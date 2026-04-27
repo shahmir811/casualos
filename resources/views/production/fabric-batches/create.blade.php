@@ -14,7 +14,8 @@
         catalogues: {{ Js::from($catalogues) }},
         get designs() {
             const cat = this.catalogues.find(c => c.id == this.selectedCatalogueId);
-            return cat ? cat.designs : [];
+            if (!cat) return [];
+            return cat.designs.filter(d => d.manufacturing_type === 'in_house');
         }
      }">
 
@@ -58,8 +59,8 @@
         <template x-if="designs.length > 0">
             <div class="card overflow-hidden">
                 <div class="px-5 py-4 border-b border-[#F2F2F7]">
-                    <h3 class="text-sm font-semibold text-[#1D1D1F]">Pieces per Design</h3>
-                    <p class="text-xs text-[#6E6E73] mt-0.5">Enter total fabric pieces received for each design</p>
+                    <h3 class="text-sm font-semibold text-[#1D1D1F]">In-House Designs</h3>
+                    <p class="text-xs text-[#6E6E73] mt-0.5">Enter fabric pieces received for each in-house design (outsourced designs are logged separately)</p>
                 </div>
                 <div class="divide-y divide-[#F2F2F7]">
                     <template x-for="(design, idx) in designs" :key="design.id">
@@ -67,7 +68,7 @@
                             <input type="hidden" :name="`items[${idx}][design_id]`" :value="design.id">
                             <span class="flex-1 text-sm text-[#1D1D1F]" x-text="design.name"></span>
                             <div class="w-32">
-                                <input type="number" :name="`items[${idx}][total_pieces]`"
+                                <input type="number" :name="`items[${idx}][quantity]`"
                                        min="0" value="0"
                                        class="apple-input text-center"
                                        placeholder="0">
@@ -80,7 +81,7 @@
         </template>
 
         <template x-if="designs.length === 0 && selectedCatalogueId !== ''">
-            <p class="text-sm text-[#FF3B30]">This catalogue has no designs yet.</p>
+            <p class="text-sm text-[#FF3B30]">This catalogue has no in-house designs.</p>
         </template>
 
         <div class="flex gap-3">

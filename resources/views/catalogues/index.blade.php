@@ -23,9 +23,10 @@
 <div class="card mb-3 hover:shadow-md transition-shadow">
     <div class="flex items-center justify-between px-5 py-4">
 
-        {{-- Cover Photo + Info --}}
-        <div class="flex items-center gap-4">
-            <div class="w-14 h-14 bg-[#F5F5F7] rounded-xl overflow-hidden flex-shrink-0 border border-[#E8E8ED]">
+        {{-- Cover Photo + Info — fully clickable as View link --}}
+        <a href="{{ route('catalogues.show', $catalogue) }}"
+           class="flex items-center gap-4 flex-1 min-w-0 group">
+            <div class="w-14 h-14 bg-[#F5F5F7] rounded-xl overflow-hidden flex-shrink-0 border border-[#E8E8ED] group-hover:border-[#0066CC]/30 transition-colors">
                 @if($catalogue->cover_photo)
                     <img src="{{ Storage::url($catalogue->cover_photo) }}" alt="{{ $catalogue->name }}" class="w-full h-full object-cover">
                 @else
@@ -39,21 +40,21 @@
 
             <div>
                 <div class="flex items-center gap-2.5 mb-1">
-                    <h2 class="text-[#1D1D1F] text-sm font-semibold">{{ $catalogue->name }}</h2>
+                    <h2 class="text-[#1D1D1F] text-sm font-semibold group-hover:text-[#0066CC] transition-colors">{{ $catalogue->name }}</h2>
                     <span class="badge {{ $catalogue->status === 'open' ? 'bg-green-100 text-green-700' : 'bg-[#F5F5F7] text-[#6E6E73]' }}">
-                        {{ $catalogue->status }}
+                        {{ strtoupper($catalogue->status) }}
                     </span>
                 </div>
                 <p class="text-[#6E6E73] text-xs">
                     {{ $catalogue->designs_count }} designs ·
-                    {{ number_format($catalogue->total_pieces) }} total pieces ·
+                    {{ number_format($catalogue->qty_per_design) }} qty/design · {{ number_format($catalogue->qty_per_design * $catalogue->number_of_designs) }} total pcs ·
                     {{ $catalogue->orders_count }} orders
                     @if($catalogue->wage_rate)
                         · PKR {{ number_format($catalogue->wage_rate) }}/pc wage
                     @endif
                 </p>
             </div>
-        </div>
+        </a>
 
         {{-- Actions --}}
         <div class="flex items-center gap-3">

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $catalogue->name }} — Casual Lite Booking Form</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
@@ -157,6 +158,79 @@
 </head>
 <body>
 
+@php
+    // Use catalogue cover photo, or fall back to the first design with a photo
+    $coverPhoto = $catalogue->cover_photo
+        ?? $catalogue->designs->firstWhere('photo', '!=', null)?->photo;
+@endphp
+
+{{-- ============================================================ --}}
+{{-- SOLD-OUT SCREEN                                              --}}
+{{-- ============================================================ --}}
+@if($soldOut)
+
+<div class="min-h-screen flex flex-col">
+
+    {{-- Cover --}}
+    @if($coverPhoto)
+    <div style="width:100%;height:300px;overflow:hidden;background:#E5E5EA;">
+        <img src="{{ Storage::url($coverPhoto) }}"
+             alt="{{ $catalogue->name }}"
+             style="width:100%;height:100%;object-fit:cover;object-position:top;display:block;filter:brightness(0.75);">
+    </div>
+    @else
+    <div style="width:100%;height:200px;background:#1D1D1F;display:flex;align-items:center;justify-content:center;">
+        <p style="color:#fff;font-size:1.5rem;font-weight:700;letter-spacing:0.05em;">{{ $catalogue->name }}</p>
+    </div>
+    @endif
+
+    <div class="max-w-lg mx-auto px-4 w-full flex-1 flex flex-col items-center justify-start pt-6">
+
+        {{-- Sold-out badge --}}
+        <div style="display:inline-flex;align-items:center;gap:0.45rem;
+                    background:#FFF0EF;border:1.5px solid #FFCDD0;
+                    border-radius:999px;padding:0.4rem 1rem;margin-bottom:1.25rem;">
+            <svg style="width:15px;height:15px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="#FF3B30" stroke-width="2.2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            <span style="font-size:0.8125rem;font-weight:700;color:#FF3B30;letter-spacing:0.04em;text-transform:uppercase;">Sold Out</span>
+        </div>
+
+        {{-- Card --}}
+        <div class="section-card px-6 py-6 w-full text-center mb-4">
+            <h1 class="text-2xl font-bold tracking-tight text-[#1D1D1F] mb-2">{{ $catalogue->name }}</h1>
+            <p class="text-[#6E6E73] text-sm leading-relaxed">
+                This catalogue is no longer accepting orders.<br>
+                All available pieces have been reserved, or the ordering period has ended.
+            </p>
+        </div>
+
+        {{-- Help card --}}
+        <div class="section-card px-5 py-4 w-full">
+            <div style="display:flex;align-items:flex-start;gap:0.875rem;">
+                <div style="width:38px;height:38px;flex-shrink:0;background:#F5F5F7;border-radius:10px;
+                            display:flex;align-items:center;justify-content:center;margin-top:1px;">
+                    <svg style="width:18px;height:18px;" fill="none" viewBox="0 0 24 24" stroke="#1D1D1F" stroke-width="1.75">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-[#1D1D1F] mb-0.5">Need help?</p>
+                    <p class="text-xs text-[#6E6E73] leading-relaxed">
+                        Contact the Casual Lite team directly if you believe this is an error or would like to be notified about the next collection.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@else
+{{-- ============================================================ --}}
+{{-- ORDER FORM                                                   --}}
+{{-- ============================================================ --}}
+
 {{-- Pass design data to Alpine --}}
 @php
     $designsJson = $catalogue->designs->map(fn($d) => [
@@ -165,10 +239,6 @@
         'price' => (float) $d->selling_price,
     ])->values()->toJson();
     $numDesigns  = $catalogue->designs->count();
-
-    // Use catalogue cover photo, or fall back to the first design with a photo
-    $coverPhoto = $catalogue->cover_photo
-        ?? $catalogue->designs->firstWhere('photo', '!=', null)?->photo;
 @endphp
 
 <div x-data="orderCalc({{ $designsJson }}, {{ $numDesigns }})" class="pb-28">
@@ -447,6 +517,8 @@ function orderCalc(designs, numDesigns) {
     };
 }
 </script>
+
+@endif {{-- end @else (order form) --}}
 
 </body>
 </html>

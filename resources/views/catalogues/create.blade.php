@@ -44,14 +44,17 @@
             @enderror
         </div>
 
-        {{-- Total Pieces + Number of Designs --}}
+        {{-- Qty Per Design + Number of Designs --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Total Pieces <span class="text-[#FF3B30]">*</span></label>
-                <input type="number" name="total_pieces" value="{{ old('total_pieces') }}" required min="1"
+                <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">
+                    Quantity Per Design <span class="text-[#FF3B30]">*</span>
+                </label>
+                <input type="number" name="qty_per_design" value="{{ old('qty_per_design') }}" required min="1"
                     class="apple-input"
-                    placeholder="e.g. 500">
-                @error('total_pieces')
+                    placeholder="e.g. 70">
+                <p class="mt-1 text-[#86868B] text-xs">Pieces manufactured from each design</p>
+                @error('qty_per_design')
                     <p class="mt-1.5 text-[#FF3B30] text-xs">{{ $message }}</p>
                 @enderror
             </div>
@@ -59,7 +62,8 @@
                 <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Number of Designs <span class="text-[#FF3B30]">*</span></label>
                 <input type="number" name="number_of_designs" value="{{ old('number_of_designs') }}" required min="1"
                     class="apple-input"
-                    placeholder="e.g. 25">
+                    placeholder="e.g. 7">
+                <p class="mt-1 text-[#86868B] text-xs">Total pieces = qty/design × no. of designs</p>
                 @error('number_of_designs')
                     <p class="mt-1.5 text-[#FF3B30] text-xs">{{ $message }}</p>
                 @enderror

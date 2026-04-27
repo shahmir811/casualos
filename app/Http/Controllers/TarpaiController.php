@@ -7,6 +7,7 @@ use App\Models\TarpaiReturn;
 use App\Models\Catalogue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class TarpaiController extends Controller
 {
@@ -18,7 +19,10 @@ class TarpaiController extends Controller
 
     public function create()
     {
-        $catalogues = Catalogue::where('status', 'open')->with('designs')->orderBy('name')->get();
+        $catalogues = Catalogue::where('status', 'open')
+            ->with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')])
+            ->orderBy('name')
+            ->get();
         return view('production.tarpai.create', compact('catalogues'));
     }
 
@@ -26,7 +30,7 @@ class TarpaiController extends Controller
     {
         $validated = $request->validate([
             'catalogue_id'   => 'required|exists:catalogues,id',
-            'design_id'      => 'required|exists:designs,id',
+            'design_id'      => ['required', Rule::exists('designs', 'id')->where('manufacturing_type', 'in_house')],
             'sent_date'      => 'required|date',
             'per_piece_price'=> 'required|numeric|min:0',
         ]);

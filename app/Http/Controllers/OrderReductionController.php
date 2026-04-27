@@ -74,7 +74,7 @@ class OrderReductionController extends Controller
             // Credit to customer ledger
             CustomerLedger::create([
                 'customer_id'             => $order->customer_id,
-                'transaction_type'        => 'order_reduction',
+                'transaction_type'        => 'order_reduced',
                 'amount'                  => -$totalReduced,
                 'running_advance_balance' => 0,
                 'reference_type'          => 'App\Models\OrderReduction',

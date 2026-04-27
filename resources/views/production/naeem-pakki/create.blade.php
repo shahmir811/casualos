@@ -26,16 +26,23 @@
     </div>
     @else
 
-    <form method="POST" action="{{ route('naeem-pakki-sends.store') }}" class="space-y-5">
+    <form method="POST" action="{{ route('naeem-pakki-sends.store') }}" class="space-y-5"
+          x-data="{
+              selectedId: '{{ old('production_assignment_id', '') }}',
+              assignments: {{ Js::from($assignments->map(fn($a) => ['id' => $a->id, 'naeem_pakki_rate' => $a->naeem_pakki_rate])) }},
+              get selectedAssignment() {
+                  return this.assignments.find(a => a.id == this.selectedId) ?? null;
+              }
+          }">
         @csrf
 
         <div class="card p-6 space-y-5">
             <div>
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Production Assignment</label>
-                <select name="production_assignment_id" class="apple-input" required>
+                <select name="production_assignment_id" x-model="selectedId" class="apple-input" required>
                     <option value="">— Select assignment —</option>
                     @foreach($assignments as $a)
-                    <option value="{{ $a->id }}" {{ old('production_assignment_id') == $a->id ? 'selected' : '' }}>
+                    <option value="{{ $a->id }}">
                         PA-{{ str_pad($a->id, 4, '0', STR_PAD_LEFT) }} — {{ $a->design?->catalogue?->name }} / {{ $a->design?->name }}
                     </option>
                     @endforeach
@@ -48,8 +55,13 @@
             </div>
 
             <div>
-                <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Per Piece Rate (Rs.)</label>
-                <input type="number" name="per_piece_price" value="{{ old('per_piece_price') }}" step="0.01" min="0" class="apple-input" placeholder="e.g. 150" required>
+                <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Per Piece Rate (Rs.) <span class="text-[#FF3B30]">*</span></label>
+                <input type="number" name="per_piece_price"
+                       :value="selectedAssignment?.naeem_pakki_rate ?? '{{ old('per_piece_price') }}'"
+                       step="0.01" min="0" class="apple-input" placeholder="e.g. 150" required>
+                <p class="mt-1 text-[#86868B] text-xs" x-show="selectedAssignment && selectedAssignment.naeem_pakki_rate">
+                    Pre-filled from assignment — adjust if rate changed
+                </p>
             </div>
         </div>
 

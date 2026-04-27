@@ -10,12 +10,57 @@ use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $orders = Order::with(['customer', 'catalogue'])
-            ->latest()
-            ->paginate(20);
-        return view('orders.index', compact('orders'));
+        $catalogues = Catalogue::orderBy('name')->get(['id', 'name', 'qty_per_design', 'number_of_designs']);
+
+        $query = Order::with(['customer', 'catalogue', 'items'])
+            ->latest('submitted_at');
+
+        // Filter by catalogue
+        $selectedCatalogueId = $request->input('catalogue_id');
+        if ($selectedCatalogueId) {
+            $query->where('catalogue_id', $selectedCatalogueId);
+        }
+
+        // Filter by status
+        if ($request->input('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        // When filtering by catalogue, load all (no pagination) — mirrors the PDF sheet
+        $orders = $selectedCatalogueId
+            ? $query->get()
+            : $query->paginate(50);
+
+        // Summary totals (size columns + grand total)
+        $summary = [
+            'xs'    => 0, 's'  => 0, 'm'  => 0,
+            'l'     => 0, 'xl' => 0, 'total_pieces' => 0, 'total_bill' => 0,
+        ];
+
+        $collection = $selectedCatalogueId ? $orders : $orders->getCollection();
+        foreach ($collection as $order) {
+            // Use first item only — quantities per design are the same across all designs
+            $item = $order->items->first();
+            if ($item) {
+                $summary['xs']           += $item->qty_xs;
+                $summary['s']            += $item->qty_s;
+                $summary['m']            += $item->qty_m;
+                $summary['l']            += $item->qty_l;
+                $summary['xl']           += $item->qty_xl;
+                $summary['total_pieces'] += $item->qty_xs + $item->qty_s + $item->qty_m + $item->qty_l + $item->qty_xl;
+            }
+            $summary['total_bill'] += $order->total_amount;
+        }
+
+        $selectedCatalogue = $selectedCatalogueId
+            ? $catalogues->firstWhere('id', $selectedCatalogueId)
+            : null;
+
+        return view('orders.index', compact(
+            'orders', 'catalogues', 'selectedCatalogue', 'selectedCatalogueId', 'summary'
+        ));
     }
 
     public function show(Order $order)

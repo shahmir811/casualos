@@ -10,7 +10,7 @@ class ProductionAssignment extends Model
 {
     use LogsActivity;
 
-    protected $fillable = ['catalogue_id', 'design_id', 'destination', 'assignment_date', 'logged_by'];
+    protected $fillable = ['catalogue_id', 'design_id', 'destination', 'naeem_pakki_rate', 'assignment_date', 'logged_by'];
 
     protected $casts = ['assignment_date' => 'date'];
 

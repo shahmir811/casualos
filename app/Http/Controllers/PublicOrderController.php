@@ -14,19 +14,25 @@ class PublicOrderController extends Controller
     public function show(string $token)
     {
         $catalogue = Catalogue::where('order_token', $token)
-            ->where('status', 'open')
             ->with(['designs' => fn($q) => $q->orderBy('sort_order')])
             ->firstOrFail();
 
-        return view('public.order', compact('catalogue'));
+        // Sold-out: manually closed by admin OR no pieces remaining
+        $soldOut = $catalogue->status !== 'open' || $catalogue->availablePieces() <= 0;
+
+        return view('public.order', compact('catalogue', 'soldOut'));
     }
 
     public function submit(Request $request, string $token)
     {
         $catalogue = Catalogue::where('order_token', $token)
-            ->where('status', 'open')
             ->with(['designs'])
             ->firstOrFail();
+
+        // Guard: reject submission if catalogue is closed or sold out
+        if ($catalogue->status !== 'open' || $catalogue->availablePieces() <= 0) {
+            return redirect()->route('order.show', $token);
+        }
 
         // Validate customer details + collective size quantities
         $request->validate([

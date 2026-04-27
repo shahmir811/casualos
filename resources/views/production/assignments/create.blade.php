@@ -11,10 +11,14 @@
 <div class="max-w-2xl"
      x-data="{
         selectedCatalogueId: '',
+        selectedDestination: '{{ old('destination', '') }}',
         catalogues: {{ Js::from($catalogues) }},
         get designs() {
             const cat = this.catalogues.find(c => c.id == this.selectedCatalogueId);
             return cat ? cat.designs : [];
+        },
+        get isNaeemPakki() {
+            return this.selectedDestination === 'naeem_pakki';
         }
      }">
 
@@ -55,11 +59,26 @@
 
             <div>
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Destination</label>
-                <select name="destination" class="apple-input" required>
+                <select name="destination" x-model="selectedDestination" class="apple-input" required>
                     <option value="">— Select destination —</option>
-                    <option value="naeem_pakki" {{ old('destination') === 'naeem_pakki' ? 'selected' : '' }}>Naeem Pakki (Embroidery)</option>
-                    <option value="stitching_unit" {{ old('destination') === 'stitching_unit' ? 'selected' : '' }}>Stitching Unit</option>
+                    <option value="naeem_pakki">Naeem Pakki (Embroidery)</option>
+                    <option value="stitching_unit">Stitching Unit</option>
                 </select>
+            </div>
+
+            {{-- Naeem Pakki rate — only shown when destination is Naeem Pakki --}}
+            <div x-show="isNaeemPakki" x-cloak>
+                <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
+                    Naeem Pakki Rate (Rs. per piece)
+                    <span class="text-[#FF3B30]">*</span>
+                </label>
+                <input type="number" name="naeem_pakki_rate"
+                       value="{{ old('naeem_pakki_rate') }}"
+                       step="0.01" min="0"
+                       class="apple-input"
+                       placeholder="e.g. 150"
+                       :required="isNaeemPakki">
+                <p class="mt-1 text-[#86868B] text-xs">Agreed embroidery rate for this design</p>
             </div>
 
             <div>
