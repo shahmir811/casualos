@@ -13,7 +13,7 @@ class Catalogue extends Model
     use HasFactory, LogsActivity;
 
     protected $fillable = [
-        'name', 'cover_photo', 'total_pieces', 'number_of_designs',
+        'name', 'cover_photo', 'qty_per_design', 'number_of_designs',
         'wage_rate', 'notes', 'status', 'order_token', 'created_by',
     ];
 
@@ -30,20 +30,24 @@ class Catalogue extends Model
         return LogOptions::defaults()->logAll()->logOnlyDirty();
     }
 
-    // Computed
-    public function getPiecesPerDesignAttribute(): int
+    /**
+     * Total actual pieces produced across all designs.
+     * qty_per_design = 70, number_of_designs = 7 → total = 490
+     */
+    public function totalPieces(): int
     {
-        return $this->number_of_designs > 0
-            ? (int) ($this->total_pieces / $this->number_of_designs)
-            : 0;
+        return $this->qty_per_design * $this->number_of_designs;
     }
 
     public function isOpen(): bool   { return $this->status === 'open'; }
     public function isClosed(): bool { return $this->status === 'closed'; }
 
     /**
-     * Total pieces still available for ordering.
-     * Calculated: total_pieces - sum of all order_items quantities for this catalogue.
+     * Pieces still available for ordering.
+     *
+     * Total production  = qty_per_design × number_of_designs
+     * Total ordered     = sum of all order_item quantities across all designs
+     * Available         = total production − total ordered
      */
     public function availablePieces(): int
     {
@@ -52,7 +56,7 @@ class Catalogue extends Model
             ->join('order_items', 'orders.id', '=', 'order_items.order_id')
             ->sum(\DB::raw('order_items.qty_xs + order_items.qty_s + order_items.qty_m + order_items.qty_l + order_items.qty_xl'));
 
-        return max(0, $this->total_pieces - (int) $ordered);
+        return max(0, $this->totalPieces() - (int) $ordered);
     }
 
     // Relationships

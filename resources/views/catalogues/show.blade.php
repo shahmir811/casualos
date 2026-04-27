@@ -46,10 +46,16 @@
 </div>
 
 {{-- Stats Row --}}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-7">
     <div class="stat-card">
-        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Pieces</p>
-        <p class="text-[#1D1D1F] text-2xl font-light">{{ number_format($catalogue->total_pieces) }}</p>
+        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Qty Per Design</p>
+        <p class="text-[#1D1D1F] text-2xl font-light">{{ number_format($catalogue->qty_per_design) }}</p>
+        <p class="text-[#86868B] text-xs mt-0.5">per design</p>
+    </div>
+    <div class="stat-card">
+        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Production</p>
+        <p class="text-[#1D1D1F] text-2xl font-light">{{ number_format($catalogue->totalPieces()) }}</p>
+        <p class="text-[#86868B] text-xs mt-0.5">{{ $catalogue->qty_per_design }} × {{ $catalogue->number_of_designs }} designs</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Pieces Ordered</p>

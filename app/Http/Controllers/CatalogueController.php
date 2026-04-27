@@ -54,7 +54,7 @@ class CatalogueController extends Controller
         $validated = $request->validate([
             'name'             => 'required|string|max:255',
             'cover_photo'      => 'nullable|image|max:10240',
-            'total_pieces'     => 'required|integer|min:1',
+            'qty_per_design'     => 'required|integer|min:1',
             'number_of_designs'=> 'required|integer|min:1',
             'wage_rate'        => 'nullable|numeric|min:0',
             'notes'            => 'nullable|string',
@@ -89,7 +89,8 @@ class CatalogueController extends Controller
             ->selectRaw('SUM(order_items.qty_xs + order_items.qty_s + order_items.qty_m + order_items.qty_l + order_items.qty_xl) as total')
             ->value('total') ?? 0;
 
-        $available = max(0, $catalogue->total_pieces - (int) $totalOrdered);
+        // Total production = qty_per_design × number_of_designs
+        $available = max(0, $catalogue->totalPieces() - (int) $totalOrdered);
 
         // Generate shareable public order URL
         $shareUrl = $catalogue->order_token
@@ -118,7 +119,7 @@ class CatalogueController extends Controller
         $validated = $request->validate([
             'name'             => 'required|string|max:255',
             'cover_photo'      => 'nullable|image|max:10240',
-            'total_pieces'     => 'required|integer|min:1',
+            'qty_per_design'     => 'required|integer|min:1',
             'number_of_designs'=> 'required|integer|min:1',
             'wage_rate'        => 'nullable|numeric|min:0',
             'notes'            => 'nullable|string',
