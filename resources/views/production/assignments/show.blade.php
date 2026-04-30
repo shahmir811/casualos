@@ -34,6 +34,19 @@
                 <p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Destination</p>
                 <span class="badge {{ $destColor }}">{{ $dest }}</span>
             </div>
+            @if($productionAssignment->destination === 'stitching_unit' && $productionAssignment->stitching_unit)
+            <div>
+                <p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Stitching Unit</p>
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold" style="background:#F5EEFF; color:#AF52DE;">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        Unit {{ $productionAssignment->stitching_unit }}
+                    </span>
+                </div>
+            </div>
+            @endif
             <div>
                 <p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Assignment Date</p>
                 <p class="text-[#1D1D1F]">{{ $productionAssignment->assignment_date->format('d M Y') }}</p>

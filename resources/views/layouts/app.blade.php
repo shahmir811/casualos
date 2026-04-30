@@ -203,13 +203,13 @@
         </div>
 
         {{-- Navigation --}}
-        <nav class="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        <nav class="px-3 py-2 space-y-0">
 
             @php $r = Auth::user()->role; @endphp
 
             {{-- Dashboard --}}
             <a href="{{ route('dashboard') }}"
-               class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                 </svg>
@@ -217,10 +217,10 @@
             </a>
 
             {{-- Catalogue --}}
-            <p class="px-3 pt-4 pb-1 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">Catalogue</p>
+            <p class="px-3 pt-3 pb-0.5 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">Catalogue</p>
 
             <a href="{{ route('catalogues.index') }}"
-               class="nav-item {{ request()->routeIs('catalogues.*') || request()->routeIs('designs.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('catalogues.*') || request()->routeIs('designs.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
@@ -229,10 +229,10 @@
 
             {{-- Customers --}}
             @if(in_array($r, ['admin','accountant']))
-            <p class="px-3 pt-4 pb-1 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">Sales</p>
+            <p class="px-3 pt-3 pb-0.5 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">Sales</p>
 
             <a href="{{ route('customers.index') }}"
-               class="nav-item {{ request()->routeIs('customers.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('customers.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
@@ -240,7 +240,7 @@
             </a>
 
             <a href="{{ route('orders.index') }}"
-               class="nav-item {{ request()->routeIs('orders.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('orders.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                 </svg>
@@ -250,10 +250,10 @@
 
             {{-- Production --}}
             @if(in_array($r, ['admin','manager']))
-            <p class="px-3 pt-4 pb-1 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">Production</p>
+            <p class="px-3 pt-3 pb-0.5 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">Production</p>
 
             <a href="{{ route('fabric-batches.index') }}"
-               class="nav-item {{ request()->routeIs('fabric-batches.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('fabric-batches.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                 </svg>
@@ -261,7 +261,7 @@
             </a>
 
             <a href="{{ route('production-assignments.index') }}"
-               class="nav-item {{ request()->routeIs('production-assignments.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('production-assignments.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                 </svg>
@@ -269,7 +269,7 @@
             </a>
 
             <a href="{{ route('stitching-returns.index') }}"
-               class="nav-item {{ request()->routeIs('stitching-returns.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('stitching-returns.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
@@ -277,7 +277,7 @@
             </a>
 
             <a href="{{ route('tarpai-sends.index') }}"
-               class="nav-item {{ request()->routeIs('tarpai-sends.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('tarpai-sends.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                 </svg>
@@ -285,7 +285,7 @@
             </a>
 
             <a href="{{ route('press-pack.index') }}"
-               class="nav-item {{ request()->routeIs('press-pack.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('press-pack.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                 </svg>
@@ -293,7 +293,7 @@
             </a>
 
             <a href="{{ route('dispatch.index') }}"
-               class="nav-item {{ request()->routeIs('dispatch.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('dispatch.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
                 </svg>
@@ -301,7 +301,7 @@
             </a>
 
             <a href="{{ route('wages.index') }}"
-               class="nav-item {{ request()->routeIs('wages.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('wages.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
                 </svg>
@@ -309,20 +309,28 @@
             </a>
 
             <a href="{{ route('packed-inventory.index') }}"
-               class="nav-item {{ request()->routeIs('packed-inventory.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('packed-inventory.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
                 </svg>
                 Inventory
             </a>
+
+            <a href="{{ route('production.tracker') }}"
+               class="nav-item {{ request()->routeIs('production.tracker') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                </svg>
+                Production Tracker
+            </a>
             @endif
 
             {{-- Reports --}}
             @if(in_array($r, ['admin','accountant']))
-            <p class="px-3 pt-4 pb-1 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">Analytics</p>
+            <p class="px-3 pt-3 pb-0.5 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">Analytics</p>
 
             <a href="{{ route('reports.index') }}"
-               class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                 </svg>
@@ -332,33 +340,51 @@
 
             {{-- System --}}
             @if($r === 'admin')
-            <p class="px-3 pt-4 pb-1 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">System</p>
+            <p class="px-3 pt-3 pb-0.5 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">System</p>
 
             <a href="{{ route('users.index') }}"
-               class="nav-item {{ request()->routeIs('users.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[#1D1D1F]">
+               class="nav-item {{ request()->routeIs('users.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                 </svg>
                 User Accounts
             </a>
+
+            <a href="{{ route('backups.index') }}"
+               class="nav-item {{ request()->routeIs('backups.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                </svg>
+                Backups
+            </a>
             @endif
 
         </nav>
 
-        {{-- User footer --}}
-        <div class="border-t border-[#F2F2F7] p-4">
+        {{-- User footer — flex-shrink-0 keeps it pinned at the bottom --}}
+        <div class="border-t border-[#F2F2F7] p-4 flex-shrink-0 mt-auto">
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-[#0071E3] flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                    {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-[#1D1D1F] text-xs font-medium truncate">{{ Auth::user()->name }}</p>
-                    <p class="text-[#86868B] text-[10px] uppercase tracking-wide">{{ Auth::user()->role }}</p>
-                </div>
+                {{-- Clicking avatar/name goes to profile --}}
+                <a href="{{ route('profile.edit') }}"
+                   class="flex items-center gap-3 flex-1 min-w-0 group rounded-lg hover:bg-[#F5F5F7] transition-colors -m-1 p-1">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 transition-opacity
+                        {{ request()->routeIs('profile.*') ? 'bg-[#005BB5]' : 'bg-[#0071E3]' }}">
+                        {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[#1D1D1F] text-xs font-medium truncate group-hover:text-[#0071E3] transition-colors">
+                            {{ Auth::user()->name }}
+                        </p>
+                        <p class="text-[#86868B] text-[10px] uppercase tracking-wide">{{ Auth::user()->role }}</p>
+                    </div>
+                </a>
+
+                {{-- Sign out --}}
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" title="Sign Out"
-                        class="text-[#86868B] hover:text-[#FF3B30] transition-colors p-1 rounded">
+                        class="text-[#86868B] hover:text-[#FF3B30] transition-colors p-1 rounded flex-shrink-0">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                         </svg>

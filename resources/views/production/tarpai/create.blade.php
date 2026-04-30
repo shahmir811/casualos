@@ -61,6 +61,32 @@
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Per Piece Rate (Rs.)</label>
                 <input type="number" name="per_piece_price" value="{{ old('per_piece_price') }}" step="0.01" min="0" class="apple-input" placeholder="e.g. 30" required>
             </div>
+
+            {{-- Pieces by size --}}
+            <div>
+                <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-1">Pieces Sent (by Size)</label>
+                <p class="text-[#86868B] text-xs mb-3">Enter the quantity for each size being sent for tarpai finishing.</p>
+                <div class="grid grid-cols-5 gap-3">
+                    @foreach(['xs','s','m','l','xl'] as $i => $size)
+                    <div>
+                        <label class="block text-xs font-semibold text-[#86868B] uppercase tracking-widest mb-1.5 text-center">{{ strtoupper($size) }}</label>
+                        <input type="hidden" name="items[{{ $i }}][size]" value="{{ $size }}">
+                        <input type="number" name="items[{{ $i }}][qty]" value="{{ old("items.{$i}.qty", 0) }}" min="0" class="apple-input text-center px-1">
+                    </div>
+                    @endforeach
+                </div>
+                <div class="mt-3 text-right text-sm text-[#6E6E73]"
+                     x-data
+                     x-init="
+                        const inputs = $el.closest('.card').querySelectorAll('input[name*=\'[qty]\']');
+                        const span   = $el.querySelector('span');
+                        const update = () => { let t=0; inputs.forEach(i => t += parseInt(i.value)||0); span.textContent = t; };
+                        inputs.forEach(i => i.addEventListener('input', update));
+                        update();
+                     ">
+                    Total pieces: <span class="font-semibold text-[#1D1D1F]">0</span>
+                </div>
+            </div>
         </div>
 
         <div class="flex gap-3">

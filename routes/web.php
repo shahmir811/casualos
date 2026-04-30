@@ -23,6 +23,9 @@ use App\Http\Controllers\DispatchController;
 use App\Http\Controllers\WagesController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\BackupController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProductionTrackerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -141,6 +144,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     // Packed Inventory (manager + admin)
     Route::get('packed-inventory', [PressPackController::class, 'inventory'])->name('packed-inventory.index');
 
+    // Production Tracker (manager + admin)
+    Route::get('production-tracker', [ProductionTrackerController::class, 'index'])->name('production.tracker');
+
     /*
     |------------------------------------------------------------------
     | REPORTS (admin + accountant)
@@ -175,4 +181,24 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('{user}/disable',            [UserManagementController::class, 'disable'])->name('disable');
         Route::post('{user}/reset-password',     [UserManagementController::class, 'resetPassword'])->name('reset-password');
     });
+
+    /*
+    |------------------------------------------------------------------
+    | BACKUPS (admin only)
+    |------------------------------------------------------------------
+    */
+    Route::middleware('role:admin')->prefix('backups')->name('backups.')->group(function () {
+        Route::get('/',                           [BackupController::class, 'index'])->name('index');
+        Route::post('/',                          [BackupController::class, 'store'])->name('store');
+        Route::get('{filename}/download',         [BackupController::class, 'download'])->name('download');
+        Route::delete('{filename}',               [BackupController::class, 'destroy'])->name('destroy');
+    });
+
+    /*
+    |------------------------------------------------------------------
+    | PROFILE (all authenticated users)
+    |------------------------------------------------------------------
+    */
+    Route::get('profile',         [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('profile',         [ProfileController::class, 'update'])->name('profile.update');
 });

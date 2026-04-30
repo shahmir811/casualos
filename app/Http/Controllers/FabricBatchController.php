@@ -6,6 +6,7 @@ use App\Models\FabricBatch;
 use App\Models\Catalogue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class FabricBatchController extends Controller
@@ -13,7 +14,56 @@ class FabricBatchController extends Controller
     public function index()
     {
         $batches = FabricBatch::with(['catalogue', 'items'])->latest()->paginate(20);
-        return view('production.fabric-batches.index', compact('batches'));
+
+        // Per-catalogue summary: expected vs total received
+        $catalogueIds = $batches->pluck('catalogue_id')->unique()->filter()->values()->toArray();
+
+        // Total received per catalogue (all batches, not just current page)
+        $receivedPerCatalogue = DB::table('fabric_batch_items')
+            ->join('fabric_batches', 'fabric_batches.id', '=', 'fabric_batch_items.fabric_batch_id')
+            ->whereIn('fabric_batches.catalogue_id', $catalogueIds)
+            ->select('fabric_batches.catalogue_id', DB::raw('SUM(fabric_batch_items.quantity) as qty'))
+            ->groupBy('fabric_batches.catalogue_id')
+            ->pluck('qty', 'catalogue_id');
+
+        // Total assigned per catalogue
+        $assignedPerCatalogue = DB::table('production_assignment_items')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
+            ->whereIn('production_assignments.catalogue_id', $catalogueIds)
+            ->select('production_assignments.catalogue_id', DB::raw('SUM(production_assignment_items.quantity) as qty'))
+            ->groupBy('production_assignments.catalogue_id')
+            ->pluck('qty', 'catalogue_id');
+
+        // Expected per catalogue: qty_per_design × in-house design count
+        $expectedPerCatalogue = Catalogue::whereIn('id', $catalogueIds)
+            ->with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')])
+            ->get()
+            ->mapWithKeys(fn($c) => [
+                $c->id => (int) $c->qty_per_design * $c->designs->count()
+            ]);
+
+        // Naeem Pakki assigned per catalogue
+        $npPerCatalogue = DB::table('production_assignment_items')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
+            ->whereIn('production_assignments.catalogue_id', $catalogueIds)
+            ->where('production_assignments.destination', 'naeem_pakki')
+            ->select('production_assignments.catalogue_id', DB::raw('SUM(production_assignment_items.quantity) as qty'))
+            ->groupBy('production_assignments.catalogue_id')
+            ->pluck('qty', 'catalogue_id');
+
+        // Stitching assigned per catalogue
+        $stitchingPerCatalogue = DB::table('production_assignment_items')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
+            ->whereIn('production_assignments.catalogue_id', $catalogueIds)
+            ->where('production_assignments.destination', 'stitching_unit')
+            ->select('production_assignments.catalogue_id', DB::raw('SUM(production_assignment_items.quantity) as qty'))
+            ->groupBy('production_assignments.catalogue_id')
+            ->pluck('qty', 'catalogue_id');
+
+        return view('production.fabric-batches.index', compact(
+            'batches', 'receivedPerCatalogue', 'assignedPerCatalogue', 'expectedPerCatalogue',
+            'npPerCatalogue', 'stitchingPerCatalogue'
+        ));
     }
 
     public function create()
@@ -71,21 +121,78 @@ class FabricBatchController extends Controller
                 ->get()
         );
 
-        // Naeem Pakki tracking — which designs from this catalogue are at Naeem Pakki
+        $catalogue = $fabricBatch->catalogue;
+        $catId     = $catalogue->id;
+
+        // ── Expected total ──────────────────────────────────────────────
+        $inHouseDesigns   = $catalogue->designs()->where('manufacturing_type', 'in_house')->get();
+        $inHouseCount     = $inHouseDesigns->count();
+        $expectedTotal    = (int) $catalogue->qty_per_design * $inHouseCount;
+
+        // ── Total received across ALL batches for this catalogue ────────
+        $totalReceivedAllBatches = (int) DB::table('fabric_batch_items')
+            ->join('fabric_batches', 'fabric_batches.id', '=', 'fabric_batch_items.fabric_batch_id')
+            ->where('fabric_batches.catalogue_id', $catId)
+            ->sum('fabric_batch_items.quantity');
+
+        // ── Total assigned to production for this catalogue ─────────────
+        $totalAssigned = (int) DB::table('production_assignment_items')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
+            ->where('production_assignments.catalogue_id', $catId)
+            ->sum('production_assignment_items.quantity');
+
+        $availableInFactory = max(0, $totalReceivedAllBatches - $totalAssigned);
+
+        // ── Per-design received & assigned (for the items table) ────────
+        $receivedPerDesign = DB::table('fabric_batch_items')
+            ->join('fabric_batches', 'fabric_batches.id', '=', 'fabric_batch_items.fabric_batch_id')
+            ->where('fabric_batches.catalogue_id', $catId)
+            ->select('fabric_batch_items.design_id', DB::raw('SUM(fabric_batch_items.quantity) as qty'))
+            ->groupBy('fabric_batch_items.design_id')
+            ->pluck('qty', 'design_id');
+
+        $assignedPerDesign = DB::table('production_assignment_items')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
+            ->where('production_assignments.catalogue_id', $catId)
+            ->select('production_assignments.design_id', DB::raw('SUM(production_assignment_items.quantity) as qty'))
+            ->groupBy('production_assignments.design_id')
+            ->pluck('qty', 'design_id');
+
+        // ── Per-design split: how many went to Naeem Pakki vs Stitching ─
+        $npAssignedPerDesign = DB::table('production_assignment_items')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
+            ->where('production_assignments.catalogue_id', $catId)
+            ->where('production_assignments.destination', 'naeem_pakki')
+            ->select('production_assignments.design_id', DB::raw('SUM(production_assignment_items.quantity) as qty'))
+            ->groupBy('production_assignments.design_id')
+            ->pluck('qty', 'design_id');
+
+        $stitchingAssignedPerDesign = DB::table('production_assignment_items')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
+            ->where('production_assignments.catalogue_id', $catId)
+            ->where('production_assignments.destination', 'stitching_unit')
+            ->select('production_assignments.design_id', DB::raw('SUM(production_assignment_items.quantity) as qty'))
+            ->groupBy('production_assignments.design_id')
+            ->pluck('qty', 'design_id');
+
+        $totalToNaeemPakki = (int) $npAssignedPerDesign->sum();
+        $totalToStitching  = (int) $stitchingAssignedPerDesign->sum();
+
+        // ── Naeem Pakki tracking ────────────────────────────────────────
         $naeemPakkiAssignments = \App\Models\ProductionAssignment::with([
                 'design',
                 'items',
                 'naeemPakkiSend.items',
                 'naeemPakkiSend.returns.items',
             ])
-            ->where('catalogue_id', $fabricBatch->catalogue_id)
+            ->where('catalogue_id', $catId)
             ->where('destination', 'naeem_pakki')
             ->get()
             ->map(function ($assignment) {
-                $send       = $assignment->naeemPakkiSend;
-                $sentQty    = $send?->items->sum('quantity') ?? 0;
-                $returnedQty= $send?->returns->flatMap->items->sum('quantity') ?? 0;
-                $pending    = max(0, $sentQty - $returnedQty);
+                $send        = $assignment->naeemPakkiSend;
+                $sentQty     = $send?->items->sum('quantity') ?? 0;
+                $returnedQty = $send?->returns->flatMap->items->sum('quantity') ?? 0;
+                $pending     = max(0, $sentQty - $returnedQty);
 
                 return [
                     'design'       => $assignment->design->name ?? '—',
@@ -97,6 +204,13 @@ class FabricBatchController extends Controller
                 ];
             });
 
-        return view('production.fabric-batches.show', compact('fabricBatch', 'naeemPakkiAssignments'));
+        return view('production.fabric-batches.show', compact(
+            'fabricBatch', 'naeemPakkiAssignments',
+            'expectedTotal', 'inHouseCount', 'totalReceivedAllBatches',
+            'totalAssigned', 'availableInFactory',
+            'receivedPerDesign', 'assignedPerDesign',
+            'npAssignedPerDesign', 'stitchingAssignedPerDesign',
+            'totalToNaeemPakki', 'totalToStitching'
+        ));
     }
 }
