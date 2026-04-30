@@ -35,8 +35,9 @@
                 {{ $pct }}% received
             </span>
         </div>
-        {{-- Top row: Expected / Received / Available --}}
-        <div class="grid grid-cols-3 gap-2 text-center">
+        {{-- Top row: Expected / Received / Remaining / Available --}}
+        @php $remaining = max(0, $expected - $received); @endphp
+        <div class="grid grid-cols-4 gap-2 text-center">
             <div>
                 <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">Expected</p>
                 <p class="text-lg font-light text-[#6E6E73]">{{ number_format($expected) }}</p>
@@ -44,6 +45,10 @@
             <div>
                 <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">Received</p>
                 <p class="text-lg font-light text-[#0071E3]">{{ number_format($received) }}</p>
+            </div>
+            <div>
+                <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">Remaining</p>
+                <p class="text-lg font-light {{ $remaining > 0 ? 'text-[#FF3B30]' : 'text-[#34C759]' }}">{{ number_format($remaining) }}</p>
             </div>
             <div>
                 <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">Available</p>
@@ -97,7 +102,10 @@
             <tr>
                 <td class="font-medium text-[#0066CC]">FB-{{ str_pad($batch->id, 4, '0', STR_PAD_LEFT) }}</td>
                 <td>{{ $batch->catalogue->name ?? '—' }}</td>
-                <td>{{ $batch->arrival_date->format('d M Y') }}</td>
+                <td>
+                    <p class="text-[#1D1D1F]">{{ $batch->arrival_date->format('d M Y') }}</p>
+                    <p class="text-[10px] text-[#86868B] mt-0.5">Logged {{ $batch->created_at->diffForHumans() }}</p>
+                </td>
                 <td>{{ $batch->items->count() }}</td>
                 <td>{{ number_format($batch->items->sum('quantity')) }} pcs</td>
                 <td class="text-[#6E6E73] text-xs">{{ $batch->loggedBy->name ?? '—' }}</td>

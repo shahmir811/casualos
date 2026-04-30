@@ -10,7 +10,7 @@ class StitchingReturn extends Model
 {
     use LogsActivity;
 
-    protected $fillable = ['catalogue_id', 'design_id', 'return_date', 'logged_by'];
+    protected $fillable = ['catalogue_id', 'design_id', 'stitching_unit', 'return_date', 'logged_by'];
 
     protected $casts = ['return_date' => 'date'];
 

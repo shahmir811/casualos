@@ -12,10 +12,35 @@ use Illuminate\Validation\Rule;
 
 class ProductionAssignmentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $assignments = ProductionAssignment::with(['catalogue', 'design'])->latest()->paginate(20);
-        return view('production.assignments.index', compact('assignments'));
+        // All open catalogues for the filter dropdown
+        $openCatalogues = Catalogue::where('status', 'open')->orderBy('name')->get();
+
+        // Default catalogue_id to the first open catalogue
+        $defaultCatalogueId = $openCatalogues->first()?->id;
+        $selectedCatalogueId = $request->get('catalogue_id', $defaultCatalogueId);
+        $selectedDestination = $request->get('destination', '');
+        $selectedUnit        = $request->get('stitching_unit', '');
+
+        $query = ProductionAssignment::with(['catalogue', 'design', 'items'])->latest();
+
+        if ($selectedCatalogueId) {
+            $query->where('catalogue_id', $selectedCatalogueId);
+        }
+        if ($selectedDestination) {
+            $query->where('destination', $selectedDestination);
+        }
+        if ($selectedUnit && $selectedUnit !== '') {
+            $query->where('stitching_unit', $selectedUnit);
+        }
+
+        $assignments = $query->paginate(20)->withQueryString();
+
+        return view('production.assignments.index', compact(
+            'assignments', 'openCatalogues',
+            'selectedCatalogueId', 'selectedDestination', 'selectedUnit'
+        ));
     }
 
     public function create()

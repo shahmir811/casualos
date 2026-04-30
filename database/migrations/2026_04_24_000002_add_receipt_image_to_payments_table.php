@@ -8,15 +8,21 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('payments', function (Blueprint $table) {
-            $table->string('receipt_image')->nullable()->after('notes');
-        });
+        // Column already added in the create_payments_table migration — skip if present
+        if (!Schema::hasColumn('payments', 'receipt_image')) {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->string('receipt_image')->nullable()->after('notes');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('payments', function (Blueprint $table) {
-            $table->dropColumn('receipt_image');
-        });
+        // Only drop if the create migration didn't originally include this column
+        if (Schema::hasColumn('payments', 'receipt_image')) {
+            Schema::table('payments', function (Blueprint $table) {
+                $table->dropColumn('receipt_image');
+            });
+        }
     }
 };
