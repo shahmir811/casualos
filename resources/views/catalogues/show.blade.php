@@ -53,13 +53,14 @@
         <p class="text-[#86868B] text-xs mt-0.5">per design</p>
     </div>
     <div class="stat-card">
-        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Production</p>
-        <p class="text-[#1D1D1F] text-2xl font-light">{{ number_format($catalogue->totalPieces()) }}</p>
-        <p class="text-[#86868B] text-xs mt-0.5">{{ $catalogue->qty_per_design }} × {{ $catalogue->number_of_designs }} designs</p>
+        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Qty Ordered</p>
+        <p class="text-[#1D1D1F] text-2xl font-light">{{ number_format($totalQtyOrdered) }}</p>
+        <p class="text-[#86868B] text-xs mt-0.5">suits across all orders</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Pieces Ordered</p>
         <p class="text-[#1D1D1F] text-2xl font-light">{{ number_format($totalOrdered) }}</p>
+        <p class="text-[#86868B] text-xs mt-0.5">across all designs</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Available</p>
@@ -150,9 +151,14 @@
         <div class="p-4">
             <div class="flex items-start justify-between mb-1.5">
                 <h3 class="text-[#1D1D1F] text-sm font-semibold leading-tight">{{ $design->name }}</h3>
-                <span class="badge ml-2 flex-shrink-0 {{ $design->manufacturing_type === 'in_house' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700' }}">
-                    {{ $design->manufacturing_type === 'in_house' ? 'In-House' : 'Out' }}
-                </span>
+                <div class="flex flex-col items-end gap-1 ml-2 flex-shrink-0">
+                    <span class="badge {{ $design->manufacturing_type === 'in_house' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700' }}">
+                        {{ $design->manufacturing_type === 'in_house' ? 'In-House' : 'Out' }}
+                    </span>
+                    @if($design->needs_naeem_pakki)
+                    <span class="badge bg-amber-100 text-amber-700">Naeem Pakki</span>
+                    @endif
+                </div>
             </div>
             <p class="text-[#6E6E73] text-sm">PKR {{ number_format($design->selling_price, 0) }}</p>
 

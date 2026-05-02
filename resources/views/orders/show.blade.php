@@ -40,7 +40,7 @@
         </form>
         @endif
 
-        @if($order->status === 'confirmed')
+        @if($order->status === 'confirmed' && in_array(Auth::user()->role, ['admin', 'manager']))
         <form method="POST" action="{{ route('orders.stitch', $order) }}">
             @csrf
             <button type="submit" class="btn-primary" style="background:#FF9500;">
@@ -58,7 +58,21 @@
 </div>
 
 {{-- Financials --}}
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-7">
+    <div class="stat-card">
+        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Order Status</p>
+        @php
+            $statusColors = [
+                'received'   => 'text-blue-600',
+                'confirmed'  => 'text-yellow-600',
+                'stitching'  => 'text-orange-500',
+                'dispatched' => 'text-[#30D158]',
+            ];
+        @endphp
+        <p class="{{ $statusColors[$order->status] ?? 'text-[#1D1D1F]' }} text-2xl font-light capitalize">
+            {{ $order->status }}
+        </p>
+    </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Amount</p>
         <p class="text-[#1D1D1F] text-2xl font-light">PKR {{ number_format($order->total_amount, 0) }}</p>

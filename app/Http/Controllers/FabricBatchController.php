@@ -15,7 +15,6 @@ class FabricBatchController extends Controller
     {
         $batches = FabricBatch::with(['catalogue', 'items'])->latest()->paginate(20);
 
-        // Per-catalogue summary: expected vs total received
         $catalogueIds = $batches->pluck('catalogue_id')->unique()->filter()->values()->toArray();
 
         // Total received per catalogue (all batches, not just current page)
@@ -26,43 +25,24 @@ class FabricBatchController extends Controller
             ->groupBy('fabric_batches.catalogue_id')
             ->pluck('qty', 'catalogue_id');
 
-        // Total assigned per catalogue
-        $assignedPerCatalogue = DB::table('production_assignment_items')
-            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
-            ->whereIn('production_assignments.catalogue_id', $catalogueIds)
-            ->select('production_assignments.catalogue_id', DB::raw('SUM(production_assignment_items.quantity) as qty'))
-            ->groupBy('production_assignments.catalogue_id')
-            ->pluck('qty', 'catalogue_id');
-
-        // Expected per catalogue: qty_per_design × in-house design count
-        $expectedPerCatalogue = Catalogue::whereIn('id', $catalogueIds)
-            ->with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')])
+        // Per-design received quantities grouped by catalogue_id → [design_id => qty]
+        $receivedPerDesignByCatalogue = DB::table('fabric_batch_items')
+            ->join('fabric_batches', 'fabric_batches.id', '=', 'fabric_batch_items.fabric_batch_id')
+            ->join('designs', 'designs.id', '=', 'fabric_batch_items.design_id')
+            ->whereIn('fabric_batches.catalogue_id', $catalogueIds)
+            ->select(
+                'fabric_batches.catalogue_id',
+                'fabric_batch_items.design_id',
+                'designs.name as design_name',
+                DB::raw('SUM(fabric_batch_items.quantity) as qty')
+            )
+            ->groupBy('fabric_batches.catalogue_id', 'fabric_batch_items.design_id', 'designs.name')
+            ->orderBy('designs.sort_order')
             ->get()
-            ->mapWithKeys(fn($c) => [
-                $c->id => (int) $c->qty_per_design * $c->designs->count()
-            ]);
-
-        // Naeem Pakki assigned per catalogue
-        $npPerCatalogue = DB::table('production_assignment_items')
-            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
-            ->whereIn('production_assignments.catalogue_id', $catalogueIds)
-            ->where('production_assignments.destination', 'naeem_pakki')
-            ->select('production_assignments.catalogue_id', DB::raw('SUM(production_assignment_items.quantity) as qty'))
-            ->groupBy('production_assignments.catalogue_id')
-            ->pluck('qty', 'catalogue_id');
-
-        // Stitching assigned per catalogue
-        $stitchingPerCatalogue = DB::table('production_assignment_items')
-            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
-            ->whereIn('production_assignments.catalogue_id', $catalogueIds)
-            ->where('production_assignments.destination', 'stitching_unit')
-            ->select('production_assignments.catalogue_id', DB::raw('SUM(production_assignment_items.quantity) as qty'))
-            ->groupBy('production_assignments.catalogue_id')
-            ->pluck('qty', 'catalogue_id');
+            ->groupBy('catalogue_id');
 
         return view('production.fabric-batches.index', compact(
-            'batches', 'receivedPerCatalogue', 'assignedPerCatalogue', 'expectedPerCatalogue',
-            'npPerCatalogue', 'stitchingPerCatalogue'
+            'batches', 'receivedPerCatalogue', 'receivedPerDesignByCatalogue'
         ));
     }
 
@@ -83,8 +63,15 @@ class FabricBatchController extends Controller
             'notes'        => 'nullable|string',
             'items'        => 'required|array',
             'items.*.design_id' => ['required', Rule::exists('designs', 'id')->where('manufacturing_type', 'in_house')],
-            'items.*.quantity'  => 'required|integer|min:1',
+            'items.*.quantity'  => 'required|integer|min:0',
         ]);
+
+        // Only keep designs where fabric was actually received (qty > 0)
+        $itemsToSave = array_filter($validated['items'], fn($i) => (int)$i['quantity'] > 0);
+
+        if (empty($itemsToSave)) {
+            return back()->withInput()->withErrors(['items' => 'At least one design must have a quantity greater than 0.']);
+        }
 
         $batch = FabricBatch::create([
             'catalogue_id' => $validated['catalogue_id'],
@@ -93,7 +80,7 @@ class FabricBatchController extends Controller
             'logged_by'    => Auth::id(),
         ]);
 
-        foreach ($validated['items'] as $item) {
+        foreach ($itemsToSave as $item) {
             $batch->items()->create([
                 'design_id' => $item['design_id'],
                 'quantity'  => $item['quantity'],

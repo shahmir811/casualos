@@ -43,42 +43,6 @@
             @endif
         </div>
 
-        {{-- Summary stat cards --}}
-        <div class="stat-card text-center">
-            <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">This Batch</p>
-            <p class="text-3xl font-light text-[#1D1D1F]">{{ number_format($fabricBatch->items->sum('quantity')) }}</p>
-            <p class="text-[#86868B] text-xs mt-1">across {{ $fabricBatch->items->count() }} designs</p>
-        </div>
-
-        <div class="stat-card text-center">
-            <p class="text-[#86868B] text-[11px] font-semibold uppercase tracking-widest mb-1">Expected Total</p>
-            <p class="text-2xl font-light text-[#6E6E73]">{{ number_format($expectedTotal) }}</p>
-            <p class="text-[#86868B] text-xs mt-1">{{ $fabricBatch->catalogue->qty_per_design }} × {{ $inHouseCount }} designs</p>
-        </div>
-
-        <div class="stat-card text-center">
-            <p class="text-[#86868B] text-[11px] font-semibold uppercase tracking-widest mb-1">Total Received</p>
-            <p class="text-2xl font-light text-[#0071E3]">{{ number_format($totalReceivedAllBatches) }}</p>
-            <p class="text-[#86868B] text-xs mt-1">all batches combined</p>
-        </div>
-
-        <div class="stat-card text-center">
-            <p class="text-[#86868B] text-[11px] font-semibold uppercase tracking-widest mb-1">Available</p>
-            <p class="text-2xl font-light {{ $availableInFactory > 0 ? 'text-[#34C759]' : 'text-[#D2D2D7]' }}">{{ number_format($availableInFactory) }}</p>
-            <p class="text-[#86868B] text-xs mt-1">received − assigned</p>
-        </div>
-
-        <div class="stat-card text-center">
-            <p class="text-[#86868B] text-[11px] font-semibold uppercase tracking-widest mb-1">→ Naeem Pakki</p>
-            <p class="text-2xl font-light {{ $totalToNaeemPakki > 0 ? '' : 'text-[#D2D2D7]' }}" style="{{ $totalToNaeemPakki > 0 ? 'color:#FF9500' : '' }}">{{ number_format($totalToNaeemPakki) }}</p>
-            <p class="text-[#86868B] text-xs mt-1">sent for embroidery</p>
-        </div>
-
-        <div class="stat-card text-center">
-            <p class="text-[#86868B] text-[11px] font-semibold uppercase tracking-widest mb-1">→ Stitching</p>
-            <p class="text-2xl font-light {{ $totalToStitching > 0 ? '' : 'text-[#D2D2D7]' }}" style="{{ $totalToStitching > 0 ? 'color:#AF52DE' : '' }}">{{ number_format($totalToStitching) }}</p>
-            <p class="text-[#86868B] text-xs mt-1">sent to stitch unit</p>
-        </div>
     </div>
 
     {{-- Items Table + Naeem Pakki Tracking --}}

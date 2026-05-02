@@ -47,7 +47,7 @@
                 </div>
                 <p class="text-[#6E6E73] text-xs">
                     {{ $catalogue->designs_count }} designs ·
-                    {{ number_format($catalogue->qty_per_design) }} qty/design · {{ number_format($catalogue->qty_per_design * $catalogue->number_of_designs) }} total pcs ·
+                    {{ number_format($catalogue->qty_per_design) }} qty/design ·
                     {{ $catalogue->orders_count }} orders
                     @if($catalogue->wage_rate)
                         · PKR {{ number_format($catalogue->wage_rate) }}/pc wage

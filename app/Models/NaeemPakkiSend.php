@@ -3,14 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class NaeemPakkiSend extends Model
 {
     use LogsActivity;
 
-    protected $fillable = ['production_assignment_id', 'sent_date', 'per_piece_price', 'logged_by'];
+    protected $fillable = [
+        'catalogue_id', 'design_id', 'sent_date', 'quantity', 'per_piece_price', 'logged_by',
+    ];
 
     protected $casts = [
         'sent_date'       => 'date',
@@ -22,14 +24,14 @@ class NaeemPakkiSend extends Model
         return LogOptions::defaults()->logAll();
     }
 
-    public function assignment(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function catalogue(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(ProductionAssignment::class, 'production_assignment_id');
+        return $this->belongsTo(Catalogue::class);
     }
 
-    public function items(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function design(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->hasMany(NaeemPakkiSendItem::class);
+        return $this->belongsTo(Design::class);
     }
 
     public function returns(): \Illuminate\Database\Eloquent\Relations\HasMany
@@ -37,14 +39,21 @@ class NaeemPakkiSend extends Model
         return $this->hasMany(NaeemPakkiReturn::class);
     }
 
+    public function loggedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'logged_by');
+    }
+
+    // ── Computed helpers ──────────────────────────────────────────────
+
     public function totalPiecesSent(): int
     {
-        return $this->items->sum('quantity');
+        return (int) $this->quantity;
     }
 
     public function totalPiecesReturned(): int
     {
-        return $this->returns->flatMap->items->sum('quantity');
+        return (int) $this->returns->sum('quantity');
     }
 
     public function outstandingPieces(): int
@@ -54,11 +63,6 @@ class NaeemPakkiSend extends Model
 
     public function totalCost(): float
     {
-        return $this->totalPiecesSent() * $this->per_piece_price;
-    }
-
-    public function loggedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-    {
-        return $this->belongsTo(User::class, 'logged_by');
+        return $this->quantity * (float) $this->per_piece_price;
     }
 }

@@ -45,7 +45,8 @@
         </div>
 
         {{-- Selling Price + Manufacturing Type --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+             x-data="{ mfgType: '{{ old('manufacturing_type', '') }}' }">
             <div>
                 <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Selling Price (PKR) <span class="text-[#FF3B30]">*</span></label>
                 <input type="number" name="selling_price" value="{{ old('selling_price') }}" required min="0" step="0.01"
@@ -57,7 +58,7 @@
             </div>
             <div>
                 <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Manufacturing Type <span class="text-[#FF3B30]">*</span></label>
-                <select name="manufacturing_type" required class="apple-input">
+                <select name="manufacturing_type" required class="apple-input" x-model="mfgType">
                     <option value="">Select type</option>
                     <option value="in_house" {{ old('manufacturing_type') === 'in_house' ? 'selected' : '' }}>In-House</option>
                     <option value="outsourced" {{ old('manufacturing_type') === 'outsourced' ? 'selected' : '' }}>Outsourced</option>
@@ -65,6 +66,20 @@
                 @error('manufacturing_type')
                     <p class="mt-1.5 text-[#FF3B30] text-xs">{{ $message }}</p>
                 @enderror
+            </div>
+
+            {{-- Naeem Pakki toggle — only for in-house designs --}}
+            <div class="sm:col-span-2" x-show="mfgType === 'in_house'" x-cloak>
+                <label class="flex items-start gap-3 cursor-pointer select-none p-4 rounded-xl border border-[#E8E8ED] hover:border-[#AF52DE] hover:bg-[#F5EEFF] transition-all"
+                       :class="{{ old('needs_naeem_pakki') ? 'true' : 'false' }} ? 'border-[#AF52DE] bg-[#F5EEFF]' : ''">
+                    <input type="checkbox" name="needs_naeem_pakki" value="1"
+                           {{ old('needs_naeem_pakki') ? 'checked' : '' }}
+                           class="mt-0.5 w-4 h-4 accent-[#AF52DE] flex-shrink-0">
+                    <div>
+                        <p class="text-sm font-medium text-[#1D1D1F]">Requires Naeem Pakki Work</p>
+                        <p class="text-xs text-[#86868B] mt-0.5">This design needs embroidery work from Naeem Pakki before stitching. Pieces will be tracked when sent and returned.</p>
+                    </div>
+                </label>
             </div>
         </div>
 

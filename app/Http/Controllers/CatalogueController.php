@@ -83,11 +83,18 @@ class CatalogueController extends Controller
         $catalogue->load(['designs' => fn($q) => $q->orderBy('sort_order'), 'createdBy']);
 
         $ordersCount  = $catalogue->orders()->count();
+
+        // Total pieces ordered = across all designs × all sizes (sum of order_items)
         $totalOrdered = $catalogue->orders()
             ->whereIn('status', ['received', 'confirmed', 'stitching', 'dispatched'])
             ->join('order_items', 'orders.id', '=', 'order_items.order_id')
             ->selectRaw('SUM(order_items.qty_xs + order_items.qty_s + order_items.qty_m + order_items.qty_l + order_items.qty_xl) as total')
             ->value('total') ?? 0;
+
+        // Total suits ordered = total pieces ÷ number of designs
+        // (each order has one order_item per design with identical quantities)
+        $designCount     = $catalogue->designs->count();
+        $totalQtyOrdered = $designCount > 0 ? (int) round($totalOrdered / $designCount) : 0;
 
         // Total production = qty_per_design × number_of_designs
         $available = max(0, $catalogue->totalPieces() - (int) $totalOrdered);
@@ -97,7 +104,7 @@ class CatalogueController extends Controller
             ? route('order.public', $catalogue->order_token)
             : null;
 
-        return view('catalogues.show', compact('catalogue', 'ordersCount', 'totalOrdered', 'available', 'shareUrl'));
+        return view('catalogues.show', compact('catalogue', 'ordersCount', 'totalQtyOrdered', 'totalOrdered', 'available', 'shareUrl'));
     }
 
     /**

@@ -99,6 +99,10 @@ class OrderController extends Controller
 
     public function markStitching(Order $order)
     {
+        if (!in_array(Auth::user()->role, ['admin', 'manager'])) {
+            abort(403);
+        }
+
         if ($order->status !== 'confirmed') {
             return back()->with('error', 'Only confirmed orders can be sent to stitching.');
         }

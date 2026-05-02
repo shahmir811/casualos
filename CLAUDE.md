@@ -37,6 +37,8 @@ A Casual Lite season is called a **Catalogue**. Each has:
 
 Each design is marked **In-House** or **Outsourced** at catalogue creation time.
 
+For **In-House** designs, a `needs_naeem_pakki` boolean flag can also be set at design creation/edit time. This means the design's fabric pieces need embroidery work done by Naeem Pakki before stitching begins. Naeem Pakki work is tracked separately on the Naeem Pakki screen.
+
 ### CRITICAL — qty_per_design vs total pieces
 
 **`qty_per_design = 70` means 70 pieces FROM EACH design.**
@@ -155,6 +157,10 @@ cash | bank_transfer | easypaisa | jazzcash | advance
 ```
 in_house | outsourced
 ```
+
+### `designs.needs_naeem_pakki`
+
+Boolean. Only meaningful when `manufacturing_type = 'in_house'`. Set at design creation time. If `true`, pieces of this design are sent to Naeem Pakki for embroidery before stitching — tracked via `naeem_pakki_sends` and `naeem_pakki_returns`. Always forced to `false` for outsourced designs.
 
 ### `catalogues.status`
 
@@ -290,12 +296,14 @@ passwords manually. Do not add one.
 ```
 Fabric Batch arrives (FabricBatch)
     ↓ Auto-transitions all confirmed orders → stitching
-Production Assignment (ProductionAssignment)
-    ↓ Per design: route to Naeem Pakki OR Stitching Unit, with qty by size
-[Naeem Pakki branch]               [Stitching Unit branch]
-NaeemPakkiSend (qty by size)       StitchingReturn (daily, by design + size)
-NaeemPakkiReturn                       ↓ Size-level reconciliation flagged if mismatch
+[For designs with needs_naeem_pakki = true]
+NaeemPakkiSend (piece count only — no sizes at this stage)
+NaeemPakkiReturn (piece count only)
     ↓
+Production Assignment (ProductionAssignment)
+    ↓ Per design: assign to Stitching Unit (1–4) with qty by size
+StitchingReturn (daily, by design + size)
+    ↓ Size-level reconciliation flagged if mismatch
 [Shirts only] TarpaiSend → TarpaiReturn
     ↓
 PressPack (all designs, by size) → enters Packed Inventory
@@ -306,10 +314,13 @@ Dispatch (batch-wise, full payment required, deducts packed inventory)
     → Order status = dispatched only when fully dispatched
 ```
 
-### Naeem Pakki pricing
+### Naeem Pakki — key rules
 
-Per-piece rate is entered **separately for each design** on `NaeemPakkiSendItem`. Not
-a single rate for the whole batch. Different designs can have different Naeem Pakki rates.
+- `needs_naeem_pakki` is set on the **Design** at catalogue creation time, not at assignment time.
+- Naeem Pakki sends and returns are **piece-based only** — no size breakdown. Sizes are irrelevant until stitching.
+- `naeem_pakki_sends` links directly to `catalogue_id` + `design_id` (NOT to `production_assignments`).
+- `naeem_pakki_returns` has a single `quantity` column — no items sub-table.
+- Per-piece rate (`per_piece_price`) is recorded on each send record. Different sends for the same design can have different rates.
 
 ### Tarpai pricing
 
