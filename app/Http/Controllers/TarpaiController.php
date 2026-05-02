@@ -13,7 +13,7 @@ class TarpaiController extends Controller
 {
     public function index()
     {
-        $sends = TarpaiSend::with(['catalogue', 'design', 'return'])->latest()->paginate(20);
+        $sends = TarpaiSend::with(['catalogue', 'design', 'returns'])->latest()->paginate(20);
         return view('production.tarpai.index', compact('sends'));
     }
 
@@ -29,14 +29,40 @@ class TarpaiController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'catalogue_id'   => 'required|exists:catalogues,id',
-            'design_id'      => ['required', Rule::exists('designs', 'id')->where('manufacturing_type', 'in_house')],
-            'sent_date'      => 'required|date',
-            'per_piece_price'=> 'required|numeric|min:0',
+            'catalogue_id'    => 'required|exists:catalogues,id',
+            'design_id'       => ['required', Rule::exists('designs', 'id')->where('manufacturing_type', 'in_house')],
+            'sent_date'       => 'required|date',
+            'per_piece_price' => 'required|numeric|min:0',
+            'items'           => 'required|array',
+            'items.*.size'    => 'required|in:xs,s,m,l,xl',
+            'items.*.qty'     => 'required|integer|min:0',
         ]);
 
-        $validated['logged_by'] = Auth::id();
-        $send = TarpaiSend::create($validated);
+        // Ensure at least one piece is being sent
+        $totalPieces = collect($validated['items'])->sum(fn($i) => (int) $i['qty']);
+        if ($totalPieces === 0) {
+            return back()
+                ->withInput()
+                ->withErrors(['items' => 'Please enter at least one piece quantity to log a Tarpai send.']);
+        }
+
+        $send = TarpaiSend::create([
+            'catalogue_id'    => $validated['catalogue_id'],
+            'design_id'       => $validated['design_id'],
+            'sent_date'       => $validated['sent_date'],
+            'per_piece_price' => $validated['per_piece_price'],
+            'logged_by'       => Auth::id(),
+        ]);
+
+        // Save per-size quantities
+        foreach ($validated['items'] as $item) {
+            if ((int) $item['qty'] > 0) {
+                $send->items()->create([
+                    'size'     => $item['size'],
+                    'quantity' => (int) $item['qty'],
+                ]);
+            }
+        }
 
         return redirect()->route('tarpai-sends.show', $send)
             ->with('success', 'Tarpai send recorded.');
@@ -44,7 +70,7 @@ class TarpaiController extends Controller
 
     public function show(TarpaiSend $tarpaiSend)
     {
-        $tarpaiSend->load(['catalogue', 'design', 'items', 'return.items', 'loggedBy']);
+        $tarpaiSend->load(['catalogue', 'design', 'items', 'returns.items', 'loggedBy']);
         return view('production.tarpai.show', compact('tarpaiSend'));
     }
 

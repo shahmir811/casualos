@@ -43,48 +43,96 @@
             @endif
         </div>
 
-        {{-- Summary stat --}}
-        <div class="stat-card text-center">
-            <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Pieces</p>
-            <p class="text-3xl font-light text-[#1D1D1F]">{{ number_format($fabricBatch->items->sum('quantity')) }}</p>
-            <p class="text-[#86868B] text-xs mt-1">across {{ $fabricBatch->items->count() }} designs</p>
-        </div>
     </div>
 
     {{-- Items Table + Naeem Pakki Tracking --}}
     <div class="lg:col-span-2 space-y-5">
 
+        {{-- Formula callout --}}
+        <div class="flex items-start gap-3 px-4 py-3 bg-[#F0F7FF] border border-[#C7E0FF] rounded-xl text-sm">
+            <svg class="w-4 h-4 text-[#0071E3] flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+            </svg>
+            <div class="text-[#1D1D1F] leading-relaxed space-y-1">
+                <div>
+                    Expected from embroidery =
+                    <strong>{{ $fabricBatch->catalogue->qty_per_design }} per design</strong>
+                    ×
+                    <strong>{{ $inHouseCount }} in-house designs</strong>
+                    =
+                    <strong class="text-[#0071E3]">{{ number_format($expectedTotal) }} pieces</strong>
+                </div>
+                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#6E6E73]">
+                    <span>Received: <strong class="text-[#0071E3]">{{ number_format($totalReceivedAllBatches) }}</strong></span>
+                    <span class="text-[#D2D2D7]">|</span>
+                    <span>→ Naeem Pakki: <strong style="color:#FF9500">{{ number_format($totalToNaeemPakki) }}</strong></span>
+                    <span class="text-[#D2D2D7]">|</span>
+                    <span>→ Stitching: <strong style="color:#AF52DE">{{ number_format($totalToStitching) }}</strong></span>
+                    <span class="text-[#D2D2D7]">|</span>
+                    <span>Available: <strong class="{{ $availableInFactory > 0 ? 'text-[#34C759]' : 'text-[#FF3B30]' }}">{{ number_format($availableInFactory) }}</strong></span>
+                </div>
+            </div>
+        </div>
+
         {{-- Fabric pieces received --}}
         <div class="card overflow-hidden">
             <div class="px-5 py-4 border-b border-[#F2F2F7]">
                 <h2 class="text-sm font-semibold text-[#1D1D1F]">Fabric Pieces Received (In-House)</h2>
+                <p class="text-xs text-[#6E6E73] mt-0.5">Per-design breakdown · Available = total received − (Naeem Pakki + Stitching assigned)</p>
             </div>
-            <table class="w-full apple-table">
+            <div class="overflow-x-auto">
+            <table class="w-full apple-table" style="min-width:640px;">
                 <thead>
                     <tr>
                         <th class="text-left">Design</th>
-                        <th class="text-right">Pieces</th>
+                        <th class="text-right">This Batch</th>
+                        <th class="text-right" style="color:#0071E3;">Total Received</th>
+                        <th class="text-right" style="color:#FF9500;">→ Naeem Pakki</th>
+                        <th class="text-right" style="color:#AF52DE;">→ Stitching</th>
+                        <th class="text-right" style="color:#34C759;">Available</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($fabricBatch->items as $item)
+                    @php
+                        $designId        = $item->design_id;
+                        $totalRec        = (int)($receivedPerDesign[$designId] ?? 0);
+                        $toNP            = (int)($npAssignedPerDesign[$designId] ?? 0);
+                        $toStitch        = (int)($stitchingAssignedPerDesign[$designId] ?? 0);
+                        $designAvailable = max(0, $totalRec - $toNP - $toStitch);
+                    @endphp
                     <tr>
                         <td>{{ $item->design->name ?? '—' }}</td>
                         <td class="text-right font-medium">{{ number_format($item->quantity) }}</td>
+                        <td class="text-right font-medium text-[#0071E3]">{{ number_format($totalRec) }}</td>
+                        <td class="text-right font-medium {{ $toNP > 0 ? '' : 'text-[#D2D2D7]' }}" style="{{ $toNP > 0 ? 'color:#FF9500' : '' }}">
+                            {{ $toNP > 0 ? number_format($toNP) : '—' }}
+                        </td>
+                        <td class="text-right font-medium {{ $toStitch > 0 ? '' : 'text-[#D2D2D7]' }}" style="{{ $toStitch > 0 ? 'color:#AF52DE' : '' }}">
+                            {{ $toStitch > 0 ? number_format($toStitch) : '—' }}
+                        </td>
+                        <td class="text-right font-semibold {{ $designAvailable > 0 ? 'text-[#34C759]' : 'text-[#D2D2D7]' }}">
+                            {{ number_format($designAvailable) }}
+                        </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="2" class="text-center text-[#86868B] py-8">No items recorded.</td>
+                        <td colspan="6" class="text-center text-[#86868B] py-8">No items recorded.</td>
                     </tr>
                     @endforelse
                     @if($fabricBatch->items->count())
                     <tr class="border-t-2 border-[#E8E8ED]">
                         <td class="font-semibold text-[#1D1D1F]">Total</td>
-                        <td class="text-right font-bold text-[#1D1D1F]">{{ number_format($fabricBatch->items->sum('quantity')) }} pcs</td>
+                        <td class="text-right font-bold text-[#1D1D1F]">{{ number_format($fabricBatch->items->sum('quantity')) }}</td>
+                        <td class="text-right font-bold text-[#0071E3]">{{ number_format($totalReceivedAllBatches) }}</td>
+                        <td class="text-right font-bold" style="color:#FF9500">{{ number_format($totalToNaeemPakki) }}</td>
+                        <td class="text-right font-bold" style="color:#AF52DE">{{ number_format($totalToStitching) }}</td>
+                        <td class="text-right font-bold {{ $availableInFactory > 0 ? 'text-[#34C759]' : 'text-[#FF3B30]' }}">{{ number_format($availableInFactory) }}</td>
                     </tr>
                     @endif
                 </tbody>
             </table>
+            </div>
         </div>
 
         {{-- Naeem Pakki Tracking --}}

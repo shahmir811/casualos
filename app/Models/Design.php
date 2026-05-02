@@ -10,11 +10,13 @@ class Design extends Model
     use HasFactory;
 
     protected $fillable = [
-        'catalogue_id', 'name', 'photo', 'selling_price', 'manufacturing_type', 'sort_order',
+        'catalogue_id', 'name', 'photo', 'selling_price', 'manufacturing_type',
+        'needs_naeem_pakki', 'sort_order',
     ];
 
     protected $casts = [
-        'selling_price' => 'decimal:2',
+        'selling_price'    => 'decimal:2',
+        'needs_naeem_pakki' => 'boolean',
     ];
 
     public function isInHouse(): bool    { return $this->manufacturing_type === 'in_house'; }
