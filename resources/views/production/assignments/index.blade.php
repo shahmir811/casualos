@@ -96,13 +96,38 @@
             @php
                 $isNP      = $a->destination === 'naeem_pakki';
                 $dest      = $isNP ? 'Naeem Pakki' : 'Stitching Unit';
-                $destColor = $isNP ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700';
+                $destColor = $isNP ? 'bg-orange-100 text-orange-700' : 'bg-purple-100 text-purple-700';
+
+                // Design label: new-style NP → "X designs"; stitching / old-style NP → design name
+                $isNewStyleNP  = $isNP && $a->npDesigns->isNotEmpty();
+                $designLabel   = $isNewStyleNP
+                    ? $a->npDesigns->count() . ' design' . ($a->npDesigns->count() > 1 ? 's' : '')
+                    : ($a->design->name ?? '—');
+
+                // Total pieces: new-style NP from np_designs, otherwise from items
+                $totalPcs = $isNewStyleNP
+                    ? $a->npDesigns->sum('quantity')
+                    : $a->items->sum('quantity');
+
+                // Total cost shown only for NP batch assignments
+                $npTotalCost = $isNewStyleNP
+                    ? $a->npDesigns->sum(fn($d) => $d->quantity * (float) $d->per_piece_price)
+                    : null;
             @endphp
             <tr>
                 <td class="font-medium text-[#0066CC]">PA-{{ str_pad($a->id, 4, '0', STR_PAD_LEFT) }}</td>
                 <td>{{ $a->catalogue->name ?? '—' }}</td>
-                <td>{{ $a->design->name ?? '—' }}</td>
-                <td><span class="badge {{ $destColor }}">{{ $dest }}</span></td>
+                <td>
+                    @if($isNewStyleNP)
+                        <span class="font-medium text-[#1D1D1F]">{{ $designLabel }}</span>
+                        <span class="ml-1 text-[10px] text-[#86868B]">
+                            ({{ $a->npDesigns->pluck('design.name')->filter()->join(', ') }})
+                        </span>
+                    @else
+                        {{ $designLabel }}
+                    @endif
+                </td>
+                <td><span class="badge {{ $destColor }}">{{ strtoupper(str_replace('_', ' ', $a->destination)) }}</span></td>
                 <td>
                     @if(!$isNP && $a->stitching_unit)
                         <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold" style="background:#F5EEFF; color:#AF52DE;">
@@ -116,7 +141,12 @@
                     @endif
                 </td>
                 <td class="text-[#6E6E73] text-xs">{{ $a->assignment_date->format('d M Y') }}</td>
-                <td class="text-right">{{ number_format($a->items->sum('quantity')) }} pcs</td>
+                <td class="text-right">
+                    <span class="font-medium">{{ number_format($totalPcs) }} pcs</span>
+                    @if($npTotalCost !== null)
+                    <br><span class="text-[10px] text-[#FF9500] font-semibold">Rs. {{ number_format($npTotalCost) }}</span>
+                    @endif
+                </td>
                 <td>
                     <a href="{{ route('production-assignments.show', $a) }}" class="text-[#0066CC] text-sm hover:underline">View →</a>
                 </td>

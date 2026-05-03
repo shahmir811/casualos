@@ -268,6 +268,14 @@
                 Assignments
             </a>
 
+            <a href="{{ route('naeem-pakki-sends.index') }}"
+               class="nav-item {{ request()->routeIs('naeem-pakki-sends.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                </svg>
+                Naeem Pakki
+            </a>
+
             <a href="{{ route('stitching-returns.index') }}"
                class="nav-item {{ request()->routeIs('stitching-returns.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">

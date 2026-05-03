@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\FabricBatch;
 use App\Models\Catalogue;
+use App\Models\NaeemPakkiSend;
+use App\Models\ProductionAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -88,7 +90,7 @@ class FabricBatchController extends Controller
         }
 
         // Auto-transition all confirmed orders for this catalogue → stitching
-        \App\Models\Order::where('catalogue_id', $validated['catalogue_id'])
+        \App\Models\Order::where('catalogue_id', $validated['catalogue_id'])   // Order not imported — using FQCN intentionally
             ->where('status', 'confirmed')
             ->update(['status' => 'stitching']);
 
@@ -122,15 +124,21 @@ class FabricBatchController extends Controller
             ->where('fabric_batches.catalogue_id', $catId)
             ->sum('fabric_batch_items.quantity');
 
-        // ── Total assigned to production for this catalogue ─────────────
-        $totalAssigned = (int) DB::table('production_assignment_items')
+        // ── Total assigned (stitching items + new-style NP np_designs) ──
+        $stitchingTotalAssigned = (int) DB::table('production_assignment_items')
             ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
             ->where('production_assignments.catalogue_id', $catId)
             ->sum('production_assignment_items.quantity');
 
+        $npTotalAssigned = (int) DB::table('production_assignment_np_designs')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_np_designs.production_assignment_id')
+            ->where('production_assignments.catalogue_id', $catId)
+            ->sum('production_assignment_np_designs.quantity');
+
+        $totalAssigned      = $stitchingTotalAssigned + $npTotalAssigned;
         $availableInFactory = max(0, $totalReceivedAllBatches - $totalAssigned);
 
-        // ── Per-design received & assigned (for the items table) ────────
+        // ── Per-design received ──────────────────────────────────────────
         $receivedPerDesign = DB::table('fabric_batch_items')
             ->join('fabric_batches', 'fabric_batches.id', '=', 'fabric_batch_items.fabric_batch_id')
             ->where('fabric_batches.catalogue_id', $catId)
@@ -138,58 +146,89 @@ class FabricBatchController extends Controller
             ->groupBy('fabric_batch_items.design_id')
             ->pluck('qty', 'design_id');
 
-        $assignedPerDesign = DB::table('production_assignment_items')
+        // ── Per-design split: Naeem Pakki vs Stitching ──────────────────
+        // Old-style NP: design_id on assignment, qty in items table, size='np'
+        $npOldPerDesign = DB::table('production_assignment_items')
             ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
             ->where('production_assignments.catalogue_id', $catId)
+            ->where('production_assignments.destination', 'naeem_pakki')
+            ->whereNotNull('production_assignments.design_id')
             ->select('production_assignments.design_id', DB::raw('SUM(production_assignment_items.quantity) as qty'))
             ->groupBy('production_assignments.design_id')
             ->pluck('qty', 'design_id');
 
-        // ── Per-design split: how many went to Naeem Pakki vs Stitching ─
-        $npAssignedPerDesign = DB::table('production_assignment_items')
-            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
+        // New-style NP: design_id on np_designs, qty in np_designs table
+        $npNewPerDesign = DB::table('production_assignment_np_designs')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_np_designs.production_assignment_id')
             ->where('production_assignments.catalogue_id', $catId)
-            ->where('production_assignments.destination', 'naeem_pakki')
-            ->select('production_assignments.design_id', DB::raw('SUM(production_assignment_items.quantity) as qty'))
-            ->groupBy('production_assignments.design_id')
+            ->select('production_assignment_np_designs.design_id', DB::raw('SUM(production_assignment_np_designs.quantity) as qty'))
+            ->groupBy('production_assignment_np_designs.design_id')
             ->pluck('qty', 'design_id');
+
+        // Merge old + new NP per design
+        $npAssignedPerDesign = $npOldPerDesign->map(fn($q) => (int) $q)
+            ->mergeRecursive($npNewPerDesign->map(fn($q) => (int) $q))
+            ->map(fn($v) => is_array($v) ? array_sum($v) : $v);
 
         $stitchingAssignedPerDesign = DB::table('production_assignment_items')
             ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
             ->where('production_assignments.catalogue_id', $catId)
             ->where('production_assignments.destination', 'stitching_unit')
+            ->whereNotNull('production_assignments.design_id')
             ->select('production_assignments.design_id', DB::raw('SUM(production_assignment_items.quantity) as qty'))
             ->groupBy('production_assignments.design_id')
             ->pluck('qty', 'design_id');
 
+        // Combined per-design for the fabric table available column
+        $assignedPerDesign = $npAssignedPerDesign
+            ->mergeRecursive($stitchingAssignedPerDesign->map(fn($q) => (int) $q))
+            ->map(fn($v) => is_array($v) ? array_sum($v) : $v);
+
         $totalToNaeemPakki = (int) $npAssignedPerDesign->sum();
         $totalToStitching  = (int) $stitchingAssignedPerDesign->sum();
 
-        // ── Naeem Pakki tracking ────────────────────────────────────────
-        $naeemPakkiAssignments = \App\Models\ProductionAssignment::with([
-                'design',
-                'items',
-                'naeemPakkiSend.items',
-                'naeemPakkiSend.returns.items',
-            ])
+        // ── Naeem Pakki tracking ─────────────────────────────────────────
+        // Pre-load all NP sends for this catalogue to avoid N+1
+        $sendsByDesign = NaeemPakkiSend::with('returns')
+            ->where('catalogue_id', $catId)
+            ->get()
+            ->keyBy('design_id');
+
+        $npAssignments = ProductionAssignment::with(['design', 'items', 'npDesigns.design'])
             ->where('catalogue_id', $catId)
             ->where('destination', 'naeem_pakki')
-            ->get()
-            ->map(function ($assignment) {
-                $send        = $assignment->naeemPakkiSend;
-                $sentQty     = $send?->items->sum('quantity') ?? 0;
-                $returnedQty = $send?->returns->flatMap->items->sum('quantity') ?? 0;
-                $pending     = max(0, $sentQty - $returnedQty);
+            ->get();
 
-                return [
-                    'design'       => $assignment->design->name ?? '—',
-                    'rate'         => $assignment->naeem_pakki_rate,
-                    'assigned_qty' => $assignment->items->sum('quantity'),
-                    'sent_qty'     => $sentQty,
-                    'returned_qty' => $returnedQty,
-                    'pending_qty'  => $pending,
-                ];
-            });
+        $naeemPakkiAssignments = $npAssignments->flatMap(function ($assignment) use ($sendsByDesign) {
+            // New-style: designs in npDesigns sub-table
+            if ($assignment->npDesigns->isNotEmpty()) {
+                return $assignment->npDesigns->map(function ($npDesign) use ($sendsByDesign) {
+                    $send        = $sendsByDesign[$npDesign->design_id] ?? null;
+                    $sentQty     = $send?->quantity ?? 0;
+                    $returnedQty = $send ? $send->returns->sum('quantity') : 0;
+                    return [
+                        'design'       => $npDesign->design->name ?? '—',
+                        'rate'         => $npDesign->per_piece_price,
+                        'assigned_qty' => $npDesign->quantity,
+                        'sent_qty'     => $sentQty,
+                        'returned_qty' => $returnedQty,
+                        'pending_qty'  => max(0, $sentQty - $returnedQty),
+                    ];
+                });
+            }
+            // Old-style: design_id on assignment, qty in items table
+            $send        = $sendsByDesign[$assignment->design_id] ?? null;
+            $sentQty     = $send?->quantity ?? 0;
+            $returnedQty = $send ? $send->returns->sum('quantity') : 0;
+            return [[
+                'design'       => $assignment->design->name ?? '—',
+                'rate'         => $assignment->naeem_pakki_rate,
+                'assigned_qty' => $assignment->items->sum('quantity'),
+                'sent_qty'     => $sentQty,
+                'returned_qty' => $returnedQty,
+                'pending_qty'  => max(0, $sentQty - $returnedQty),
+            ]];
+        });
 
         return view('production.fabric-batches.show', compact(
             'fabricBatch', 'naeemPakkiAssignments',

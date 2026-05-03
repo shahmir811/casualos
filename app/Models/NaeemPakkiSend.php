@@ -3,13 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Activitylog\LogOptions;
 
 class NaeemPakkiSend extends Model
 {
-    use LogsActivity;
-
     protected $fillable = [
         'catalogue_id', 'design_id', 'sent_date', 'quantity', 'per_piece_price', 'logged_by',
     ];
@@ -18,11 +14,6 @@ class NaeemPakkiSend extends Model
         'sent_date'       => 'date',
         'per_piece_price' => 'decimal:2',
     ];
-
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()->logAll();
-    }
 
     public function catalogue(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
