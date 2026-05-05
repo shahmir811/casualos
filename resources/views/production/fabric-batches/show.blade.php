@@ -155,7 +155,6 @@
                     <tr>
                         <th class="text-left">Design</th>
                         <th class="text-right">Rate</th>
-                        <th class="text-center">Assigned</th>
                         <th class="text-center">Sent</th>
                         <th class="text-center">Returned</th>
                         <th class="text-center">Pending</th>
@@ -172,20 +171,15 @@
                                 <span class="text-[#FF3B30]">— not set</span>
                             @endif
                         </td>
-                        <td class="text-center tabular-nums">{{ number_format($np['assigned_qty']) }}</td>
-                        <td class="text-center tabular-nums {{ $np['sent_qty'] > 0 ? 'text-[#FF9500]' : 'text-[#D1D1D6]' }}">
-                            {{ $np['sent_qty'] ?: '—' }}
-                        </td>
+                        <td class="text-center tabular-nums text-[#FF9500]">{{ number_format($np['assigned_qty']) }}</td>
                         <td class="text-center tabular-nums {{ $np['returned_qty'] > 0 ? 'text-[#30D158]' : 'text-[#D1D1D6]' }}">
                             {{ $np['returned_qty'] ?: '—' }}
                         </td>
                         <td class="text-center">
                             @if($np['pending_qty'] > 0)
                             <span class="badge bg-orange-50 text-orange-700">{{ $np['pending_qty'] }}</span>
-                            @elseif($np['sent_qty'] > 0)
-                            <span class="badge bg-green-50 text-green-700">✓</span>
                             @else
-                            <span class="text-[#D1D1D6]">—</span>
+                            <span class="badge bg-green-50 text-green-700">✓</span>
                             @endif
                         </td>
                     </tr>
@@ -194,8 +188,7 @@
                 <tfoot>
                     <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
                         <td colspan="2" class="font-semibold text-[#1D1D1F] text-xs uppercase tracking-wide">Totals</td>
-                        <td class="text-center font-semibold">{{ number_format($naeemPakkiAssignments->sum('assigned_qty')) }}</td>
-                        <td class="text-center font-semibold">{{ number_format($naeemPakkiAssignments->sum('sent_qty')) }}</td>
+                        <td class="text-center font-semibold text-[#FF9500]">{{ number_format($naeemPakkiAssignments->sum('assigned_qty')) }}</td>
                         <td class="text-center font-semibold text-[#30D158]">{{ number_format($naeemPakkiAssignments->sum('returned_qty')) }}</td>
                         <td class="text-center font-bold {{ $totalPending > 0 ? 'text-orange-600' : 'text-[#30D158]' }}">
                             {{ $totalPending > 0 ? number_format($totalPending) : '✓' }}

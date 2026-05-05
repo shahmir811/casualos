@@ -2,84 +2,99 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Catalogue;
-use App\Models\NaeemPakkiSend;
 use App\Models\NaeemPakkiReturn;
+use App\Models\NaeemPakkiReturnItem;
+use App\Models\ProductionAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class NaeemPakkiController extends Controller
 {
     public function index()
     {
-        $sends = NaeemPakkiSend::with(['catalogue', 'design', 'returns'])
+        $assignments = ProductionAssignment::with([
+            'catalogue',
+            'npDesigns.design',
+            'npDesigns.returnItems',
+        ])
+            ->where('destination', 'naeem_pakki')
+            ->whereHas('npDesigns')
             ->latest()
             ->paginate(20);
 
-        return view('production.naeem-pakki.index', compact('sends'));
+        return view('production.naeem-pakki.index', compact('assignments'));
     }
 
-    public function create()
+    public function show(ProductionAssignment $productionAssignment)
     {
-        // Only in-house designs that require Naeem Pakki work, from open catalogues
-        $catalogues = Catalogue::where('status', 'open')
-            ->with(['designs' => fn($q) => $q
-                ->where('manufacturing_type', 'in_house')
-                ->where('needs_naeem_pakki', true)
-            ])
-            ->orderBy('name')
-            ->get()
-            ->filter(fn($c) => $c->designs->isNotEmpty())
-            ->values();
+        $productionAssignment->load([
+            'catalogue',
+            'loggedBy',
+            'npDesigns.design',
+            'npDesigns.returnItems',
+            'naeemPakkiReturns.items.npDesign.design',
+            'naeemPakkiReturns.loggedBy',
+        ]);
 
-        return view('production.naeem-pakki.create', compact('catalogues'));
+        return view('production.naeem-pakki.show', compact('productionAssignment'));
     }
 
-    public function store(Request $request)
+    public function logReturn(Request $request, ProductionAssignment $productionAssignment)
     {
-        $validated = $request->validate([
-            'catalogue_id'    => 'required|exists:catalogues,id',
-            'design_id'       => 'required|exists:designs,id',
-            'sent_date'       => 'required|date',
-            'quantity'        => 'required|integer|min:1',
-            'per_piece_price' => 'required|numeric|min:0',
+        $productionAssignment->load(['npDesigns.returnItems']);
+
+        $request->validate([
+            'return_date'          => 'required|date',
+            'items'                => 'required|array',
+            'items.*.np_design_id' => 'required|exists:production_assignment_np_designs,id',
+            'items.*.quantity'     => 'required|integer|min:0',
         ]);
 
-        $send = NaeemPakkiSend::create([
-            'catalogue_id'    => $validated['catalogue_id'],
-            'design_id'       => $validated['design_id'],
-            'sent_date'       => $validated['sent_date'],
-            'quantity'        => $validated['quantity'],
-            'per_piece_price' => $validated['per_piece_price'],
-            'logged_by'       => Auth::id(),
-        ]);
+        // Build only rows with qty > 0 and validate against outstanding
+        $linesToSave = [];
+        foreach ($request->items as $item) {
+            $qty = (int) $item['quantity'];
+            if ($qty === 0) continue;
 
-        return redirect()->route('naeem-pakki-sends.show', $send)
-            ->with('success', 'Naeem Pakki send of ' . $validated['quantity'] . ' pieces recorded.');
-    }
+            $npDesign = $productionAssignment->npDesigns->firstWhere('id', $item['np_design_id']);
+            if (!$npDesign) continue;
 
-    public function show(NaeemPakkiSend $naeemPakkiSend)
-    {
-        $naeemPakkiSend->load(['catalogue', 'design', 'returns.loggedBy', 'loggedBy']);
-        return view('production.naeem-pakki.show', compact('naeemPakkiSend'));
-    }
+            $outstanding = $npDesign->outstandingPieces();
+            if ($qty > $outstanding) {
+                return back()->withInput()->withErrors([
+                    'items' => "Cannot return {$qty} pcs for '{$npDesign->design->name}' — only {$outstanding} pcs outstanding.",
+                ]);
+            }
 
-    public function logReturn(Request $request, NaeemPakkiSend $send)
-    {
-        $outstanding = $send->outstandingPieces();
+            $linesToSave[] = ['np_design_id' => $npDesign->id, 'quantity' => $qty];
+        }
 
-        $validated = $request->validate([
-            'return_date' => 'required|date',
-            'quantity'    => 'required|integer|min:1|max:' . $outstanding,
-        ]);
+        if (empty($linesToSave)) {
+            return back()->withInput()->withErrors([
+                'items' => 'Enter at least one piece quantity to log a return.',
+            ]);
+        }
 
-        NaeemPakkiReturn::create([
-            'naeem_pakki_send_id' => $send->id,
-            'return_date'         => $validated['return_date'],
-            'quantity'            => $validated['quantity'],
-            'logged_by'           => Auth::id(),
-        ]);
+        DB::transaction(function () use ($request, $productionAssignment, $linesToSave) {
+            $batch = NaeemPakkiReturn::create([
+                'production_assignment_id' => $productionAssignment->id,
+                'return_date'              => $request->return_date,
+                'logged_by'                => Auth::id(),
+            ]);
 
-        return back()->with('success', $validated['quantity'] . ' pieces returned from Naeem Pakki.');
+            foreach ($linesToSave as $line) {
+                NaeemPakkiReturnItem::create([
+                    'naeem_pakki_return_id' => $batch->id,
+                    'np_design_id'          => $line['np_design_id'],
+                    'quantity'              => $line['quantity'],
+                ]);
+            }
+        });
+
+        $total = collect($linesToSave)->sum('quantity');
+
+        return redirect()->route('naeem-pakki-sends.show', $productionAssignment)
+            ->with('success', $total . ' pieces returned from Naeem Pakki.');
     }
 }

@@ -162,6 +162,14 @@ in_house | outsourced
 
 Boolean. Only meaningful when `manufacturing_type = 'in_house'`. Set at design creation time. If `true`, pieces of this design are sent to Naeem Pakki for embroidery before stitching — tracked via `naeem_pakki_sends` and `naeem_pakki_returns`. Always forced to `false` for outsourced designs.
 
+### `production_assignment_items.size`
+
+```
+xs | s | m | l | xl | np
+```
+
+`'np'` is a special value used for Naeem Pakki assignments only — NP has no size breakdown, so the total pieces are stored as a single row with `size = 'np'`. All stitching assignments use `xs/s/m/l/xl` only. Migration `2026_05_02_000001` added `'np'` to this enum.
+
 ### `catalogues.status`
 
 ```
@@ -296,12 +304,22 @@ passwords manually. Do not add one.
 ```
 Fabric Batch arrives (FabricBatch)
     ↓ Auto-transitions all confirmed orders → stitching
-[For designs with needs_naeem_pakki = true]
-NaeemPakkiSend (piece count only — no sizes at this stage)
-NaeemPakkiReturn (piece count only)
-    ↓
-Production Assignment (ProductionAssignment)
-    ↓ Per design: assign to Stitching Unit (1–4) with qty by size
+Production Assignment (ProductionAssignment) — New Assignment form
+    ↓ Manager picks: Catalogue → Destination (Naeem Pakki | Stitching Unit)
+    │
+    ├─ [Naeem Pakki destination]
+    │   Multi-design table: only designs with needs_naeem_pakki=true shown
+    │   One ProductionAssignment per design (size='np' item, no size breakdown)
+    │   Tracks: available qty guard, per-piece rate on each assignment
+    │   ↓
+    │   NaeemPakkiSend (physical sending, piece count, per-piece rate)
+    │   NaeemPakkiReturn (piece count only)
+    │   ↓
+    │   [After embroidery returns] → back to Stitching Unit flow below
+    │
+    └─ [Stitching Unit destination]
+        Single design + unit (1–4) + qty by size (XS/S/M/L/XL)
+        ↓
 StitchingReturn (daily, by design + size)
     ↓ Size-level reconciliation flagged if mismatch
 [Shirts only] TarpaiSend → TarpaiReturn
@@ -321,6 +339,9 @@ Dispatch (batch-wise, full payment required, deducts packed inventory)
 - `naeem_pakki_sends` links directly to `catalogue_id` + `design_id` (NOT to `production_assignments`).
 - `naeem_pakki_returns` has a single `quantity` column — no items sub-table.
 - Per-piece rate (`per_piece_price`) is recorded on each send record. Different sends for the same design can have different rates.
+- **Production Assignments for NP:** Manager uses the New Assignment form, selects Naeem Pakki as destination, and sees a table of all NP-eligible designs. Can assign multiple designs at once, each with qty + rate. One `ProductionAssignment` record is created per design. Quantity is stored as a single `production_assignment_items` row with `size = 'np'`.
+- **Available qty guard:** The available qty shown in the NP assignment table = fabric received (from `fabric_batch_items`) minus already assigned (from `production_assignment_items`). The form prevents submitting if any qty exceeds available.
+- `NaeemPakkiSend` and `NaeemPakkiReturn` models do **NOT** use `LogsActivity` trait — only `Order` and `Catalogue` do.
 
 ### Tarpai pricing
 
@@ -371,18 +392,23 @@ returns that cause discrepancies — it flags them for review.
 - Spatie Permission and Activitylog setup
 - Auth (login/logout, role-based middleware, active check)
 - Catalogue management (create, view, close/reopen, shareable link)
-- Design management (CRUD, photo upload)
+- Design management (CRUD, photo upload) — shows In-House / Outsourced badge + Naeem Pakki amber badge per design card
 - Customer management (create, edit, view, portal token auto-generation)
 - Customer portal (email verification, 3 tabs)
 - Public order form (sold-out screen, real-time totals, customer email matching UI)
-- Orders view and management
+- Orders view and management — Order Status card shown to all roles; only admin/manager can change status
 - Payment recording (with receipt image upload and preview)
 - Apply advance credit to orders
 - Customer ledger view
 - Order reduction (admin only) — _financial surplus-to-advance logic still incomplete_
-- Fabric batch arrivals
-- Production assignments
-- Naeem Pakki sends and returns
+- Fabric batch arrivals — validation allows qty=0 per item (zeros filtered out); index shows per-catalogue / per-design received breakdown cards; show page has formula callout without stat card clutter
+- **Production assignments** — redesigned form (2026-05-02):
+  - Flow: Catalogue → Destination radio cards (Naeem Pakki | Stitching Unit) → conditional section
+  - Naeem Pakki: multi-design table showing only `needs_naeem_pakki=true` designs; qty + rate per design; one assignment per design; size=`np` item
+  - Stitching: single design selector + unit (1–4) + per-size qty (unchanged)
+  - Controller split into `storeNaeemPakki()` and `storeStitchingUnit()` private methods
+  - Pending migration: `2026_05_02_000001` — adds `'np'` to `production_assignment_items.size` enum (run `php artisan migrate`)
+- Naeem Pakki sends and returns — sidebar nav link added; `LogsActivity` removed from both models
 - Stitching returns (size-level reconciliation)
 - Tarpai sends and returns
 - Press & Pack records
@@ -392,7 +418,6 @@ returns that cause discrepancies — it flags them for review.
 - Worker wages (weekly, Friday confirmation)
 - All 12 reports
 - User management (create, enable, disable, password reset — admin only)
-- README.md updated for GitHub
 
 ### Known Bugs / Incomplete Features (must fix)
 
@@ -401,11 +426,15 @@ returns that cause discrepancies — it flags them for review.
 3. **Dispatch payment check missing** — `DispatchController::store()` has no outstanding balance guard
 4. **Cargo document is text, not file** — must be a file upload stored on disk
 5. **Packed inventory not deducted after dispatch** — `DispatchController::store()` must decrement press_pack_records
-6. **Order status auto-transition to stitching** — ✅ Fixed: `FabricBatchController::store()` now auto-transitions confirmed orders
+6. **Order status auto-transition to stitching** — ✅ Fixed: `FabricBatchController::store()` auto-transitions confirmed orders on fabric batch creation
 7. **Order reduction surplus logic** — three-case financial logic not implemented
 8. **`running_advance_balance` hardcoded to 0** in all ledger entries — must be actual customer balance
 9. **Dispatch order status** — order marked `dispatched` on every batch dispatch, should only be set when `isFullyDispatched()` returns true
 10. **Designer role dashboard restriction** — designer should not see financial/order/production data on dashboard
+
+### Pending Migrations (must run `php artisan migrate`)
+
+- `2026_05_02_000001_add_np_to_size_enum_in_production_assignment_items` — adds `'np'` to size enum for NP assignments
 
 ---
 

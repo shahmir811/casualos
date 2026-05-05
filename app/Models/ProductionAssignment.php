@@ -37,9 +37,15 @@ class ProductionAssignment extends Model
         return $this->hasMany(ProductionAssignmentItem::class);
     }
 
-    public function naeemPakkiSend(): \Illuminate\Database\Eloquent\Relations\HasOne
+    /** Per-design breakdown for Naeem Pakki batch assignments. */
+    public function npDesigns(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasOne(NaeemPakkiSend::class);
+        return $this->hasMany(ProductionAssignmentNpDesign::class);
+    }
+
+    public function naeemPakkiReturns(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(NaeemPakkiReturn::class);
     }
 
     public function loggedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
