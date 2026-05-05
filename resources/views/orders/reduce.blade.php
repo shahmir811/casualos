@@ -5,14 +5,14 @@
 <div class="flex items-center gap-3 mb-7">
     <a href="{{ route('orders.index') }}" class="text-[#0066CC] hover:underline text-sm">Orders</a>
     <span class="text-[#86868B]">/</span>
-    <a href="{{ route('orders.show', $order) }}" class="text-[#0066CC] hover:underline text-sm">#{{ $order->id }}</a>
+    <a href="{{ route('orders.show', $order) }}" class="text-[#0066CC] hover:underline text-sm">#{{ $order->order_number }}</a>
     <span class="text-[#86868B]">/</span>
     <span class="text-[#1D1D1F] text-sm font-medium">Reduction</span>
 </div>
 
 <div class="max-w-2xl">
     <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F] mb-1">Order Reduction</h1>
-    <p class="text-[#6E6E73] text-sm mb-6">Order #{{ $order->id }} · {{ $order->customer->name ?? '—' }} · PKR {{ number_format($order->total_amount, 0) }}</p>
+    <p class="text-[#6E6E73] text-sm mb-6">Order #{{ $order->order_number }} · {{ $order->customer->name ?? '—' }} · PKR {{ number_format($order->total_amount, 0) }}</p>
 
     @if($errors->any())
     <div class="mb-5 px-4 py-3 bg-[#FFF0EF] border border-[#FFCDD0] text-[#FF3B30] text-sm rounded-xl">
@@ -98,7 +98,7 @@
         </div>
 
         <div class="p-4 bg-[#FFF0EF] border border-[#FFCDD0] rounded-xl text-sm text-[#FF3B30]">
-            <strong>Warning:</strong> This will permanently reduce Order #{{ $order->id }}'s value and create a ledger credit for the customer. This cannot be undone.
+            <strong>Warning:</strong> This will permanently reduce Order #{{ $order->order_number }}'s value and create a ledger credit for the customer. This cannot be undone.
         </div>
 
         <div class="flex gap-3">

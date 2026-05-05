@@ -38,7 +38,7 @@
             @endphp
             <tr class="border-l-4 border-l-[#FF3B30]">
                 <td class="font-medium">
-                    #{{ $order->id }}
+                    #{{ $order->order_number }}
                     <span class="text-[#FF3B30] ml-1">⚑</span>
                 </td>
                 <td>{{ $order->customer->name ?? '—' }}</td>

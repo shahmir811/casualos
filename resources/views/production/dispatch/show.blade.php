@@ -5,7 +5,7 @@
 <div class="flex items-center gap-3 mb-7">
     <a href="{{ route('dispatch.index') }}" class="text-[#0066CC] hover:underline text-sm">Dispatch</a>
     <span class="text-[#86868B]">/</span>
-    <span class="text-[#1D1D1F] text-sm font-medium">Order #{{ $order->id }}</span>
+    <span class="text-[#1D1D1F] text-sm font-medium">Order #{{ $order->order_number }}</span>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

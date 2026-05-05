@@ -93,7 +93,7 @@
                 <div class="flex items-start justify-between gap-3">
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-1">
-                            <span class="text-[#1D1D1F] text-sm font-semibold">#{{ $order->id }}</span>
+                            <span class="text-[#1D1D1F] text-sm font-semibold">#{{ $order->order_number }}</span>
                             <span class="badge {{ $badgeMap[$order->status] ?? 'bg-[#F5F5F7] text-[#6E6E73]' }}">
                                 {{ ucfirst($order->status) }}
                             </span>

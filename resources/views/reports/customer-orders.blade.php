@@ -46,7 +46,7 @@
                     ];
                 @endphp
                 <tr>
-                    <td><a href="{{ route('orders.show', $order) }}" class="font-medium text-[#0066CC] hover:underline">#{{ $order->id }}</a></td>
+                    <td><a href="{{ route('orders.show', $order) }}" class="font-medium text-[#0066CC] hover:underline">#{{ $order->order_number }}</a></td>
                     <td class="text-[#6E6E73]">{{ $order->catalogue->name ?? '—' }}</td>
                     <td class="text-right font-medium">PKR {{ number_format($order->total_amount, 0) }}</td>
                     <td><span class="badge {{ $statusColor[$order->status] ?? 'bg-[#F5F5F7] text-[#6E6E73]' }}">{{ ucfirst($order->status) }}</span></td>

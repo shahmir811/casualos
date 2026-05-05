@@ -42,7 +42,7 @@ class DispatchController extends Controller
 
         DispatchBatch::create([
             'order_id'         => $order->id,
-            'batch_number'     => $validated['batch_number'] ?? ('DISP-' . $order->id . '-' . now()->format('Ymd')),
+            'batch_number'     => $validated['batch_number'] ?? ('DISP-' . $order->order_number . '-' . now()->format('Ymd')),
             'dispatch_date'    => $validated['dispatch_date'],
             'shipping_address' => $validated['shipping_address'] ?? $order->customer->city,
             'cargo_document'   => $validated['cargo_document'] ?? null,
@@ -52,6 +52,6 @@ class DispatchController extends Controller
         $order->update(['status' => 'dispatched']);
 
         return redirect()->route('dispatch.index')
-            ->with('success', 'Order #' . $order->id . ' dispatched successfully.');
+            ->with('success', 'Order #' . $order->order_number . ' dispatched successfully.');
     }
 }

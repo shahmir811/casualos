@@ -67,7 +67,7 @@
                     ];
                 @endphp
                 <tr>
-                    <td class="font-medium">#{{ $order->id }}</td>
+                    <td class="font-medium">#{{ $order->order_number }}</td>
                     <td class="text-[#6E6E73]">{{ $order->catalogue->name ?? '—' }}</td>
                     <td>PKR {{ number_format($order->total_amount, 0) }}</td>
                     <td>

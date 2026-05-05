@@ -79,7 +79,7 @@ class OrderReductionController extends Controller
                 'running_advance_balance' => 0,
                 'reference_type'          => 'App\Models\OrderReduction',
                 'reference_id'            => $reduction->id,
-                'notes'                   => "Order reduction on #{$order->id}: {$request->adjustment_type}",
+                'notes'                   => "Order reduction on #{$order->order_number}: {$request->adjustment_type}",
                 'created_by'              => Auth::id(),
             ]);
         });

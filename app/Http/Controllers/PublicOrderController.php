@@ -120,7 +120,7 @@ class PublicOrderController extends Controller
                 'running_advance_balance' => $customer->advance_credit_balance ?? 0,
                 'reference_type'          => 'App\Models\Order',
                 'reference_id'            => $order->id,
-                'notes'                   => "Order #{$order->id} — {$catalogue->name}",
+                'notes'                   => "Order #{$order->order_number} — {$catalogue->name}",
                 'created_by'              => null, // nullable — see migration
             ]);
 

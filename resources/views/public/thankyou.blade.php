@@ -38,7 +38,7 @@
             <div class="space-y-2 text-sm">
                 <div class="flex justify-between">
                     <span class="text-[#6E6E73]">Order ID</span>
-                    <span class="text-[#1D1D1F] font-medium">#{{ $order->id }}</span>
+                    <span class="text-[#1D1D1F] font-medium">#{{ $order->order_number }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-[#6E6E73]">Catalogue</span>

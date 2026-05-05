@@ -42,7 +42,7 @@
                 <td class="font-medium text-[#0066CC]">{{ $dispatch->batch_number }}</td>
                 <td>
                     <a href="{{ route('orders.show', $dispatch->order) }}" class="text-[#0066CC] hover:underline font-medium">
-                        #{{ $dispatch->order->id }}
+                        #{{ $dispatch->order->order_number }}
                     </a>
                 </td>
                 <td>{{ $dispatch->order->customer->name ?? '—' }}</td>

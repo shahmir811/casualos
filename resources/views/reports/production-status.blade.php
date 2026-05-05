@@ -39,7 +39,7 @@
         <tbody>
             @forelse($orders as $order)
             <tr>
-                <td class="font-medium">#{{ $order->id }}</td>
+                <td class="font-medium">#{{ $order->order_number }}</td>
                 <td>{{ $order->customer->name ?? '—' }}</td>
                 <td>{{ $order->catalogue->name ?? '—' }}</td>
                 <td class="text-right">PKR {{ number_format($order->total_amount, 0) }}</td>

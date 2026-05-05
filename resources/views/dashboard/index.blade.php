@@ -66,7 +66,7 @@
                     ];
                 @endphp
                 <tr>
-                    <td class="font-medium">#{{ $order->id }}</td>
+                    <td class="font-medium">#{{ $order->order_number }}</td>
                     <td>{{ $order->customer->name ?? '—' }}</td>
                     <td class="text-[#6E6E73]">{{ $order->catalogue->name ?? '—' }}</td>
                     <td>
