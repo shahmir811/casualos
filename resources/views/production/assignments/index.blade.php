@@ -22,7 +22,7 @@
     {{-- Catalogue --}}
     <div class="flex-1 min-w-[180px]">
         <label class="block text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Catalogue</label>
-        <select name="catalogue_id" class="apple-input" style="padding:0.5rem 1rem;">
+        <select name="catalogue_id" class="apple-input" style="padding:0.5rem 1rem;" onchange="this.form.submit()">
             <option value="">All catalogues</option>
             @foreach($openCatalogues as $cat)
             <option value="{{ $cat->id }}" {{ $selectedCatalogueId == $cat->id ? 'selected' : '' }}>

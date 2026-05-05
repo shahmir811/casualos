@@ -43,9 +43,9 @@ class ProductionAssignment extends Model
         return $this->hasMany(ProductionAssignmentNpDesign::class);
     }
 
-    public function naeemPakkiSend(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function naeemPakkiReturns(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasOne(NaeemPakkiSend::class);
+        return $this->hasMany(NaeemPakkiReturn::class);
     }
 
     public function loggedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo

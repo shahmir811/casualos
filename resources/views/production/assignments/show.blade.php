@@ -104,20 +104,38 @@
                     <tr>
                         <th class="text-left">Design</th>
                         <th class="text-right">Qty Assigned</th>
+                        <th class="text-right">Returned</th>
+                        <th class="text-right">Outstanding</th>
                         <th class="text-right">Rate (Rs./pc)</th>
                         <th class="text-right">Amount</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($productionAssignment->npDesigns as $npDesign)
+                    @php
+                        $npReturned    = $npDesign->totalReturned();
+                        $npOutstanding = $npDesign->outstandingPieces();
+                    @endphp
                     <tr>
                         <td class="font-medium text-[#1D1D1F]">{{ $npDesign->design->name ?? '—' }}</td>
                         <td class="text-right tabular-nums">{{ number_format($npDesign->quantity) }} pcs</td>
+                        <td class="text-right tabular-nums text-green-700">{{ number_format($npReturned) }} pcs</td>
+                        <td class="text-right tabular-nums {{ $npOutstanding > 0 ? 'text-orange-600 font-semibold' : 'text-[#86868B]' }}">
+                            {{ number_format($npOutstanding) }} pcs
+                        </td>
                         <td class="text-right tabular-nums text-[#6E6E73]">
                             Rs. {{ number_format((float) $npDesign->per_piece_price, 0) }}
                         </td>
                         <td class="text-right tabular-nums font-semibold" style="color:#FF9500">
                             Rs. {{ number_format($npDesign->quantity * (float) $npDesign->per_piece_price) }}
+                        </td>
+                        <td>
+                            @if($npOutstanding > 0)
+                                <span class="text-orange-500 text-xs">{{ number_format($npOutstanding) }} pending</span>
+                            @else
+                                <span class="text-green-600 text-xs">✓ Done</span>
+                            @endif
                         </td>
                     </tr>
                     @endforeach
@@ -126,21 +144,36 @@
                     <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
                         <td class="font-semibold text-[#1D1D1F] text-xs uppercase tracking-wide">Total</td>
                         <td class="text-right font-bold text-[#1D1D1F]">{{ number_format($totalPcs) }} pcs</td>
+                        <td class="text-right font-bold text-green-700">
+                            {{ number_format($productionAssignment->npDesigns->sum(fn($d) => $d->totalReturned())) }} pcs
+                        </td>
+                        <td class="text-right font-bold text-orange-600">
+                            {{ number_format($productionAssignment->npDesigns->sum(fn($d) => $d->outstandingPieces())) }} pcs
+                        </td>
                         <td class="text-right text-[#D2D2D7]">—</td>
                         <td class="text-right font-bold text-base" style="color:#FF9500">
                             Rs. {{ number_format($totalCost) }}
                         </td>
+                        <td></td>
                     </tr>
                 </tfoot>
             </table>
         </div>
 
-        {{-- Quick link to log NP send --}}
-        <div class="p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-center justify-between">
-            <p class="text-sm text-orange-800">
-                These designs are routed to <strong>Naeem Pakki</strong>. Log the physical send when fabric is dispatched.
-            </p>
-            <a href="{{ route('naeem-pakki-sends.create') }}" class="btn-primary text-xs">Log Send →</a>
+        {{-- Return status per design --}}
+        @php
+            $allReturned = $productionAssignment->npDesigns->every(fn($d) => $d->outstandingPieces() === 0 && $d->quantity > 0);
+            $anyPending  = $productionAssignment->npDesigns->some(fn($d) => $d->outstandingPieces() > 0);
+        @endphp
+        <div class="p-4 {{ $allReturned ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200' }} border rounded-xl flex items-center justify-between">
+            @if($allReturned)
+                <p class="text-sm text-green-800">All pieces have been returned from <strong>Naeem Pakki</strong>.</p>
+            @else
+                <p class="text-sm text-orange-800">
+                    Pieces sent to <strong>Naeem Pakki</strong>. Log returns when embroidery is complete.
+                </p>
+                <a href="{{ route('naeem-pakki-sends.index') }}" class="btn-primary text-xs">View Returns →</a>
+            @endif
         </div>
 
         @else
@@ -183,8 +216,8 @@
 
         @if($isNP)
         <div class="p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-center justify-between">
-            <p class="text-sm text-orange-800">Routed to <strong>Naeem Pakki</strong>. Log the send when fabric is dispatched.</p>
-            <a href="{{ route('naeem-pakki-sends.create') }}" class="btn-primary text-xs">Log Send →</a>
+            <p class="text-sm text-orange-800">Routed to <strong>Naeem Pakki</strong>. Log returns when embroidery is complete.</p>
+            <a href="{{ route('naeem-pakki-sends.index') }}" class="btn-primary text-xs">View Returns →</a>
         </div>
         @else
         <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">

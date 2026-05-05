@@ -6,17 +6,27 @@ use Illuminate\Database\Eloquent\Model;
 
 class NaeemPakkiReturn extends Model
 {
-    protected $fillable = ['naeem_pakki_send_id', 'return_date', 'quantity', 'logged_by'];
+    protected $fillable = ['production_assignment_id', 'return_date', 'logged_by'];
 
     protected $casts = ['return_date' => 'date'];
 
-    public function send(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function assignment(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(NaeemPakkiSend::class, 'naeem_pakki_send_id');
+        return $this->belongsTo(ProductionAssignment::class, 'production_assignment_id');
+    }
+
+    public function items(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(NaeemPakkiReturnItem::class);
     }
 
     public function loggedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'logged_by');
+    }
+
+    public function totalPieces(): int
+    {
+        return (int) $this->items->sum('quantity');
     }
 }

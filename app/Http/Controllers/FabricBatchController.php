@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\FabricBatch;
 use App\Models\Catalogue;
-use App\Models\NaeemPakkiSend;
 use App\Models\ProductionAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -188,45 +187,33 @@ class FabricBatchController extends Controller
         $totalToStitching  = (int) $stitchingAssignedPerDesign->sum();
 
         // ── Naeem Pakki tracking ─────────────────────────────────────────
-        // Pre-load all NP sends for this catalogue to avoid N+1
-        $sendsByDesign = NaeemPakkiSend::with('returns')
-            ->where('catalogue_id', $catId)
-            ->get()
-            ->keyBy('design_id');
-
-        $npAssignments = ProductionAssignment::with(['design', 'items', 'npDesigns.design'])
+        $npAssignments = ProductionAssignment::with(['design', 'items', 'npDesigns.design', 'npDesigns.returnItems'])
             ->where('catalogue_id', $catId)
             ->where('destination', 'naeem_pakki')
             ->get();
 
-        $naeemPakkiAssignments = $npAssignments->flatMap(function ($assignment) use ($sendsByDesign) {
-            // New-style: designs in npDesigns sub-table
+        $naeemPakkiAssignments = $npAssignments->flatMap(function ($assignment) {
             if ($assignment->npDesigns->isNotEmpty()) {
-                return $assignment->npDesigns->map(function ($npDesign) use ($sendsByDesign) {
-                    $send        = $sendsByDesign[$npDesign->design_id] ?? null;
-                    $sentQty     = $send?->quantity ?? 0;
-                    $returnedQty = $send ? $send->returns->sum('quantity') : 0;
+                return $assignment->npDesigns->map(function ($npDesign) {
+                    $assignedQty = (int) $npDesign->quantity;
+                    $returnedQty = $npDesign->totalReturned();
                     return [
                         'design'       => $npDesign->design->name ?? '—',
                         'rate'         => $npDesign->per_piece_price,
-                        'assigned_qty' => $npDesign->quantity,
-                        'sent_qty'     => $sentQty,
+                        'assigned_qty' => $assignedQty,
                         'returned_qty' => $returnedQty,
-                        'pending_qty'  => max(0, $sentQty - $returnedQty),
+                        'pending_qty'  => max(0, $assignedQty - $returnedQty),
                     ];
                 });
             }
             // Old-style: design_id on assignment, qty in items table
-            $send        = $sendsByDesign[$assignment->design_id] ?? null;
-            $sentQty     = $send?->quantity ?? 0;
-            $returnedQty = $send ? $send->returns->sum('quantity') : 0;
+            $assignedQty = (int) $assignment->items->sum('quantity');
             return [[
                 'design'       => $assignment->design->name ?? '—',
                 'rate'         => $assignment->naeem_pakki_rate,
-                'assigned_qty' => $assignment->items->sum('quantity'),
-                'sent_qty'     => $sentQty,
-                'returned_qty' => $returnedQty,
-                'pending_qty'  => max(0, $sentQty - $returnedQty),
+                'assigned_qty' => $assignedQty,
+                'returned_qty' => 0,
+                'pending_qty'  => $assignedQty,
             ]];
         });
 

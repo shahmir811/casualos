@@ -111,9 +111,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         // Production route assignments (Naeem Pakki / Stitching Unit)
         Route::resource('production-assignments', ProductionAssignmentController::class)->only(['index','create','store','show']);
 
-        // Naeem Pakki sends & returns
-        Route::resource('naeem-pakki-sends', NaeemPakkiController::class)->only(['index','create','store','show']);
-        Route::post('naeem-pakki-sends/{send}/return', [NaeemPakkiController::class, 'logReturn'])->name('naeem-pakki.return');
+        // Naeem Pakki (one row per assignment; batch returns with per-design breakdown)
+        Route::get('naeem-pakki-sends', [NaeemPakkiController::class, 'index'])->name('naeem-pakki-sends.index');
+        Route::get('naeem-pakki-sends/{productionAssignment}', [NaeemPakkiController::class, 'show'])->name('naeem-pakki-sends.show');
+        Route::post('naeem-pakki-sends/{productionAssignment}/return', [NaeemPakkiController::class, 'logReturn'])->name('naeem-pakki.return');
 
         // Stitching daily returns
         Route::resource('stitching-returns', StitchingReturnController::class)->only(['index','create','store','show']);

@@ -16,8 +16,7 @@ class ProductionAssignmentController extends Controller
     public function index(Request $request)
     {
         $openCatalogues      = Catalogue::where('status', 'open')->orderBy('name')->get();
-        $defaultCatalogueId  = $openCatalogues->first()?->id;
-        $selectedCatalogueId = $request->get('catalogue_id', $defaultCatalogueId);
+        $selectedCatalogueId = $request->get('catalogue_id', '');
         $selectedDestination = $request->get('destination', '');
         $selectedUnit        = $request->get('stitching_unit', '');
 
@@ -268,7 +267,7 @@ class ProductionAssignmentController extends Controller
 
     public function show(ProductionAssignment $productionAssignment)
     {
-        $productionAssignment->load(['catalogue', 'design', 'items', 'npDesigns.design', 'loggedBy']);
+        $productionAssignment->load(['catalogue', 'design', 'items', 'npDesigns.design', 'npDesigns.returnItems', 'loggedBy']);
         return view('production.assignments.show', compact('productionAssignment'));
     }
 }

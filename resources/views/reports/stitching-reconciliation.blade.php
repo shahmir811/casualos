@@ -15,8 +15,9 @@
 
 {{-- Naeem Pakki Section --}}
 @php
-    use App\Models\NaeemPakkiSend;
-    $naeemSends = NaeemPakkiSend::with(['assignment.design.catalogue', 'items', 'returns.items'])->latest()->get();
+    use App\Models\ProductionAssignmentNpDesign;
+    $npDesignRows = ProductionAssignmentNpDesign::with(['assignment.catalogue', 'design', 'returnItems'])
+        ->latest('id')->get();
     $npTotalSent = 0; $npTotalReturned = 0;
 @endphp
 
@@ -28,7 +29,7 @@
         <table class="w-full apple-table">
             <thead>
                 <tr>
-                    <th class="text-left">Send #</th>
+                    <th class="text-left">Assignment</th>
                     <th class="text-left">Design</th>
                     <th class="text-left">Catalogue</th>
                     <th class="text-right">Sent</th>
@@ -38,18 +39,20 @@
                 </tr>
             </thead>
             <tbody>
-                @forelse($naeemSends as $send)
+                @forelse($npDesignRows as $npDesign)
                 @php
-                    $s = $send->totalPiecesSent();
-                    $r = $send->totalPiecesReturned();
-                    $o = $send->outstandingPieces();
+                    $s = (int) $npDesign->quantity;
+                    $r = $npDesign->totalReturned();
+                    $o = $npDesign->outstandingPieces();
                     $npTotalSent += $s;
                     $npTotalReturned += $r;
                 @endphp
                 <tr>
-                    <td class="font-medium">NP-{{ str_pad($send->id, 4, '0', STR_PAD_LEFT) }}</td>
-                    <td>{{ $send->assignment?->design?->name ?? '—' }}</td>
-                    <td class="text-[#6E6E73] text-xs">{{ $send->assignment?->design?->catalogue?->name ?? '—' }}</td>
+                    <td class="font-medium text-[#0066CC]">
+                        PA-{{ str_pad($npDesign->assignment->id, 4, '0', STR_PAD_LEFT) }}
+                    </td>
+                    <td>{{ $npDesign->design->name ?? '—' }}</td>
+                    <td class="text-[#6E6E73] text-xs">{{ $npDesign->assignment->catalogue->name ?? '—' }}</td>
                     <td class="text-right">{{ $s }}</td>
                     <td class="text-right text-green-700">{{ $r }}</td>
                     <td class="text-right {{ $o > 0 ? 'text-orange-600 font-semibold' : 'text-[#86868B]' }}">{{ $o }}</td>
@@ -62,7 +65,7 @@
                 @empty
                 <tr><td colspan="7" class="text-center text-[#86868B] py-8">No Naeem Pakki records.</td></tr>
                 @endforelse
-                @if($naeemSends->count())
+                @if($npDesignRows->count())
                 <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
                     <td class="px-5 py-3 font-semibold text-sm" colspan="3">Totals</td>
                     <td class="px-5 py-3 text-right font-bold text-sm">{{ $npTotalSent }}</td>
