@@ -17,23 +17,26 @@
 
 {{-- ── Per-unit summary cards ─────────────────────────────────────── --}}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    @foreach([1, 2, 3, 4] as $unit)
+    @foreach($stitchingUnits as $unit)
     @php
-        $uData    = $unitSummary[$unit] ?? null;
+        $uData    = $unitSummary[$unit->id] ?? null;
         $pieces   = $uData ? (int) $uData->total_pieces  : 0;
         $designs  = $uData ? (int) $uData->total_designs : 0;
-        $aData    = $unitAssigned[$unit] ?? null;
+        $aData    = $unitAssigned[$unit->id] ?? null;
         $assigned = $aData ? (int) $aData->total_assigned    : 0;
         $pending  = max(0, $assigned - $pieces);
     @endphp
-    <div class="card p-5">
+    <div class="card p-5 {{ $unit->is_active ? '' : 'opacity-60' }}">
         <div class="flex items-center gap-2 mb-3">
             <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#F5EEFF;">
                 <svg class="w-4 h-4" style="color:#AF52DE;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                 </svg>
             </div>
-            <p class="text-sm font-semibold text-[#1D1D1F]">Unit {{ $unit }}</p>
+            <div>
+                <p class="text-sm font-semibold text-[#1D1D1F]">Unit {{ $unit->number }}</p>
+                <p class="text-[10px] text-[#86868B] leading-tight">{{ $unit->name }}</p>
+            </div>
         </div>
         <div class="space-y-2">
             {{-- Assigned --}}
@@ -89,12 +92,12 @@
                 <td>{{ $ret->catalogue->name ?? '—' }}</td>
                 <td>{{ $ret->design->name ?? '—' }}</td>
                 <td>
-                    @if($ret->stitching_unit)
+                    @if($ret->stitchingUnit)
                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold" style="background:#F5EEFF; color:#AF52DE;">
                         <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                         </svg>
-                        Unit {{ $ret->stitching_unit }}
+                        Unit {{ $ret->stitchingUnit->number }} — {{ $ret->stitchingUnit->name }}
                     </span>
                     @else
                     <span class="text-[#D2D2D7] text-xs">—</span>

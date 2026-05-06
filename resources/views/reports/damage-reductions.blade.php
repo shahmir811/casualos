@@ -50,7 +50,7 @@
                 <td class="font-medium text-[#0066CC]">OR-{{ str_pad($reduction->id, 4, '0', STR_PAD_LEFT) }}</td>
                 <td>
                     <a href="{{ route('orders.show', $reduction->order) }}" class="text-[#0066CC] hover:underline font-medium">
-                        #{{ $reduction->order->id }}
+                        #{{ $reduction->order->order_number }}
                     </a>
                 </td>
                 <td>{{ $reduction->order->customer->name ?? '—' }}</td>

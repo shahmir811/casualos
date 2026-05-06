@@ -5,12 +5,12 @@
 <div class="flex items-center gap-3 mb-7">
     <a href="{{ route('dispatch.index') }}" class="text-[#0066CC] hover:underline text-sm">Dispatch</a>
     <span class="text-[#86868B]">/</span>
-    <span class="text-[#1D1D1F] text-sm font-medium">Order #{{ $order->id }}</span>
+    <span class="text-[#1D1D1F] text-sm font-medium">Order #{{ $order->order_number }}</span>
 </div>
 
 <div class="max-w-2xl">
     <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F] mb-2">Record Dispatch</h1>
-    <p class="text-[#6E6E73] text-sm mb-6">Order #{{ $order->id }} · {{ $order->customer->name }} · PKR {{ number_format($order->total_amount, 0) }}</p>
+    <p class="text-[#6E6E73] text-sm mb-6">Order #{{ $order->order_number }} · {{ $order->customer->name }} · PKR {{ number_format($order->total_amount, 0) }}</p>
 
     @if($errors->any())
     <div class="mb-5 px-4 py-3 bg-[#FFF0EF] border border-[#FFCDD0] text-[#FF3B30] text-sm rounded-xl">
@@ -68,7 +68,7 @@
         </div>
 
         <div class="p-4 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-800">
-            <strong>Note:</strong> Saving this dispatch will mark order #{{ $order->id }} as <strong>Dispatched</strong>. This cannot be undone.
+            <strong>Note:</strong> Saving this dispatch will mark order #{{ $order->order_number }} as <strong>Dispatched</strong>. This cannot be undone.
         </div>
 
         <div class="flex gap-3">

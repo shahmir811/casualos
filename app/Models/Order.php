@@ -15,8 +15,23 @@ class Order extends Model
         'customer_id', 'catalogue_id', 'status',
         'submitted_name', 'submitted_city', 'submitted_email',
         'total_amount', 'total_paid', 'outstanding_balance',
-        'is_flagged', 'notes', 'submitted_at',
+        'is_flagged', 'notes', 'submitted_at', 'order_number',
     ];
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (Order $order) {
+            if (empty($order->order_number)) {
+                do {
+                    $number = (string) random_int(100000, 999999);
+                } while (static::where('order_number', $number)->exists());
+
+                $order->order_number = $number;
+            }
+        });
+    }
 
     protected $casts = [
         'total_amount'        => 'decimal:2',

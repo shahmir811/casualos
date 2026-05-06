@@ -90,20 +90,10 @@
 @endif
 
 {{-- Additional Info --}}
-@if($catalogue->wage_rate || $catalogue->notes)
-<div class="card p-5 mb-7 grid grid-cols-1 md:grid-cols-2 gap-4">
-    @if($catalogue->wage_rate)
-    <div>
-        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Wage Rate</p>
-        <p class="text-[#1D1D1F] text-sm">PKR {{ number_format($catalogue->wage_rate, 2) }} per piece</p>
-    </div>
-    @endif
-    @if($catalogue->notes)
-    <div>
-        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Notes</p>
-        <p class="text-[#1D1D1F] text-sm">{{ $catalogue->notes }}</p>
-    </div>
-    @endif
+@if($catalogue->notes)
+<div class="card p-5 mb-7">
+    <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Notes</p>
+    <p class="text-[#1D1D1F] text-sm">{{ $catalogue->notes }}</p>
 </div>
 @endif
 
@@ -149,9 +139,25 @@
 
         {{-- Design Info --}}
         <div class="p-4">
-            <div class="flex items-start justify-between mb-1.5">
-                <h3 class="text-[#1D1D1F] text-sm font-semibold leading-tight">{{ $design->name }}</h3>
-                <div class="flex flex-col items-end gap-1 ml-2 flex-shrink-0">
+            <div class="flex items-start justify-between">
+                {{-- Left: name + prices --}}
+                <div class="flex-1 min-w-0 mr-2">
+                    <h3 class="text-[#1D1D1F] text-sm font-semibold leading-tight mb-1.5">{{ $design->name }}</h3>
+                    <div class="space-y-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[#6E6E73] text-xs font-medium uppercase tracking-wide" style="min-width:52px;">Normal</span>
+                            <span class="text-[#1D1D1F] text-sm font-semibold">PKR {{ number_format($design->normal_price, 0) }}</span>
+                        </div>
+                        @if($design->discount_price)
+                        <div class="flex items-center gap-2">
+                            <span class="text-[#6E6E73] text-xs font-medium uppercase tracking-wide" style="min-width:52px;">Discount</span>
+                            <span class="text-[#34C759] text-sm font-semibold">PKR {{ number_format($design->discount_price, 0) }}</span>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                {{-- Right: badges --}}
+                <div class="flex flex-col items-end gap-1 flex-shrink-0">
                     <span class="badge {{ $design->manufacturing_type === 'in_house' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700' }}">
                         {{ $design->manufacturing_type === 'in_house' ? 'In-House' : 'Out' }}
                     </span>
@@ -160,7 +166,6 @@
                     @endif
                 </div>
             </div>
-            <p class="text-[#6E6E73] text-sm">PKR {{ number_format($design->selling_price, 0) }}</p>
 
             @if(in_array(Auth::user()->role, ['admin', 'designer']))
             <div class="flex items-center gap-3 mt-3 pt-3 border-t border-[#F2F2F7]">

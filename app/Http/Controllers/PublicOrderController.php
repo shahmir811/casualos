@@ -62,10 +62,17 @@ class PublicOrderController extends Controller
                 ->withInput();
         }
 
-        // Calculate total amount across all designs
-        $totalAmount = $catalogue->designs->sum(function ($design) use ($piecesPerDesign) {
-            return $piecesPerDesign * $design->selling_price;
-        });
+        // Determine pricing tier: discount applies when total qty exceeds benchmark
+        $benchmark      = $catalogue->quantity_benchmark;
+        $useDiscount    = $benchmark !== null && $piecesPerDesign > $benchmark;
+
+        // Calculate total amount across all designs using the effective price
+        $totalAmount = (int) round($catalogue->designs->sum(function ($design) use ($piecesPerDesign, $useDiscount) {
+            $price = ($useDiscount && $design->discount_price !== null)
+                ? round((float) $design->discount_price)
+                : round((float) $design->normal_price);
+            return $piecesPerDesign * $price;
+        }));
 
         // Verify the customer exists in the system — new customers must be registered by admin first
         $customer = Customer::where('email', $request->input('submitted_email'))->first();
@@ -76,9 +83,20 @@ class PublicOrderController extends Controller
                 ->with('customer_not_found', true);
         }
 
+        // Prevent duplicate orders — one order per customer per catalogue
+        $alreadyOrdered = Order::where('customer_id', $customer->id)
+            ->where('catalogue_id', $catalogue->id)
+            ->exists();
+
+        if ($alreadyOrdered) {
+            return back()
+                ->withInput()
+                ->with('duplicate_order', true);
+        }
+
         $orderId = null;
 
-        DB::transaction(function () use ($request, $catalogue, $customer, $qtyXS, $qtyS, $qtyM, $qtyL, $qtyXL, $piecesPerDesign, $totalAmount, &$orderId) {
+        DB::transaction(function () use ($request, $catalogue, $customer, $qtyXS, $qtyS, $qtyM, $qtyL, $qtyXL, $piecesPerDesign, $totalAmount, $useDiscount, &$orderId) {
 
             // Create the order
             $order = Order::create([
@@ -97,7 +115,10 @@ class PublicOrderController extends Controller
 
             // Create one OrderItem per design — same sizes for every design
             foreach ($catalogue->designs as $design) {
-                $lineAmount = $piecesPerDesign * $design->selling_price;
+                $unitPrice  = (int) round(($useDiscount && $design->discount_price !== null)
+                    ? (float) $design->discount_price
+                    : (float) $design->normal_price);
+                $lineAmount = $piecesPerDesign * $unitPrice;
 
                 $order->items()->create([
                     'design_id'    => $design->id,
@@ -106,7 +127,7 @@ class PublicOrderController extends Controller
                     'qty_m'        => $qtyM,
                     'qty_l'        => $qtyL,
                     'qty_xl'       => $qtyXL,
-                    'unit_price'   => $design->selling_price,
+                    'unit_price'   => $unitPrice,
                     'total_amount' => $lineAmount,
                 ]);
             }
@@ -120,7 +141,7 @@ class PublicOrderController extends Controller
                 'running_advance_balance' => $customer->advance_credit_balance ?? 0,
                 'reference_type'          => 'App\Models\Order',
                 'reference_id'            => $order->id,
-                'notes'                   => "Order #{$order->id} — {$catalogue->name}",
+                'notes'                   => "Order #{$order->order_number} — {$catalogue->name}",
                 'created_by'              => null, // nullable — see migration
             ]);
 

@@ -92,7 +92,7 @@ class ReportController extends Controller
 
     public function payrollHistory(Request $request)
     {
-        $wages = Wage::with(['catalogue', 'loggedBy'])->orderBy('wage_date', 'desc')->get();
+        $wages = Wage::with(['catalogue', 'stitchingUnit', 'confirmedBy'])->latest()->get();
         return view('reports.payroll-history', compact('wages'));
     }
 

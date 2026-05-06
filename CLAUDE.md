@@ -30,12 +30,16 @@ A Casual Lite season is called a **Catalogue**. Each has:
 
 - A name (e.g. ISHQIA), cover photo, and a set of designs (each with its own selling price)
 - A **qty_per_design** — pieces manufactured FROM EACH design (NOT total across all designs)
-- A **wage_rate** (Rs. per suit stitched) used for weekly worker wages
+- A **quantity_benchmark** — the minimum order quantity at which a customer qualifies for the discounted price. Orders at or above this threshold use each design's `discount_price` instead of `selling_price` in the live total and final amount.
 - A private **notes** field (internal only, never shown to customers)
 - A unique **order_token** (auto-generated UUID, used in the shareable WhatsApp link)
 - A **status**: `open` or `closed`
 
 Each design is marked **In-House** or **Outsourced** at catalogue creation time.
+
+Each design has two prices:
+- `selling_price` — the standard price per suit
+- `discount_price` — the discounted price applied when the customer's quantity meets or exceeds the catalogue's `quantity_benchmark`. Can be left null if no discount applies.
 
 For **In-House** designs, a `needs_naeem_pakki` boolean flag can also be set at design creation/edit time. This means the design's fabric pieces need embroidery work done by Naeem Pakki before stitching begins. Naeem Pakki work is tracked separately on the Naeem Pakki screen.
 
@@ -69,8 +73,22 @@ The `Catalogue::availablePieces()` method returns `totalPieces() - sum(all order
 1. Admin shares the catalogue link on WhatsApp: `casuallite.com/order/{order_token}`
 2. Customer fills in name, city, email, and piece quantities per size (XS/S/M/L/XL)
 3. The **same quantity applies to ALL designs** in the catalogue
-4. Total amount is shown live as they type (sum of each design's selling price × quantity)
-5. On submit, the system looks up the email in the Customer Master List
+4. Total amount is shown live as they type. If the total quantity meets or exceeds the catalogue's `quantity_benchmark`, each design's `discount_price` is used instead of `selling_price`. If `discount_price` is null for a design, `selling_price` is always used for that design.
+5. **Duplicate order prevention**: if the submitted email already has an order for the same catalogue, an alert modal warns the customer before they can re-submit.
+6. On submit, the system looks up the email in the Customer Master List
+7. Each saved order gets a randomly generated `order_number` (not a sequential ID). This is displayed everywhere instead of the database `id`.
+
+### Stitching Units
+
+Stitching units are managed in the `stitching_units` table (not hardcoded integers). Each unit has:
+
+- `number` — display number (1, 2, 3 …), auto-assigned, immutable
+- `name` — human name (e.g. "Subhan", "Mumtaz")
+- `payment_type` — `salary` or `per_piece`
+- `per_piece_rate` — **required** for `per_piece` units. This is the rate used to calculate weekly wages. Salary units have no rate in CasualOS (tracked externally).
+- `is_active` — inactive units are hidden from production assignment and stitching return forms
+
+**Wage rate is stored on the stitching unit, not on the catalogue.** When recording weekly wages, the manager selects a stitching unit and the rate auto-populates from `stitching_units.per_piece_rate`. The `wages` table stores `stitching_unit_id` (FK) and a snapshot of `wage_rate` at the time of recording.
 
 ### Catalogue Sold-Out
 
@@ -290,7 +308,8 @@ determine this. Never mark an order `dispatched` unless that method returns `tru
 `CustomerPortalController::verify()` must compare the email entered by the visitor
 against `$customer->email` (case-insensitive). Only on exact match is access granted
 and the dashboard shown. If no match: return back with error. Customer portal shows
-3 tabs: current order status, payments & balance, full order history.
+3 tabs: current order status, payments & balance, full order history. The order status
+tab displays quantities **broken down per size** (XS / S / M / L / XL) for each order.
 
 ### 5.11 No Password Reset on Login Screen
 
@@ -318,7 +337,7 @@ Production Assignment (ProductionAssignment) — New Assignment form
     │   [After embroidery returns] → back to Stitching Unit flow below
     │
     └─ [Stitching Unit destination]
-        Single design + unit (1–4) + qty by size (XS/S/M/L/XL)
+        Single design + unit (selected from active per-piece units in stitching_units table) + qty by size (XS/S/M/L/XL)
         ↓
 StitchingReturn (daily, by design + size)
     ↓ Size-level reconciliation flagged if mismatch
@@ -394,20 +413,23 @@ returns that cause discrepancies — it flags them for review.
 - Catalogue management (create, view, close/reopen, shareable link)
 - Design management (CRUD, photo upload) — shows In-House / Outsourced badge + Naeem Pakki amber badge per design card
 - Customer management (create, edit, view, portal token auto-generation)
-- Customer portal (email verification, 3 tabs)
-- Public order form (sold-out screen, real-time totals, customer email matching UI)
+- Customer portal (email verification, 3 tabs) — order status tab shows **size-wise quantity breakdown** per order
+- Public order form (sold-out screen, real-time totals with discount price logic, customer email matching UI, **duplicate order alert modal**)
+- **Discount pricing** — catalogues have `quantity_benchmark`; designs have `selling_price` + optional `discount_price`; the order form applies the correct price tier live and on submission
+- **Random order numbers** — `orders.order_number` is a randomly generated unique identifier displayed everywhere instead of the database `id`
 - Orders view and management — Order Status card shown to all roles; only admin/manager can change status
 - Payment recording (with receipt image upload and preview)
 - Apply advance credit to orders
 - Customer ledger view
 - Order reduction (admin only) — _financial surplus-to-advance logic still incomplete_
 - Fabric batch arrivals — validation allows qty=0 per item (zeros filtered out); index shows per-catalogue / per-design received breakdown cards; show page has formula callout without stat card clutter
+- **Stitching Units** — `stitching_units` table introduced; units are no longer hardcoded integers. `production_assignments.stitching_unit_id` and `stitching_returns.stitching_unit_id` are proper foreign keys. Each per-piece unit holds its own `per_piece_rate`.
 - **Production assignments** — redesigned form (2026-05-02):
   - Flow: Catalogue → Destination radio cards (Naeem Pakki | Stitching Unit) → conditional section
   - Naeem Pakki: multi-design table showing only `needs_naeem_pakki=true` designs; qty + rate per design; one assignment per design; size=`np` item
-  - Stitching: single design selector + unit (1–4) + per-size qty (unchanged)
+  - Stitching: single design selector + active per-piece unit from `stitching_units` + per-size qty
   - Controller split into `storeNaeemPakki()` and `storeStitchingUnit()` private methods
-  - Pending migration: `2026_05_02_000001` — adds `'np'` to `production_assignment_items.size` enum (run `php artisan migrate`)
+  - Index page: Destination and Stitching Unit columns use consistent pill badges (amber for NP, purple for stitching unit); **mobile-responsive** — card layout on small screens, table on md+
 - Naeem Pakki sends and returns — sidebar nav link added; `LogsActivity` removed from both models
 - Stitching returns (size-level reconciliation)
 - Tarpai sends and returns
@@ -415,8 +437,8 @@ returns that cause discrepancies — it flags them for review.
 - Packed inventory tracker
 - Outsourced batch arrivals
 - Dispatch management (create batches)
-- Worker wages (weekly, Friday confirmation)
-- All 12 reports
+- **Worker wages** — rate is now sourced from `stitching_units.per_piece_rate` (not catalogue); wage form has a unit selector that auto-populates the rate; `wages.stitching_unit_id` FK added
+- All 12 reports — payroll history report shows stitching unit per wage record
 - User management (create, enable, disable, password reset — admin only)
 
 ### Known Bugs / Incomplete Features (must fix)
@@ -432,9 +454,16 @@ returns that cause discrepancies — it flags them for review.
 9. **Dispatch order status** — order marked `dispatched` on every batch dispatch, should only be set when `isFullyDispatched()` returns true
 10. **Designer role dashboard restriction** — designer should not see financial/order/production data on dashboard
 
-### Pending Migrations (must run `php artisan migrate`)
+### All Migrations (run `php artisan migrate` after pulling)
 
-- `2026_05_02_000001_add_np_to_size_enum_in_production_assignment_items` — adds `'np'` to size enum for NP assignments
+All migrations have been run. No pending migrations. For reference, the full set introduced across branches:
+
+- `2026_05_02_000001` — adds `'np'` to `production_assignment_items.size` enum
+- `2026_05_06_000001` — adds `discount_price` to `designs` and `quantity_benchmark` to `catalogues`
+- `2026_05_06_000002` — creates `stitching_units` table and seeds Units 1–4
+- `2026_05_06_000003` — migrates `stitching_unit` integer columns to FK on `production_assignments` and `stitching_returns`
+- `2026_05_06_000004` — adds `per_piece_rate` to `stitching_units`
+- `2026_05_06_000005` — adds `stitching_unit_id` FK to `wages`; drops `wage_rate` from `catalogues`
 
 ---
 

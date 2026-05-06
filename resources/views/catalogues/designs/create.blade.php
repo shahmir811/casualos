@@ -44,15 +44,25 @@
             @enderror
         </div>
 
-        {{-- Selling Price + Manufacturing Type --}}
+        {{-- Normal Price + Discount Price + Manufacturing Type --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4"
              x-data="{ mfgType: '{{ old('manufacturing_type', '') }}' }">
             <div>
-                <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Selling Price (PKR) <span class="text-[#FF3B30]">*</span></label>
-                <input type="number" name="selling_price" value="{{ old('selling_price') }}" required min="0" step="0.01"
+                <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Normal Price (PKR) <span class="text-[#FF3B30]">*</span></label>
+                <input type="number" name="normal_price" value="{{ old('normal_price') }}" required min="0" step="0.01"
                     class="apple-input"
                     placeholder="e.g. 2500.00">
-                @error('selling_price')
+                @error('normal_price')
+                    <p class="mt-1.5 text-[#FF3B30] text-xs">{{ $message }}</p>
+                @enderror
+            </div>
+            <div>
+                <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Discount Price (PKR)</label>
+                <input type="number" name="discount_price" value="{{ old('discount_price') }}" min="0" step="0.01"
+                    class="apple-input"
+                    placeholder="e.g. 2200.00">
+                <p class="mt-1 text-[#86868B] text-xs">Applied when order qty exceeds catalogue benchmark</p>
+                @error('discount_price')
                     <p class="mt-1.5 text-[#FF3B30] text-xs">{{ $message }}</p>
                 @enderror
             </div>

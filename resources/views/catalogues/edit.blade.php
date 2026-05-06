@@ -76,12 +76,13 @@
             </div>
         </div>
 
-        {{-- Wage Rate --}}
+        {{-- Discount Benchmark --}}
         <div>
-            <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Stitching Wage Rate (PKR per piece)</label>
-            <input type="number" name="wage_rate" value="{{ old('wage_rate', $catalogue->wage_rate) }}" min="0" step="0.01"
+            <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Discount Benchmark (Qty)</label>
+            <input type="number" name="quantity_benchmark" value="{{ old('quantity_benchmark', $catalogue->quantity_benchmark) }}" min="1"
                 class="apple-input">
-            @error('wage_rate')
+            <p class="mt-1 text-[#86868B] text-xs">Orders above this quantity get discount prices</p>
+            @error('quantity_benchmark')
                 <p class="mt-1.5 text-[#FF3B30] text-xs">{{ $message }}</p>
             @enderror
         </div>

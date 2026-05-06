@@ -57,7 +57,7 @@ class PaymentController extends Controller
                 'running_advance_balance' => 0,
                 'reference_type'          => 'App\Models\Payment',
                 'reference_id'            => $payment->id,
-                'notes'                   => "Payment for Order #{$order->id} via {$request->payment_type}",
+                'notes'                   => "Payment for Order #{$order->order_number} via {$request->payment_type}",
                 'created_by'              => Auth::id(),
             ]);
         });

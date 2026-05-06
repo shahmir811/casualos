@@ -52,7 +52,8 @@ class DesignController extends Controller
         $validated = $request->validate([
             'name'               => 'required|string|max:255',
             'photo'              => 'nullable|image|max:10240',
-            'selling_price'      => 'required|numeric|min:0',
+            'normal_price'       => 'required|numeric|min:0',
+            'discount_price'     => 'nullable|numeric|min:0',
             'manufacturing_type' => 'required|in:in_house,outsourced',
             'needs_naeem_pakki'  => 'nullable|boolean',
             'sort_order'         => 'nullable|integer|min:0',
@@ -103,7 +104,8 @@ class DesignController extends Controller
         $validated = $request->validate([
             'name'               => 'required|string|max:255',
             'photo'              => 'nullable|image|max:10240',
-            'selling_price'      => 'required|numeric|min:0',
+            'normal_price'       => 'required|numeric|min:0',
+            'discount_price'     => 'nullable|numeric|min:0',
             'manufacturing_type' => 'required|in:in_house,outsourced',
             'needs_naeem_pakki'  => 'nullable|boolean',
             'sort_order'         => 'nullable|integer|min:0',

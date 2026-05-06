@@ -93,7 +93,7 @@
                 <div class="flex items-start justify-between gap-3">
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-1">
-                            <span class="text-[#1D1D1F] text-sm font-semibold">#{{ $order->id }}</span>
+                            <span class="text-[#1D1D1F] text-sm font-semibold">#{{ $order->order_number }}</span>
                             <span class="badge {{ $badgeMap[$order->status] ?? 'bg-[#F5F5F7] text-[#6E6E73]' }}">
                                 {{ ucfirst($order->status) }}
                             </span>
@@ -115,20 +115,31 @@
 
                 {{-- Items breakdown --}}
                 @if($order->items->isNotEmpty())
-                <div class="mt-3 grid grid-cols-5 gap-1.5">
+                <div class="mt-3 space-y-2">
                     @foreach($order->items as $item)
-                    <div class="bg-[#F5F5F7] rounded-lg p-2 text-center">
-                        <div class="w-8 h-8 rounded-md overflow-hidden mx-auto mb-1 bg-[#E8E8ED]">
+                    <div class="bg-[#F5F5F7] rounded-lg p-2.5 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-md overflow-hidden flex-shrink-0 bg-[#E8E8ED]">
                             @if($item->design?->photo)
                                 <img src="{{ Storage::url($item->design->photo) }}" alt="{{ $item->design->name }}" class="w-full h-full object-cover">
                             @else
                                 <div class="w-full h-full flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-[#C7C7CC]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    <svg class="w-5 h-5 text-[#C7C7CC]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 </div>
                             @endif
                         </div>
-                        <p class="text-[#1D1D1F] text-xs font-semibold leading-none">{{ $item->qty_xs + $item->qty_s + $item->qty_m + $item->qty_l + $item->qty_xl }}</p>
-                        <p class="text-[#86868B] text-[10px] truncate">pcs</p>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[#1D1D1F] text-xs font-semibold truncate mb-1.5">{{ $item->design?->name ?? 'Design' }}</p>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                @foreach(['xs' => 'XS', 's' => 'S', 'm' => 'M', 'l' => 'L', 'xl' => 'XL'] as $key => $label)
+                                @php $qty = $item->{'qty_' . $key}; @endphp
+                                <div class="flex items-center gap-1">
+                                    <span class="text-[#86868B] text-[10px] font-medium">{{ $label }}</span>
+                                    <span class="text-[#1D1D1F] text-[10px] font-semibold {{ $qty > 0 ? '' : 'text-[#C7C7CC]' }}">{{ $qty }}</span>
+                                </div>
+                                @endforeach
+                                <span class="ml-auto text-[#6E6E73] text-[10px]">{{ $item->qty_xs + $item->qty_s + $item->qty_m + $item->qty_l + $item->qty_xl }} pcs</span>
+                            </div>
+                        </div>
                     </div>
                     @endforeach
                 </div>

@@ -94,7 +94,7 @@ class OrderController extends Controller
 
         $order->update(['status' => 'confirmed']);
 
-        return back()->with('success', 'Order #' . $order->id . ' confirmed.');
+        return back()->with('success', 'Order #' . $order->order_number . ' confirmed.');
     }
 
     public function markStitching(Order $order)
@@ -109,7 +109,7 @@ class OrderController extends Controller
 
         $order->update(['status' => 'stitching']);
 
-        return back()->with('success', 'Order #' . $order->id . ' moved to stitching.');
+        return back()->with('success', 'Order #' . $order->order_number . ' moved to stitching.');
     }
 
     public function flagged()

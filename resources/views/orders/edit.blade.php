@@ -5,13 +5,13 @@
 <div class="flex items-center gap-3 mb-7">
     <a href="{{ route('orders.index') }}" class="text-[#0066CC] hover:underline text-sm">Orders</a>
     <span class="text-[#86868B]">/</span>
-    <a href="{{ route('orders.show', $order) }}" class="text-[#0066CC] hover:underline text-sm">#{{ $order->id }}</a>
+    <a href="{{ route('orders.show', $order) }}" class="text-[#0066CC] hover:underline text-sm">#{{ $order->order_number }}</a>
     <span class="text-[#86868B]">/</span>
     <span class="text-[#1D1D1F] text-sm font-medium">Edit</span>
 </div>
 
 <div class="max-w-lg">
-    <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F] mb-1">Edit Order #{{ $order->id }}</h1>
+    <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F] mb-1">Edit Order #{{ $order->order_number }}</h1>
     <p class="text-[#6E6E73] text-sm mb-6">{{ $order->customer->name ?? '—' }} · {{ $order->catalogue->name ?? '—' }}</p>
 
     @if($errors->any())

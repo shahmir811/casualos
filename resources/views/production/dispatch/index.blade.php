@@ -22,7 +22,7 @@
         <tbody>
             @forelse($orders as $order)
             <tr>
-                <td class="font-medium">#{{ $order->id }}</td>
+                <td class="font-medium">#{{ $order->order_number }}</td>
                 <td>{{ $order->customer->name ?? '—' }}</td>
                 <td>
                     <div class="flex items-center gap-2.5">

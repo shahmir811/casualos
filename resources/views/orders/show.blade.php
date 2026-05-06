@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Order #' . $order->id)
+@section('title', 'Order #' . $order->order_number)
 
 @section('content')
 
@@ -17,7 +17,7 @@
     <div>
         <a href="{{ route('orders.index') }}" class="text-[#0066CC] text-sm hover:underline">← Orders</a>
         <div class="flex flex-wrap items-center gap-2.5 mt-3">
-            <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Order #{{ $order->id }}</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Order #{{ $order->order_number }}</h1>
             <span class="{{ $statusBadge[$order->status] ?? 'badge bg-[#F5F5F7] text-[#6E6E73]' }}">
                 {{ $order->status }}
             </span>
@@ -189,8 +189,6 @@
                     <select name="payment_type" required class="apple-input">
                         <option value="cash"          {{ old('payment_type') === 'cash'          ? 'selected' : '' }}>Cash</option>
                         <option value="bank_transfer" {{ old('payment_type') === 'bank_transfer' ? 'selected' : '' }}>Bank Transfer</option>
-                        <option value="easypaisa"     {{ old('payment_type') === 'easypaisa'     ? 'selected' : '' }}>Easypaisa</option>
-                        <option value="jazzcash"      {{ old('payment_type') === 'jazzcash'      ? 'selected' : '' }}>JazzCash</option>
                         <option value="advance"       {{ old('payment_type') === 'advance'       ? 'selected' : '' }}>From Advance Credit</option>
                     </select>
                 </div>

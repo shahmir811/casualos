@@ -234,14 +234,18 @@
 {{-- Pass design data to Alpine --}}
 @php
     $designsJson = $catalogue->designs->map(fn($d) => [
-        'id'    => $d->id,
-        'name'  => $d->name,
-        'price' => (float) $d->selling_price,
+        'id'             => $d->id,
+        'name'           => $d->name,
+        'normal_price'   => (int) round((float) $d->normal_price),
+        'discount_price' => $d->discount_price !== null
+            ? (int) round((float) $d->discount_price)
+            : (int) round((float) $d->normal_price),
     ])->values()->toJson();
     $numDesigns  = $catalogue->designs->count();
+    $benchmark   = $catalogue->quantity_benchmark ?? 'null';
 @endphp
 
-<div x-data="orderCalc({{ $designsJson }}, {{ $numDesigns }})" class="pb-28">
+<div x-data="orderCalc({{ $designsJson }}, {{ $numDesigns }}, {{ $benchmark }})" class="pb-28">
 
     {{-- ===== CUSTOMER NOT FOUND MODAL ===== --}}
     @if(session('customer_not_found'))
@@ -274,6 +278,48 @@
             </p>
 
             <button onclick="document.getElementById('notFoundModal').style.display='none'"
+                style="width:100%;background:#1D1D1F;color:#fff;font-size:0.9375rem;
+                       font-weight:600;border:none;border-radius:12px;
+                       padding:0.875rem 1rem;cursor:pointer;
+                       transition:background 0.15s;">
+                OK, Got It
+            </button>
+        </div>
+    </div>
+    @endif
+
+    {{-- ===== DUPLICATE ORDER MODAL ===== --}}
+    @if(session('duplicate_order'))
+    <div id="duplicateOrderModal"
+         style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;
+                display:flex;align-items:center;justify-content:center;
+                padding:1.5rem;
+                background:rgba(0,0,0,0.5);
+                backdrop-filter:blur(5px);
+                -webkit-backdrop-filter:blur(5px);">
+        <div style="background:#fff;border-radius:20px;padding:2rem 1.75rem;
+                    max-width:340px;width:100%;text-align:center;
+                    box-shadow:0 24px 60px rgba(0,0,0,0.22);">
+
+            {{-- Icon --}}
+            <div style="width:60px;height:60px;background:#FFF5E6;border-radius:50%;
+                        display:flex;align-items:center;justify-content:center;margin:0 auto 1.1rem;">
+                <svg style="width:28px;height:28px;" fill="none" viewBox="0 0 24 24" stroke="#FF9500" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+            </div>
+
+            <h2 style="font-size:1.125rem;font-weight:700;color:#1D1D1F;margin-bottom:0.55rem;line-height:1.3;">
+                Order Already Placed
+            </h2>
+            <p style="font-size:0.875rem;color:#6E6E73;line-height:1.65;margin-bottom:1.6rem;">
+                You have already placed an order for this catalogue.
+                Only one order per catalogue is allowed.
+                Please contact the <strong style="color:#1D1D1F;">Casual Lite admin</strong>
+                if you need to make changes.
+            </p>
+
+            <button onclick="document.getElementById('duplicateOrderModal').style.display='none'"
                 style="width:100%;background:#1D1D1F;color:#fff;font-size:0.9375rem;
                        font-weight:600;border:none;border-radius:12px;
                        padding:0.875rem 1rem;cursor:pointer;
@@ -328,7 +374,7 @@
                         @endif
                     </div>
                     <p style="font-size:0.7rem;color:#1D1D1F;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $design->name }}</p>
-                    <p style="font-size:0.65rem;color:#86868B;">PKR {{ number_format($design->selling_price, 0) }}</p>
+                    <p style="font-size:0.65rem;color:#86868B;">PKR {{ number_format($design->normal_price, 0) }}</p>
                 </div>
                 @endforeach
             </div>
@@ -485,27 +531,38 @@
 </footer>
 
 <script>
-function orderCalc(designs, numDesigns) {
+function orderCalc(designs, numDesigns, benchmark) {
     return {
         designs,
         numDesigns,
+        benchmark,
         sizes: { xs: 0, s: 0, m: 0, l: 0, xl: 0 },
 
         get totalPieces() {
             return this.sizes.xs + this.sizes.s + this.sizes.m + this.sizes.l + this.sizes.xl;
         },
 
+        // True when total qty exceeds the benchmark and a benchmark is set
+        get useDiscount() {
+            return this.benchmark !== null && this.totalPieces > this.benchmark;
+        },
+
+        // Effective price per design based on current tier
+        effectivePrice(d) {
+            return this.useDiscount ? d.discount_price : d.normal_price;
+        },
+
         // Total amount for one size key across all designs
         sizeTotal(key) {
             const qty = this.sizes[key];
-            return this.designs.reduce((sum, d) => sum + qty * d.price, 0);
+            return Math.round(this.designs.reduce((sum, d) => sum + qty * this.effectivePrice(d), 0));
         },
 
         // Grand total = sum of all sizes across all designs
         get grandTotal() {
-            return this.designs.reduce((sum, d) => {
-                return sum + this.totalPieces * d.price;
-            }, 0);
+            return Math.round(this.designs.reduce((sum, d) => {
+                return sum + this.totalPieces * this.effectivePrice(d);
+            }, 0));
         },
 
         increment(key) {

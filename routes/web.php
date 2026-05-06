@@ -22,6 +22,7 @@ use App\Http\Controllers\OutsourcedBatchController;
 use App\Http\Controllers\DispatchController;
 use App\Http\Controllers\WagesController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\StitchingUnitController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ProfileController;
@@ -167,6 +168,16 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('dispatch-history',      [ReportController::class, 'dispatchHistory'])->name('dispatch-history');
         Route::get('activity-log',          [ReportController::class, 'activityLog'])->name('activity-log');
         Route::get('damage-reductions',     [ReportController::class, 'damageReductions'])->name('damage-reductions');
+    });
+
+    /*
+    |------------------------------------------------------------------
+    | STITCHING UNIT MANAGEMENT (admin only)
+    |------------------------------------------------------------------
+    */
+    Route::middleware('role:admin')->group(function () {
+        Route::resource('stitching-units', StitchingUnitController::class)->only(['index', 'create', 'store', 'edit', 'update']);
+        Route::post('stitching-units/{stitchingUnit}/toggle', [StitchingUnitController::class, 'toggle'])->name('stitching-units.toggle');
     });
 
     /*

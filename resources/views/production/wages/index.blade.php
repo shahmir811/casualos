@@ -35,6 +35,7 @@
             <tr>
                 <th class="text-left">Week</th>
                 <th class="text-left">Catalogue</th>
+                <th class="text-left">Unit</th>
                 <th class="text-right">Suits</th>
                 <th class="text-right">Rate</th>
                 <th class="text-right">Total</th>
@@ -49,6 +50,7 @@
                     <p class="font-medium text-sm">{{ $wage->week_start->format('d M') }} – {{ $wage->week_end->format('d M Y') }}</p>
                 </td>
                 <td>{{ $wage->catalogue->name ?? '—' }}</td>
+                <td class="text-[#6E6E73] text-sm">{{ $wage->stitchingUnit ? 'Unit '.$wage->stitchingUnit->number.' — '.$wage->stitchingUnit->name : '—' }}</td>
                 <td class="text-right">{{ number_format($wage->total_suits_stitched) }}</td>
                 <td class="text-right text-[#6E6E73] text-xs">Rs. {{ number_format($wage->wage_rate, 0) }}/suit</td>
                 <td class="text-right font-semibold">Rs. {{ number_format($wage->total_wages, 0) }}</td>
@@ -75,7 +77,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="7" class="text-center text-[#86868B] py-12">No wage records yet.</td>
+                <td colspan="8" class="text-center text-[#86868B] py-12">No wage records yet.</td>
             </tr>
             @endforelse
         </tbody>
