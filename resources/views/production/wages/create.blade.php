@@ -12,7 +12,14 @@
      x-data="{
         suits: {{ old('total_suits_stitched', 0) }},
         rate: {{ old('wage_rate', 0) }},
-        get total() { return (this.suits || 0) * (this.rate || 0); }
+        selectedUnitId: '{{ old('stitching_unit_id', '') }}',
+        units: {{ Js::from($units) }},
+        get total() { return (this.suits || 0) * (this.rate || 0); },
+        selectUnit(id) {
+            this.selectedUnitId = id;
+            const unit = this.units.find(u => u.id == id);
+            this.rate = unit ? (unit.per_piece_rate || 0) : 0;
+        }
      }">
 
     <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F] mb-6">Record Weekly Wages</h1>
@@ -40,6 +47,27 @@
                 </select>
             </div>
 
+            <div>
+                <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Stitching Unit</label>
+                @if($units->isEmpty())
+                <p class="text-sm text-[#FF3B30]">No active per-piece stitching units found. Please add one first.</p>
+                @else
+                <select name="stitching_unit_id" class="apple-input" required
+                        @change="selectUnit($event.target.value)">
+                    <option value="">— Select unit —</option>
+                    @foreach($units as $unit)
+                    <option value="{{ $unit->id }}"
+                            {{ old('stitching_unit_id') == $unit->id ? 'selected' : '' }}>
+                        Unit {{ $unit->number }} — {{ $unit->name }}
+                        @if($unit->per_piece_rate)
+                            (Rs. {{ number_format($unit->per_piece_rate, 0) }}/pc)
+                        @endif
+                    </option>
+                    @endforeach
+                </select>
+                @endif
+            </div>
+
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Week Start</label>
@@ -58,9 +86,12 @@
             </div>
 
             <div>
-                <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Wage Rate (Rs. per suit)</label>
-                <input type="number" name="wage_rate" x-model="rate"
-                       value="{{ old('wage_rate') }}" step="0.01" min="0" class="apple-input" placeholder="e.g. 250" required>
+                <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
+                    Rate (Rs. per suit)
+                    <span class="text-[#86868B] font-normal normal-case text-[10px] ml-1">auto-filled from unit</span>
+                </label>
+                <input type="number" x-model="rate" step="0.01" min="0" class="apple-input"
+                       placeholder="Select a unit above" readonly>
             </div>
         </div>
 

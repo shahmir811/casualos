@@ -90,20 +90,10 @@
 @endif
 
 {{-- Additional Info --}}
-@if($catalogue->wage_rate || $catalogue->notes)
-<div class="card p-5 mb-7 grid grid-cols-1 md:grid-cols-2 gap-4">
-    @if($catalogue->wage_rate)
-    <div>
-        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Wage Rate</p>
-        <p class="text-[#1D1D1F] text-sm">PKR {{ number_format($catalogue->wage_rate, 2) }} per piece</p>
-    </div>
-    @endif
-    @if($catalogue->notes)
-    <div>
-        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Notes</p>
-        <p class="text-[#1D1D1F] text-sm">{{ $catalogue->notes }}</p>
-    </div>
-    @endif
+@if($catalogue->notes)
+<div class="card p-5 mb-7">
+    <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Notes</p>
+    <p class="text-[#1D1D1F] text-sm">{{ $catalogue->notes }}</p>
 </div>
 @endif
 

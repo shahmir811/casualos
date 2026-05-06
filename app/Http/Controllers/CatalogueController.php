@@ -56,7 +56,6 @@ class CatalogueController extends Controller
             'cover_photo'        => 'nullable|image|max:10240',
             'qty_per_design'     => 'required|integer|min:1',
             'number_of_designs'  => 'required|integer|min:1',
-            'wage_rate'          => 'nullable|numeric|min:0',
             'quantity_benchmark' => 'nullable|integer|min:1',
             'notes'              => 'nullable|string',
         ]);
@@ -129,7 +128,6 @@ class CatalogueController extends Controller
             'cover_photo'        => 'nullable|image|max:10240',
             'qty_per_design'     => 'required|integer|min:1',
             'number_of_designs'  => 'required|integer|min:1',
-            'wage_rate'          => 'nullable|numeric|min:0',
             'quantity_benchmark' => 'nullable|integer|min:1',
             'notes'              => 'nullable|string',
         ]);

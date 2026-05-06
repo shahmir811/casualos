@@ -49,9 +49,6 @@
                     {{ $catalogue->designs_count }} designs ·
                     {{ number_format($catalogue->qty_per_design) }} qty/design ·
                     {{ $catalogue->orders_count }} orders
-                    @if($catalogue->wage_rate)
-                        · PKR {{ number_format($catalogue->wage_rate) }}/pc wage
-                    @endif
                 </p>
             </div>
         </a>

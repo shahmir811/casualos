@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class StitchingUnit extends Model
 {
-    protected $fillable = ['number', 'name', 'payment_type', 'salary_amount', 'is_active'];
+    protected $fillable = ['number', 'name', 'payment_type', 'per_piece_rate', 'is_active'];
 
     protected $casts = ['is_active' => 'boolean'];
 

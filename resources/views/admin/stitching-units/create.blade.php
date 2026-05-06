@@ -82,15 +82,15 @@
                 </div>
             </div>
 
-            {{-- Salary Amount (only for salary type) --}}
-            <div x-show="paymentType === 'salary'" x-cloak>
+            {{-- Per Piece Rate (only for per_piece type) --}}
+            <div x-show="paymentType === 'per_piece'" x-cloak>
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
-                    Monthly Salary (Rs.) <span class="text-[#86868B] font-normal normal-case text-[10px]">optional</span>
+                    Per Piece Rate (Rs.) <span class="text-[#FF3B30]">*</span>
                 </label>
-                <input type="number" name="salary_amount" value="{{ old('salary_amount') }}"
-                       placeholder="0" min="0" step="0.01"
-                       class="apple-input">
-                <p class="mt-1.5 text-[10px] text-[#86868B]">For reference only — salary units are tracked externally.</p>
+                <input type="number" name="per_piece_rate" value="{{ old('per_piece_rate') }}"
+                       placeholder="e.g. 250" min="0" step="0.01"
+                       class="apple-input" :required="paymentType === 'per_piece'">
+                <p class="mt-1.5 text-[10px] text-[#86868B]">Used to calculate weekly wages for this unit.</p>
             </div>
 
             <div class="flex gap-3 pt-2">

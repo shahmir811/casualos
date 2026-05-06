@@ -40,6 +40,7 @@
             <tr>
                 <th class="text-left">Week</th>
                 <th class="text-left">Catalogue</th>
+                <th class="text-left">Unit</th>
                 <th class="text-right">Suits</th>
                 <th class="text-right">Rate / Suit</th>
                 <th class="text-right">Total Wages</th>
@@ -55,6 +56,7 @@
                     <p class="font-medium text-sm">{{ $wage->week_start->format('d M') }} – {{ $wage->week_end->format('d M Y') }}</p>
                 </td>
                 <td class="text-[#6E6E73]">{{ $wage->catalogue->name ?? '—' }}</td>
+                <td class="text-[#6E6E73] text-sm">{{ $wage->stitchingUnit ? 'Unit '.$wage->stitchingUnit->number.' — '.$wage->stitchingUnit->name : '—' }}</td>
                 <td class="text-right">{{ number_format($wage->total_suits_stitched) }}</td>
                 <td class="text-right text-[#6E6E73] text-xs">Rs. {{ number_format($wage->wage_rate, 0) }}</td>
                 <td class="text-right font-semibold">Rs. {{ number_format($wage->total_wages, 0) }}</td>
@@ -67,13 +69,13 @@
                 <td class="text-[#6E6E73] text-xs">{{ $wage->confirmed_at?->format('d M Y') ?? '—' }}</td>
             </tr>
             @empty
-            <tr><td colspan="8" class="text-center text-[#86868B] py-12">No payroll records found.</td></tr>
+            <tr><td colspan="9" class="text-center text-[#86868B] py-12">No payroll records found.</td></tr>
             @endforelse
         </tbody>
         @if($wages->count())
         <tfoot>
             <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
-                <td class="px-5 py-3 font-semibold text-sm" colspan="2">Total</td>
+                <td class="px-5 py-3 font-semibold text-sm" colspan="3">Total</td>
                 <td class="px-5 py-3 text-right font-bold text-sm">{{ number_format($totalSuits) }}</td>
                 <td></td>
                 <td class="px-5 py-3 text-right font-bold text-sm">Rs. {{ number_format($totalPaid + $totalPending, 0) }}</td>

@@ -24,19 +24,19 @@ class StitchingUnitController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'          => 'required|string|max:100',
-            'payment_type'  => 'required|in:salary,per_piece',
-            'salary_amount' => 'nullable|numeric|min:0',
+            'name'           => 'required|string|max:100',
+            'payment_type'   => 'required|in:salary,per_piece',
+            'per_piece_rate' => 'required_if:payment_type,per_piece|nullable|numeric|min:0',
         ]);
 
         $nextNumber = StitchingUnit::nextNumber();
 
         StitchingUnit::create([
-            'number'        => $nextNumber,
-            'name'          => $validated['name'],
-            'payment_type'  => $validated['payment_type'],
-            'salary_amount' => $validated['payment_type'] === 'salary' ? ($validated['salary_amount'] ?? null) : null,
-            'is_active'     => true,
+            'number'         => $nextNumber,
+            'name'           => $validated['name'],
+            'payment_type'   => $validated['payment_type'],
+            'per_piece_rate' => $validated['payment_type'] === 'per_piece' ? ($validated['per_piece_rate'] ?? null) : null,
+            'is_active'      => true,
         ]);
 
         return redirect()->route('stitching-units.index')
@@ -51,15 +51,15 @@ class StitchingUnitController extends Controller
     public function update(Request $request, StitchingUnit $stitchingUnit)
     {
         $validated = $request->validate([
-            'name'          => 'required|string|max:100',
-            'payment_type'  => 'required|in:salary,per_piece',
-            'salary_amount' => 'nullable|numeric|min:0',
+            'name'           => 'required|string|max:100',
+            'payment_type'   => 'required|in:salary,per_piece',
+            'per_piece_rate' => 'required_if:payment_type,per_piece|nullable|numeric|min:0',
         ]);
 
         $stitchingUnit->update([
-            'name'          => $validated['name'],
-            'payment_type'  => $validated['payment_type'],
-            'salary_amount' => $validated['payment_type'] === 'salary' ? ($validated['salary_amount'] ?? null) : null,
+            'name'           => $validated['name'],
+            'payment_type'   => $validated['payment_type'],
+            'per_piece_rate' => $validated['payment_type'] === 'per_piece' ? ($validated['per_piece_rate'] ?? null) : null,
         ]);
 
         return redirect()->route('stitching-units.index')

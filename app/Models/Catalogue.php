@@ -14,7 +14,7 @@ class Catalogue extends Model
 
     protected $fillable = [
         'name', 'cover_photo', 'qty_per_design', 'number_of_designs',
-        'wage_rate', 'quantity_benchmark', 'notes', 'status', 'order_token', 'created_by',
+        'quantity_benchmark', 'notes', 'status', 'order_token', 'created_by',
     ];
 
     // Auto-generate order_token on creation

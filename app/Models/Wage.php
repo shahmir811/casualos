@@ -11,7 +11,7 @@ class Wage extends Model
     use LogsActivity;
 
     protected $fillable = [
-        'catalogue_id', 'week_start', 'week_end',
+        'catalogue_id', 'stitching_unit_id', 'week_start', 'week_end',
         'total_suits_stitched', 'wage_rate', 'total_wages',
         'is_confirmed', 'confirmed_by', 'confirmed_at',
     ];
@@ -41,6 +41,11 @@ class Wage extends Model
     public function catalogue(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Catalogue::class);
+    }
+
+    public function stitchingUnit(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(StitchingUnit::class);
     }
 
     public function confirmedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo

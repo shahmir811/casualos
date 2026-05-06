@@ -28,7 +28,7 @@
                 <th class="text-left">Unit #</th>
                 <th class="text-left">Name</th>
                 <th class="text-left">Payment Type</th>
-                <th class="text-left">Salary Amount</th>
+                <th class="text-left">Rate</th>
                 <th class="text-left">Status</th>
                 <th></th>
             </tr>
@@ -51,8 +51,8 @@
                     @endif
                 </td>
                 <td class="text-[#6E6E73] text-sm">
-                    @if($unit->isSalary() && $unit->salary_amount)
-                        Rs. {{ number_format($unit->salary_amount) }}
+                    @if($unit->isPerPiece() && $unit->per_piece_rate)
+                        Rs. {{ number_format($unit->per_piece_rate, 0) }}/pc
                     @else
                         <span class="text-[#D2D2D7]">—</span>
                     @endif
