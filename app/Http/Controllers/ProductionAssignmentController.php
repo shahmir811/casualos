@@ -6,6 +6,7 @@ use App\Models\ProductionAssignment;
 use App\Models\ProductionAssignmentNpDesign;
 use App\Models\Design;
 use App\Models\Catalogue;
+use App\Models\StitchingUnit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,18 +19,20 @@ class ProductionAssignmentController extends Controller
         $openCatalogues      = Catalogue::where('status', 'open')->orderBy('name')->get();
         $selectedCatalogueId = $request->get('catalogue_id', '');
         $selectedDestination = $request->get('destination', '');
-        $selectedUnit        = $request->get('stitching_unit', '');
+        $selectedUnit        = $request->get('stitching_unit_id', '');
 
-        $query = ProductionAssignment::with(['catalogue', 'design', 'items', 'npDesigns.design'])->latest();
+        $query = ProductionAssignment::with(['catalogue', 'design', 'items', 'npDesigns.design', 'stitchingUnit'])->latest();
 
         if ($selectedCatalogueId) $query->where('catalogue_id', $selectedCatalogueId);
         if ($selectedDestination) $query->where('destination', $selectedDestination);
-        if ($selectedUnit)        $query->where('stitching_unit', $selectedUnit);
+        if ($selectedUnit)        $query->where('stitching_unit_id', $selectedUnit);
 
         $assignments = $query->paginate(20)->withQueryString();
 
+        $stitchingUnits = StitchingUnit::orderBy('number')->get();
+
         return view('production.assignments.index', compact(
-            'assignments', 'openCatalogues',
+            'assignments', 'openCatalogues', 'stitchingUnits',
             'selectedCatalogueId', 'selectedDestination', 'selectedUnit'
         ));
     }
@@ -101,7 +104,9 @@ class ProductionAssignmentController extends Controller
             });
         });
 
-        return view('production.assignments.create', compact('catalogues'));
+        $stitchingUnits = StitchingUnit::where('is_active', true)->orderBy('number')->get();
+
+        return view('production.assignments.create', compact('catalogues', 'stitchingUnits'));
     }
 
     public function store(Request $request)
@@ -175,13 +180,13 @@ class ProductionAssignmentController extends Controller
 
         // Create ONE parent assignment for this entire NP batch
         $assignment = ProductionAssignment::create([
-            'catalogue_id'    => $catalogueId,
-            'design_id'       => null,          // NP batches: no single design on parent
-            'destination'     => 'naeem_pakki',
-            'stitching_unit'  => null,
-            'naeem_pakki_rate'=> null,           // rate stored per-design in np_designs
-            'assignment_date' => $request->assignment_date,
-            'logged_by'       => Auth::id(),
+            'catalogue_id'     => $catalogueId,
+            'design_id'        => null,
+            'destination'      => 'naeem_pakki',
+            'stitching_unit_id' => null,
+            'naeem_pakki_rate' => null,
+            'assignment_date'  => $request->assignment_date,
+            'logged_by'        => Auth::id(),
         ]);
 
         // Create one np_designs row per selected design
@@ -200,12 +205,14 @@ class ProductionAssignmentController extends Controller
     // ── Stitching Unit: single design, per-size quantities ───────────────
     private function storeStitchingUnit(Request $request)
     {
+        $activeUnitIds = StitchingUnit::where('is_active', true)->pluck('id')->toArray();
+
         $validated = $request->validate([
-            'design_id'      => ['required', Rule::exists('designs', 'id')->where('manufacturing_type', 'in_house')],
-            'stitching_unit' => 'required|integer|in:1,2,3,4',
-            'items'          => 'required|array',
-            'items.*.size'   => 'required|in:xs,s,m,l,xl',
-            'items.*.qty'    => 'required|integer|min:0',
+            'design_id'        => ['required', Rule::exists('designs', 'id')->where('manufacturing_type', 'in_house')],
+            'stitching_unit_id' => ['required', Rule::in($activeUnitIds)],
+            'items'            => 'required|array',
+            'items.*.size'     => 'required|in:xs,s,m,l,xl',
+            'items.*.qty'      => 'required|integer|min:0',
         ]);
 
         $totalItemsQty = collect($validated['items'])->sum(fn($i) => (int) $i['qty']);
@@ -243,13 +250,13 @@ class ProductionAssignmentController extends Controller
         // ────────────────────────────────────────────────────────────────
 
         $assignment = ProductionAssignment::create([
-            'catalogue_id'    => $request->catalogue_id,
-            'design_id'       => $validated['design_id'],
-            'destination'     => 'stitching_unit',
-            'stitching_unit'  => $validated['stitching_unit'],
-            'naeem_pakki_rate'=> null,
-            'assignment_date' => $request->assignment_date,
-            'logged_by'       => Auth::id(),
+            'catalogue_id'     => $request->catalogue_id,
+            'design_id'        => $validated['design_id'],
+            'destination'      => 'stitching_unit',
+            'stitching_unit_id' => $validated['stitching_unit_id'],
+            'naeem_pakki_rate' => null,
+            'assignment_date'  => $request->assignment_date,
+            'logged_by'        => Auth::id(),
         ]);
 
         foreach ($validated['items'] as $item) {
@@ -267,7 +274,7 @@ class ProductionAssignmentController extends Controller
 
     public function show(ProductionAssignment $productionAssignment)
     {
-        $productionAssignment->load(['catalogue', 'design', 'items', 'npDesigns.design', 'npDesigns.returnItems', 'loggedBy']);
+        $productionAssignment->load(['catalogue', 'design', 'items', 'stitchingUnit', 'npDesigns.design', 'npDesigns.returnItems', 'loggedBy']);
         return view('production.assignments.show', compact('productionAssignment'));
     }
 }

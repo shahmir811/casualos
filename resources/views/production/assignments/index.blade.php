@@ -37,7 +37,7 @@
         <label class="block text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Destination</label>
         <div class="flex gap-1.5">
             @foreach(['' => 'All', 'naeem_pakki' => 'Naeem Pakki', 'stitching_unit' => 'Stitching Unit'] as $val => $label)
-            <a href="{{ route('production-assignments.index', array_merge(request()->query(), ['destination' => $val, 'stitching_unit' => $val === 'naeem_pakki' ? '' : $selectedUnit])) }}"
+            <a href="{{ route('production-assignments.index', array_merge(request()->query(), ['destination' => $val, 'stitching_unit_id' => $val === 'naeem_pakki' ? '' : $selectedUnit])) }}"
                class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all
                       {{ $selectedDestination === $val
                            ? ($val === 'naeem_pakki' ? 'bg-purple-100 text-purple-700 border-purple-300' : ($val === 'stitching_unit' ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-[#1D1D1F] text-white border-[#1D1D1F]'))
@@ -52,14 +52,21 @@
     @if($selectedDestination !== 'naeem_pakki')
     <div>
         <label class="block text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Stitching Unit</label>
-        <div class="flex gap-1.5">
-            @foreach(['' => 'All', '1' => 'Unit 1', '2' => 'Unit 2', '3' => 'Unit 3', '4' => 'Unit 4'] as $val => $label)
-            <a href="{{ route('production-assignments.index', array_merge(request()->query(), ['stitching_unit' => $val])) }}"
+        <div class="flex flex-wrap gap-1.5">
+            <a href="{{ route('production-assignments.index', array_merge(request()->query(), ['stitching_unit_id' => ''])) }}"
                class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all
-                      {{ $selectedUnit === $val
-                           ? 'border-[#AF52DE] text-[#AF52DE]' . ' ' . 'bg-[#F5EEFF]'
+                      {{ $selectedUnit === ''
+                           ? 'border-[#AF52DE] text-[#AF52DE] bg-[#F5EEFF]'
                            : 'bg-white text-[#6E6E73] border-[#E8E8ED] hover:border-[#C7C7CC]' }}">
-                {{ $label }}
+                All
+            </a>
+            @foreach($stitchingUnits as $unit)
+            <a href="{{ route('production-assignments.index', array_merge(request()->query(), ['stitching_unit_id' => $unit->id])) }}"
+               class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all
+                      {{ $selectedUnit == $unit->id
+                           ? 'border-[#AF52DE] text-[#AF52DE] bg-[#F5EEFF]'
+                           : 'bg-white text-[#6E6E73] border-[#E8E8ED] hover:border-[#C7C7CC]' }}">
+                Unit {{ $unit->number }} — {{ $unit->name }}
             </a>
             @endforeach
         </div>
@@ -129,12 +136,12 @@
                 </td>
                 <td><span class="badge {{ $destColor }}">{{ strtoupper(str_replace('_', ' ', $a->destination)) }}</span></td>
                 <td>
-                    @if(!$isNP && $a->stitching_unit)
+                    @if(!$isNP && $a->stitchingUnit)
                         <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold" style="background:#F5EEFF; color:#AF52DE;">
                             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                             </svg>
-                            Unit {{ $a->stitching_unit }}
+                            Unit {{ $a->stitchingUnit->number }} — {{ $a->stitchingUnit->name }}
                         </span>
                     @else
                         <span class="text-[#D2D2D7]">—</span>

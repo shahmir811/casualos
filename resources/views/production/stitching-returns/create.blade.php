@@ -12,7 +12,7 @@
      x-data="{
         selectedCatalogueId: '{{ old('catalogue_id', '') }}',
         selectedDesignId: '{{ old('design_id', '') }}',
-        selectedUnit: '{{ old('stitching_unit', '') }}',
+        selectedUnit: '{{ old('stitching_unit_id', '') }}',
         catalogues: {{ Js::from($catalogues) }},
         sizes: {
             xs: {{ old('items.0.qty', 0) }},
@@ -60,8 +60,8 @@
             // Reset sizes on design change
             this.sizes = { xs: 0, s: 0, m: 0, l: 0, xl: 0 };
             // Auto-select stitching unit from the production assignment
-            if (this.selectedDesign && this.selectedDesign.stitching_unit) {
-                this.selectedUnit = String(this.selectedDesign.stitching_unit);
+            if (this.selectedDesign && this.selectedDesign.stitching_unit_id) {
+                this.selectedUnit = String(this.selectedDesign.stitching_unit_id);
             } else {
                 this.selectedUnit = '';
             }
@@ -111,10 +111,10 @@
                     Stitching Unit
                     <span class="text-[#FF3B30]">*</span>
                 </label>
-                <div class="grid grid-cols-4 gap-3">
-                    @foreach([1, 2, 3, 4] as $unit)
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-{{ min(count($stitchingUnits), 4) }}">
+                    @foreach($stitchingUnits as $unit)
                     <label class="relative cursor-pointer">
-                        <input type="radio" name="stitching_unit" value="{{ $unit }}"
+                        <input type="radio" name="stitching_unit_id" value="{{ $unit->id }}"
                                x-model="selectedUnit"
                                class="sr-only peer">
                         <div class="flex flex-col items-center justify-center p-4 border-2 rounded-xl text-center transition-all
@@ -124,17 +124,18 @@
                             <svg class="w-5 h-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                             </svg>
-                            <span class="text-xs font-semibold">Unit {{ $unit }}</span>
+                            <span class="text-xs font-semibold">Unit {{ $unit->number }}</span>
+                            <span class="text-[10px] mt-0.5 text-current opacity-70 leading-tight">{{ $unit->name }}</span>
                         </div>
                     </label>
                     @endforeach
                 </div>
                 {{-- Auto-select note --}}
-                <p x-show="selectedDesign && selectedDesign.stitching_unit" x-cloak
+                <p x-show="selectedDesign && selectedDesign.stitching_unit_id" x-cloak
                    class="mt-2 text-[10px] text-[#86868B]">
                     Auto-selected from production assignment — change if incorrect
                 </p>
-                <p x-show="selectedDesign && !selectedDesign.stitching_unit" x-cloak
+                <p x-show="selectedDesign && !selectedDesign.stitching_unit_id" x-cloak
                    class="mt-2 text-[10px] text-[#FF9500]">
                     No stitching unit found on the assignment — please select manually
                 </p>

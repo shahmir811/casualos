@@ -10,7 +10,7 @@ class ProductionAssignment extends Model
 {
     use LogsActivity;
 
-    protected $fillable = ['catalogue_id', 'design_id', 'destination', 'stitching_unit', 'naeem_pakki_rate', 'assignment_date', 'logged_by'];
+    protected $fillable = ['catalogue_id', 'design_id', 'destination', 'stitching_unit_id', 'naeem_pakki_rate', 'assignment_date', 'logged_by'];
 
     protected $casts = ['assignment_date' => 'date'];
 
@@ -46,6 +46,11 @@ class ProductionAssignment extends Model
     public function naeemPakkiReturns(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(NaeemPakkiReturn::class);
+    }
+
+    public function stitchingUnit(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(StitchingUnit::class);
     }
 
     public function loggedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
