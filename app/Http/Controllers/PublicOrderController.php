@@ -83,6 +83,17 @@ class PublicOrderController extends Controller
                 ->with('customer_not_found', true);
         }
 
+        // Prevent duplicate orders — one order per customer per catalogue
+        $alreadyOrdered = Order::where('customer_id', $customer->id)
+            ->where('catalogue_id', $catalogue->id)
+            ->exists();
+
+        if ($alreadyOrdered) {
+            return back()
+                ->withInput()
+                ->with('duplicate_order', true);
+        }
+
         $orderId = null;
 
         DB::transaction(function () use ($request, $catalogue, $customer, $qtyXS, $qtyS, $qtyM, $qtyL, $qtyXL, $piecesPerDesign, $totalAmount, $useDiscount, &$orderId) {
