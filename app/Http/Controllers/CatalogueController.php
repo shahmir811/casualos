@@ -52,12 +52,13 @@ class CatalogueController extends Controller
         $this->adminOnly();
 
         $validated = $request->validate([
-            'name'             => 'required|string|max:255',
-            'cover_photo'      => 'nullable|image|max:10240',
+            'name'               => 'required|string|max:255',
+            'cover_photo'        => 'nullable|image|max:10240',
             'qty_per_design'     => 'required|integer|min:1',
-            'number_of_designs'=> 'required|integer|min:1',
-            'wage_rate'        => 'nullable|numeric|min:0',
-            'notes'            => 'nullable|string',
+            'number_of_designs'  => 'required|integer|min:1',
+            'wage_rate'          => 'nullable|numeric|min:0',
+            'quantity_benchmark' => 'nullable|integer|min:1',
+            'notes'              => 'nullable|string',
         ]);
 
         $validated['created_by'] = Auth::id();
@@ -124,12 +125,13 @@ class CatalogueController extends Controller
         $this->adminOnly();
 
         $validated = $request->validate([
-            'name'             => 'required|string|max:255',
-            'cover_photo'      => 'nullable|image|max:10240',
+            'name'               => 'required|string|max:255',
+            'cover_photo'        => 'nullable|image|max:10240',
             'qty_per_design'     => 'required|integer|min:1',
-            'number_of_designs'=> 'required|integer|min:1',
-            'wage_rate'        => 'nullable|numeric|min:0',
-            'notes'            => 'nullable|string',
+            'number_of_designs'  => 'required|integer|min:1',
+            'wage_rate'          => 'nullable|numeric|min:0',
+            'quantity_benchmark' => 'nullable|integer|min:1',
+            'notes'              => 'nullable|string',
         ]);
 
         if ($request->hasFile('cover_photo')) {

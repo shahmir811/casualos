@@ -33,16 +33,21 @@ class OrderReductionController extends Controller
             $totalReduced = 0;
             $itemData     = [];
 
+            // Index order items by design_id to retrieve the price charged at order time
+            $order->loadMissing('items');
+            $orderItemsByDesign = $order->items->keyBy('design_id');
+
             foreach ($request->items as $item) {
-                $design      = \App\Models\Design::findOrFail($item['design_id']);
-                $amount      = $design->selling_price * $item['qty'];
+                $orderItem = $orderItemsByDesign->get($item['design_id']);
+                $unitPrice = $orderItem ? (float) $orderItem->unit_price : 0;
+                $amount    = $unitPrice * $item['qty'];
                 $totalReduced += $amount;
 
                 $itemData[] = [
                     'design_id'          => $item['design_id'],
                     'size'               => $item['size'],
                     'qty_reduced'        => $item['qty'],
-                    'unit_price'         => $design->selling_price,
+                    'unit_price'         => $unitPrice,
                     'amount_reduced'     => $amount,
                 ];
             }

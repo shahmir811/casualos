@@ -234,14 +234,18 @@
 {{-- Pass design data to Alpine --}}
 @php
     $designsJson = $catalogue->designs->map(fn($d) => [
-        'id'    => $d->id,
-        'name'  => $d->name,
-        'price' => (float) $d->selling_price,
+        'id'             => $d->id,
+        'name'           => $d->name,
+        'normal_price'   => (int) round((float) $d->normal_price),
+        'discount_price' => $d->discount_price !== null
+            ? (int) round((float) $d->discount_price)
+            : (int) round((float) $d->normal_price),
     ])->values()->toJson();
     $numDesigns  = $catalogue->designs->count();
+    $benchmark   = $catalogue->quantity_benchmark ?? 'null';
 @endphp
 
-<div x-data="orderCalc({{ $designsJson }}, {{ $numDesigns }})" class="pb-28">
+<div x-data="orderCalc({{ $designsJson }}, {{ $numDesigns }}, {{ $benchmark }})" class="pb-28">
 
     {{-- ===== CUSTOMER NOT FOUND MODAL ===== --}}
     @if(session('customer_not_found'))
@@ -328,7 +332,7 @@
                         @endif
                     </div>
                     <p style="font-size:0.7rem;color:#1D1D1F;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $design->name }}</p>
-                    <p style="font-size:0.65rem;color:#86868B;">PKR {{ number_format($design->selling_price, 0) }}</p>
+                    <p style="font-size:0.65rem;color:#86868B;">PKR {{ number_format($design->normal_price, 0) }}</p>
                 </div>
                 @endforeach
             </div>
@@ -485,27 +489,38 @@
 </footer>
 
 <script>
-function orderCalc(designs, numDesigns) {
+function orderCalc(designs, numDesigns, benchmark) {
     return {
         designs,
         numDesigns,
+        benchmark,
         sizes: { xs: 0, s: 0, m: 0, l: 0, xl: 0 },
 
         get totalPieces() {
             return this.sizes.xs + this.sizes.s + this.sizes.m + this.sizes.l + this.sizes.xl;
         },
 
+        // True when total qty exceeds the benchmark and a benchmark is set
+        get useDiscount() {
+            return this.benchmark !== null && this.totalPieces > this.benchmark;
+        },
+
+        // Effective price per design based on current tier
+        effectivePrice(d) {
+            return this.useDiscount ? d.discount_price : d.normal_price;
+        },
+
         // Total amount for one size key across all designs
         sizeTotal(key) {
             const qty = this.sizes[key];
-            return this.designs.reduce((sum, d) => sum + qty * d.price, 0);
+            return Math.round(this.designs.reduce((sum, d) => sum + qty * this.effectivePrice(d), 0));
         },
 
         // Grand total = sum of all sizes across all designs
         get grandTotal() {
-            return this.designs.reduce((sum, d) => {
-                return sum + this.totalPieces * d.price;
-            }, 0);
+            return Math.round(this.designs.reduce((sum, d) => {
+                return sum + this.totalPieces * this.effectivePrice(d);
+            }, 0));
         },
 
         increment(key) {
