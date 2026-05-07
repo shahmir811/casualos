@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class StitchingReturnItem extends Model
 {
-    protected $fillable = ['stitching_return_id', 'size', 'quantity'];
+    protected $fillable = ['stitching_return_id', 'size', 'component', 'quantity'];
 
     public function stitchingReturn(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {

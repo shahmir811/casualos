@@ -117,8 +117,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('naeem-pakki-sends/{productionAssignment}', [NaeemPakkiController::class, 'show'])->name('naeem-pakki-sends.show');
         Route::post('naeem-pakki-sends/{productionAssignment}/return', [NaeemPakkiController::class, 'logReturn'])->name('naeem-pakki.return');
 
-        // Stitching daily returns
-        Route::resource('stitching-returns', StitchingReturnController::class)->only(['index','create','store','show']);
+        // Stitching returns (assignment-centric)
+        Route::resource('stitching-returns', StitchingReturnController::class)->only(['index', 'show']);
+        Route::get('stitching-assignments/{productionAssignment}', [StitchingReturnController::class, 'showAssignment'])->name('stitching-assignments.show');
+        Route::post('stitching-assignments/{productionAssignment}/return', [StitchingReturnController::class, 'storeReturn'])->name('stitching-assignments.return');
 
         // Tarpai finishing
         Route::resource('tarpai-sends', TarpaiController::class)->only(['index','create','store','show']);
