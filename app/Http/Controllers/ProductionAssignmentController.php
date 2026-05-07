@@ -60,12 +60,28 @@ class ProductionAssignmentController extends Controller
             ->groupBy('catalogue_id')
             ->map(fn($rows) => $rows->pluck('qty', 'design_id'));
 
-        // ── Already assigned (stitching items + new-style NP np_designs) ─
-        // Old-style stitching/NP: design_id on parent assignment, qty in items table
-        $itemsAssigned = DB::table('production_assignment_items')
+        // ── Pieces assigned to stitching units only (destination='stitching_unit') ─
+        $stitchingAssignedRows = DB::table('production_assignment_items')
             ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
             ->whereIn('production_assignments.catalogue_id', $catIds)
             ->whereNotNull('production_assignments.design_id')
+            ->where('production_assignments.destination', 'stitching_unit')
+            ->select(
+                'production_assignments.catalogue_id',
+                'production_assignments.design_id',
+                DB::raw('SUM(production_assignment_items.quantity) as qty')
+            )
+            ->groupBy('production_assignments.catalogue_id', 'production_assignments.design_id')
+            ->get()
+            ->groupBy('catalogue_id')
+            ->map(fn($rows) => $rows->pluck('qty', 'design_id'));
+
+        // ── Total NP assigned per (catalogue, design) — for NP form "available" ─
+        $npAssignedOld = DB::table('production_assignment_items')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
+            ->whereIn('production_assignments.catalogue_id', $catIds)
+            ->whereNotNull('production_assignments.design_id')
+            ->where('production_assignments.destination', 'naeem_pakki')
             ->select(
                 'production_assignments.catalogue_id',
                 'production_assignments.design_id',
@@ -74,8 +90,7 @@ class ProductionAssignmentController extends Controller
             ->groupBy('production_assignments.catalogue_id', 'production_assignments.design_id')
             ->get();
 
-        // New-style NP: design_id on np_designs, qty in np_designs table
-        $npAssigned = DB::table('production_assignment_np_designs')
+        $npAssignedNew = DB::table('production_assignment_np_designs')
             ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_np_designs.production_assignment_id')
             ->whereIn('production_assignments.catalogue_id', $catIds)
             ->select(
@@ -86,21 +101,52 @@ class ProductionAssignmentController extends Controller
             ->groupBy('production_assignments.catalogue_id', 'production_assignment_np_designs.design_id')
             ->get();
 
-        // Merge: group by catalogue_id → design_id → total assigned
-        $assignedRows = $itemsAssigned->concat($npAssigned)
+        $npAssignedRows = $npAssignedOld->concat($npAssignedNew)
             ->groupBy('catalogue_id')
             ->map(fn($catRows) =>
                 $catRows->groupBy('design_id')->map(fn($r) => $r->sum('qty'))
             );
 
-        // ── Attach available_qty to each design ──────────────────────────
-        $catalogues->each(function ($cat) use ($receivedRows, $assignedRows) {
-            $catReceived = $receivedRows[$cat->id] ?? collect();
-            $catAssigned = $assignedRows[$cat->id] ?? collect();
-            $cat->designs->each(function ($design) use ($catReceived, $catAssigned) {
-                $received = (int) ($catReceived[$design->id] ?? 0);
-                $assigned = (int) ($catAssigned[$design->id] ?? 0);
-                $design->available_qty = max(0, $received - $assigned);
+        // ── NP returned per (catalogue, design) ──────────────────────────
+        // NP designs: source for stitching is what came back from NP, not raw fabric
+        $npReturnedRows = DB::table('naeem_pakki_return_items')
+            ->join('production_assignment_np_designs', 'production_assignment_np_designs.id', '=', 'naeem_pakki_return_items.np_design_id')
+            ->join('naeem_pakki_returns', 'naeem_pakki_returns.id', '=', 'naeem_pakki_return_items.naeem_pakki_return_id')
+            ->join('production_assignments', 'production_assignments.id', '=', 'naeem_pakki_returns.production_assignment_id')
+            ->whereIn('production_assignments.catalogue_id', $catIds)
+            ->select(
+                'production_assignments.catalogue_id',
+                'production_assignment_np_designs.design_id',
+                DB::raw('SUM(naeem_pakki_return_items.quantity) as qty')
+            )
+            ->groupBy('production_assignments.catalogue_id', 'production_assignment_np_designs.design_id')
+            ->get()
+            ->groupBy('catalogue_id')
+            ->map(fn($rows) => $rows->pluck('qty', 'design_id'));
+
+        // ── Attach available_qty and np_available_qty to each design ─────
+        // available_qty    → used by stitching unit form
+        //   NP designs:     npReturned - stitchingAssigned
+        //   Non-NP designs: fabricReceived - stitchingAssigned
+        // np_available_qty → used by NP assignment form
+        //   NP designs:     fabricReceived - totalNpAssigned (pieces not yet sent to NP)
+        $catalogues->each(function ($cat) use ($receivedRows, $stitchingAssignedRows, $npReturnedRows, $npAssignedRows) {
+            $catReceived   = $receivedRows[$cat->id] ?? collect();
+            $catStitching  = $stitchingAssignedRows[$cat->id] ?? collect();
+            $catNpReturned = $npReturnedRows[$cat->id] ?? collect();
+            $catNpAssigned = $npAssignedRows[$cat->id] ?? collect();
+            $cat->designs->each(function ($design) use ($catReceived, $catStitching, $catNpReturned, $catNpAssigned) {
+                $stitchingAssigned = (int) ($catStitching[$design->id] ?? 0);
+                $received          = (int) ($catReceived[$design->id] ?? 0);
+                if ($design->needs_naeem_pakki) {
+                    $npReturned = (int) ($catNpReturned[$design->id] ?? 0);
+                    $npAssigned = (int) ($catNpAssigned[$design->id] ?? 0);
+                    $design->available_qty    = max(0, $npReturned - $stitchingAssigned);
+                    $design->np_available_qty = max(0, $received - $npAssigned);
+                } else {
+                    $design->available_qty    = max(0, $received - $stitchingAssigned);
+                    $design->np_available_qty = 0;
+                }
             });
         });
 
@@ -222,25 +268,37 @@ class ProductionAssignmentController extends Controller
         }
 
         // ── Availability check ───────────────────────────────────────────
-        $fabricReceived = (int) DB::table('fabric_batch_items')
-            ->join('fabric_batches', 'fabric_batches.id', '=', 'fabric_batch_items.fabric_batch_id')
-            ->where('fabric_batches.catalogue_id', $request->catalogue_id)
-            ->where('fabric_batch_items.design_id', $validated['design_id'])
-            ->sum('fabric_batch_items.quantity');
+        $design = Design::findOrFail($validated['design_id']);
 
-        $oldAssigned = (int) DB::table('production_assignment_items')
+        // Pieces already assigned to stitching units for this design
+        $stitchingAssigned = (int) DB::table('production_assignment_items')
             ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
             ->where('production_assignments.catalogue_id', $request->catalogue_id)
             ->where('production_assignments.design_id', $validated['design_id'])
+            ->where('production_assignments.destination', 'stitching_unit')
             ->sum('production_assignment_items.quantity');
 
-        $newNpAssigned = (int) DB::table('production_assignment_np_designs')
-            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_np_designs.production_assignment_id')
-            ->where('production_assignments.catalogue_id', $request->catalogue_id)
-            ->where('production_assignment_np_designs.design_id', $validated['design_id'])
-            ->sum('production_assignment_np_designs.quantity');
+        if ($design->needs_naeem_pakki) {
+            // Source is NP returns — raw fabric is not directly available for stitching
+            $npReturned = (int) DB::table('naeem_pakki_return_items')
+                ->join('production_assignment_np_designs', 'production_assignment_np_designs.id', '=', 'naeem_pakki_return_items.np_design_id')
+                ->join('naeem_pakki_returns', 'naeem_pakki_returns.id', '=', 'naeem_pakki_return_items.naeem_pakki_return_id')
+                ->join('production_assignments', 'production_assignments.id', '=', 'naeem_pakki_returns.production_assignment_id')
+                ->where('production_assignments.catalogue_id', $request->catalogue_id)
+                ->where('production_assignment_np_designs.design_id', $validated['design_id'])
+                ->sum('naeem_pakki_return_items.quantity');
 
-        $availableInFactory = max(0, $fabricReceived - $oldAssigned - $newNpAssigned);
+            $availableInFactory = max(0, $npReturned - $stitchingAssigned);
+        } else {
+            // Source is raw fabric received in factory
+            $fabricReceived = (int) DB::table('fabric_batch_items')
+                ->join('fabric_batches', 'fabric_batches.id', '=', 'fabric_batch_items.fabric_batch_id')
+                ->where('fabric_batches.catalogue_id', $request->catalogue_id)
+                ->where('fabric_batch_items.design_id', $validated['design_id'])
+                ->sum('fabric_batch_items.quantity');
+
+            $availableInFactory = max(0, $fabricReceived - $stitchingAssigned);
+        }
 
         if ($totalItemsQty > $availableInFactory) {
             return back()->withInput()->withErrors([

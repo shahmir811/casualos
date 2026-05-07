@@ -33,7 +33,12 @@
         <div class="space-y-2">
             @foreach($designs as $design)
             <div class="flex items-center justify-between">
-                <p class="text-sm text-[#1D1D1F] truncate flex-1 mr-3">{{ $design->design_name }}</p>
+                <div class="flex items-center gap-1.5 flex-1 mr-3 min-w-0">
+                    <p class="text-sm text-[#1D1D1F] truncate">{{ $design->design_name }}</p>
+                    @if($design->needs_naeem_pakki)
+                        <span class="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 flex-shrink-0">NP</span>
+                    @endif
+                </div>
                 <p class="text-sm font-semibold text-[#0071E3] flex-shrink-0">{{ number_format($design->qty) }} pcs</p>
             </div>
             @endforeach

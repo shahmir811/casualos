@@ -35,9 +35,10 @@ class FabricBatchController extends Controller
                 'fabric_batches.catalogue_id',
                 'fabric_batch_items.design_id',
                 'designs.name as design_name',
+                'designs.needs_naeem_pakki',
                 DB::raw('SUM(fabric_batch_items.quantity) as qty')
             )
-            ->groupBy('fabric_batches.catalogue_id', 'fabric_batch_items.design_id', 'designs.name')
+            ->groupBy('fabric_batches.catalogue_id', 'fabric_batch_items.design_id', 'designs.name', 'designs.needs_naeem_pakki')
             ->orderBy('designs.sort_order')
             ->get()
             ->groupBy('catalogue_id');
