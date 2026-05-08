@@ -67,7 +67,7 @@
             const d = this.npDesigns.find(x => x.id == id);
             if (!d) return false;
             const q = this.npQtyFor(id);
-            return q > 0 && q > (d.available_qty || 0);
+            return q > 0 && q > (d.np_available_qty || 0);
         },
         get npHasAnyQty()    { return this.npDesigns.some(d => this.npQtyFor(d.id) > 0); },
         get npAnyOverLimit() { return this.npDesigns.some(d => this.npOverFor(d.id)); },
@@ -198,15 +198,15 @@
                                     </td>
                                     <td class="text-center">
                                         <span class="text-sm font-semibold"
-                                              :class="(design.available_qty || 0) > 0 ? 'text-[#0071E3]' : 'text-[#FF3B30]'"
-                                              x-text="(design.available_qty || 0).toLocaleString()"></span>
+                                              :class="(design.np_available_qty || 0) > 0 ? 'text-[#0071E3]' : 'text-[#FF3B30]'"
+                                              x-text="(design.np_available_qty || 0).toLocaleString()"></span>
                                         <span class="text-[10px] text-[#86868B]"> pcs</span>
                                     </td>
                                     <td class="text-center">
                                         <input type="number"
                                                :name="'np_items[' + design.id + '][quantity]'"
                                                x-model.number="npQty[design.id]"
-                                               min="0" :max="design.available_qty || 0"
+                                               min="0" :max="design.np_available_qty || 0"
                                                class="apple-input text-center"
                                                style="width:5rem"
                                                placeholder="0"

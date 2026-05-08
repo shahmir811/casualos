@@ -2,239 +2,245 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ProductionAssignment;
 use App\Models\StitchingReturn;
-use App\Models\Catalogue;
 use App\Models\StitchingUnit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class StitchingReturnController extends Controller
 {
     public function index()
     {
-        $returns = StitchingReturn::with(['catalogue', 'design', 'items', 'stitchingUnit', 'loggedBy'])
+        $assignments = ProductionAssignment::with(['catalogue', 'design', 'stitchingUnit', 'items'])
+            ->where('destination', 'stitching_unit')
+            ->whereHas('items')
             ->latest()
             ->paginate(20);
 
-        $stitchingUnits = StitchingUnit::orderBy('number')->get();
+        // Bulk-load return totals per (catalogue, design, stitching_unit, component)
+        $catalogueIds = $assignments->pluck('catalogue_id')->unique()->values()->toArray();
 
-        // ── Per-unit summary: pieces returned + distinct designs per unit ──
-        $unitSummary = DB::table('stitching_returns')
-            ->join('stitching_return_items', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
+        $returnTotalsRaw = DB::table('stitching_return_items')
+            ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
+            ->whereIn('stitching_returns.catalogue_id', $catalogueIds)
             ->whereNotNull('stitching_returns.stitching_unit_id')
             ->select(
+                'stitching_returns.catalogue_id',
+                'stitching_returns.design_id',
                 'stitching_returns.stitching_unit_id',
-                DB::raw('SUM(stitching_return_items.quantity) as total_pieces'),
-                DB::raw('COUNT(DISTINCT stitching_returns.design_id) as total_designs')
+                'stitching_return_items.component',
+                DB::raw('SUM(stitching_return_items.quantity) as qty')
             )
-            ->groupBy('stitching_returns.stitching_unit_id')
+            ->groupBy(
+                'stitching_returns.catalogue_id',
+                'stitching_returns.design_id',
+                'stitching_returns.stitching_unit_id',
+                'stitching_return_items.component'
+            )
             ->get()
-            ->keyBy('stitching_unit_id');
+            ->groupBy(fn($r) => "{$r->catalogue_id}_{$r->design_id}_{$r->stitching_unit_id}");
 
-        // ── Per-unit assigned: pieces & designs assigned from production_assignments ──
+        // Attach computed stats to each assignment
+        $assignments->each(function ($a) use ($returnTotalsRaw) {
+            $key     = "{$a->catalogue_id}_{$a->design_id}_{$a->stitching_unit_id}";
+            $rows    = $returnTotalsRaw[$key] ?? collect();
+            $a->total_assigned   = $a->items->sum('quantity');
+            $a->kameez_returned  = (int) ($rows->firstWhere('component', 'kameez')?->qty ?? 0);
+            $a->shalwar_returned = (int) ($rows->firstWhere('component', 'shalwar')?->qty ?? 0);
+            $a->dupatta_returned = (int) ($rows->firstWhere('component', 'dupatta')?->qty ?? 0);
+            $a->is_complete      = $a->total_assigned > 0
+                && $a->kameez_returned  >= $a->total_assigned
+                && $a->shalwar_returned >= $a->total_assigned
+                && $a->dupatta_returned >= $a->total_assigned;
+        });
+
+        // Unit summary cards
+        $stitchingUnits = StitchingUnit::orderBy('number')->get();
+
         $unitAssigned = DB::table('production_assignment_items')
             ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
             ->where('production_assignments.destination', 'stitching_unit')
             ->whereNotNull('production_assignments.stitching_unit_id')
             ->select(
                 'production_assignments.stitching_unit_id',
-                DB::raw('SUM(production_assignment_items.quantity) as total_assigned'),
-                DB::raw('COUNT(DISTINCT production_assignments.design_id) as designs_assigned')
+                DB::raw('SUM(production_assignment_items.quantity) as total_assigned')
             )
             ->groupBy('production_assignments.stitching_unit_id')
             ->get()
             ->keyBy('stitching_unit_id');
 
-        return view('production.stitching-returns.index', compact('returns', 'stitchingUnits', 'unitSummary', 'unitAssigned'));
-    }
-
-    public function create()
-    {
-        $catalogues = Catalogue::where('status', 'open')
-            ->with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')])
-            ->orderBy('name')
-            ->get();
-
-        $catIds = $catalogues->pluck('id')->toArray();
-
-        $stitchingUnits = StitchingUnit::where('is_active', true)->orderBy('number')->get();
-
-        // Assigned stitching_unit_id per (catalogue, design)
-        $unitByDesign = DB::table('production_assignments')
-            ->whereIn('catalogue_id', $catIds)
-            ->where('destination', 'stitching_unit')
-            ->whereNotNull('stitching_unit_id')
-            ->select('catalogue_id', 'design_id', 'stitching_unit_id')
-            ->get()
-            ->groupBy('catalogue_id')
-            ->map(fn($rows) => $rows->pluck('stitching_unit_id', 'design_id'));
-
-        // Total pieces assigned per (catalogue, design) — stitching_unit only
-        $assignedQty = DB::table('production_assignment_items')
-            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
-            ->whereIn('production_assignments.catalogue_id', $catIds)
-            ->where('production_assignments.destination', 'stitching_unit')
-            ->select(
-                'production_assignments.catalogue_id',
-                'production_assignments.design_id',
-                DB::raw('SUM(production_assignment_items.quantity) as qty')
-            )
-            ->groupBy('production_assignments.catalogue_id', 'production_assignments.design_id')
-            ->get()
-            ->groupBy('catalogue_id')
-            ->map(fn($rows) => $rows->pluck('qty', 'design_id'));
-
-        // Total pieces already returned per (catalogue, design)
-        $returnedQty = DB::table('stitching_return_items')
+        $unitReturned = DB::table('stitching_return_items')
             ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
-            ->whereIn('stitching_returns.catalogue_id', $catIds)
+            ->whereNotNull('stitching_returns.stitching_unit_id')
             ->select(
-                'stitching_returns.catalogue_id',
-                'stitching_returns.design_id',
+                'stitching_returns.stitching_unit_id',
+                'stitching_return_items.component',
                 DB::raw('SUM(stitching_return_items.quantity) as qty')
             )
-            ->groupBy('stitching_returns.catalogue_id', 'stitching_returns.design_id')
+            ->groupBy('stitching_returns.stitching_unit_id', 'stitching_return_items.component')
             ->get()
-            ->groupBy('catalogue_id')
-            ->map(fn($rows) => $rows->pluck('qty', 'design_id'));
+            ->groupBy('stitching_unit_id');
 
-        // ── Per-SIZE assigned per (catalogue, design) — stitching_unit only ──
-        $assignedSizesRaw = DB::table('production_assignment_items')
-            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
-            ->whereIn('production_assignments.catalogue_id', $catIds)
-            ->where('production_assignments.destination', 'stitching_unit')
-            ->select(
-                'production_assignments.catalogue_id',
-                'production_assignments.design_id',
-                'production_assignment_items.size',
-                DB::raw('SUM(production_assignment_items.quantity) as qty')
-            )
-            ->groupBy('production_assignments.catalogue_id', 'production_assignments.design_id', 'production_assignment_items.size')
-            ->get()
-            ->groupBy('catalogue_id');
+        return view('production.stitching-returns.index', compact(
+            'assignments', 'stitchingUnits', 'unitAssigned', 'unitReturned'
+        ));
+    }
 
-        // ── Per-SIZE already returned per (catalogue, design) ──
-        $returnedSizesRaw = DB::table('stitching_return_items')
+    public function showAssignment(ProductionAssignment $productionAssignment)
+    {
+        $productionAssignment->load(['catalogue', 'design', 'stitchingUnit', 'items', 'loggedBy']);
+
+        $sizes      = ['xs', 's', 'm', 'l', 'xl'];
+        $components = ['kameez', 'shalwar', 'dupatta'];
+
+        // All returns for this assignment (matched by catalogue + design + stitching unit)
+        $stitchingReturns = StitchingReturn::with(['items', 'loggedBy'])
+            ->where('catalogue_id',      $productionAssignment->catalogue_id)
+            ->where('design_id',         $productionAssignment->design_id)
+            ->where('stitching_unit_id', $productionAssignment->stitching_unit_id)
+            ->latest()
+            ->get();
+
+        // Assigned qty per size from assignment items
+        $assignedPerSize = $productionAssignment->items->pluck('quantity', 'size')->toArray();
+
+        // Returned totals per (size, component)
+        $returnedRaw = DB::table('stitching_return_items')
             ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
-            ->whereIn('stitching_returns.catalogue_id', $catIds)
+            ->where('stitching_returns.catalogue_id',      $productionAssignment->catalogue_id)
+            ->where('stitching_returns.design_id',         $productionAssignment->design_id)
+            ->where('stitching_returns.stitching_unit_id', $productionAssignment->stitching_unit_id)
             ->select(
-                'stitching_returns.catalogue_id',
-                'stitching_returns.design_id',
+                'stitching_return_items.size',
+                'stitching_return_items.component',
+                DB::raw('SUM(stitching_return_items.quantity) as qty')
+            )
+            ->groupBy('stitching_return_items.size', 'stitching_return_items.component')
+            ->get()
+            ->groupBy('size');
+
+        // Build matrix: matrix[size][component] = [assigned, returned, remaining]
+        $matrix = [];
+        foreach ($sizes as $size) {
+            $assigned   = (int) ($assignedPerSize[$size] ?? 0);
+            $sizeRows   = $returnedRaw[$size] ?? collect();
+            foreach ($components as $component) {
+                $returned = (int) ($sizeRows->firstWhere('component', $component)?->qty ?? 0);
+                $matrix[$size][$component] = [
+                    'assigned'  => $assigned,
+                    'returned'  => $returned,
+                    'remaining' => max(0, $assigned - $returned),
+                ];
+            }
+        }
+
+        // remaining[size][component] — passed to Alpine.js on the form
+        $remainingPerSizePerComponent = [];
+        foreach ($sizes as $size) {
+            foreach ($components as $component) {
+                $remainingPerSizePerComponent[$size][$component] = $matrix[$size][$component]['remaining'];
+            }
+        }
+
+        $isFullyComplete = collect($components)->every(
+            fn($c) => collect($sizes)->every(fn($s) => $matrix[$s][$c]['remaining'] === 0 && $matrix[$s][$c]['assigned'] > 0)
+        );
+
+        return view('production.stitching-returns.assignment', compact(
+            'productionAssignment', 'stitchingReturns', 'matrix',
+            'sizes', 'components', 'remainingPerSizePerComponent', 'isFullyComplete'
+        ));
+    }
+
+    public function storeReturn(Request $request, ProductionAssignment $productionAssignment)
+    {
+        $productionAssignment->load('items');
+
+        $validated = $request->validate([
+            'return_date'  => 'required|date',
+            'components'   => 'required|array|min:1',
+            'components.*' => 'in:kameez,shalwar,dupatta',
+            'items'        => 'required|array',
+            'items.*.size' => 'required|in:xs,s,m,l,xl',
+            'items.*.qty'  => 'nullable|integer|min:0',
+        ]);
+
+        $assignedPerSize = $productionAssignment->items->pluck('quantity', 'size')->toArray();
+
+        // Already returned per (component, size) for the selected components
+        $alreadyReturned = DB::table('stitching_return_items')
+            ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
+            ->where('stitching_returns.catalogue_id',      $productionAssignment->catalogue_id)
+            ->where('stitching_returns.design_id',         $productionAssignment->design_id)
+            ->where('stitching_returns.stitching_unit_id', $productionAssignment->stitching_unit_id)
+            ->whereIn('stitching_return_items.component', $validated['components'])
+            ->select(
+                'stitching_return_items.component',
                 'stitching_return_items.size',
                 DB::raw('SUM(stitching_return_items.quantity) as qty')
             )
-            ->groupBy('stitching_returns.catalogue_id', 'stitching_returns.design_id', 'stitching_return_items.size')
+            ->groupBy('stitching_return_items.component', 'stitching_return_items.size')
             ->get()
-            ->groupBy('catalogue_id');
+            ->groupBy('component')
+            ->map(fn($rows) => $rows->pluck('qty', 'size'));
 
-        $sizes = ['xs', 's', 'm', 'l', 'xl'];
+        // Validate quantities and build lines to save
+        $linesToSave = [];
+        $totalPieces = 0;
 
-        // Attach all qty data to each design
-        $catalogues->each(function ($cat) use ($unitByDesign, $assignedQty, $returnedQty, $assignedSizesRaw, $returnedSizesRaw, $sizes) {
-            $catUnits    = $unitByDesign[$cat->id] ?? collect();
-            $catAssigned = $assignedQty[$cat->id]  ?? collect();
-            $catReturned = $returnedQty[$cat->id]  ?? collect();
+        foreach ($validated['components'] as $component) {
+            $prevReturned = $alreadyReturned[$component] ?? collect();
+            foreach ($validated['items'] as $item) {
+                $size = $item['size'];
+                $qty  = (int) ($item['qty'] ?? 0);
+                if ($qty === 0) continue;
 
-            // Build per-size lookup: [design_id => [size => qty]]
-            $catAssignedSizes = [];
-            foreach (($assignedSizesRaw[$cat->id] ?? collect()) as $row) {
-                $catAssignedSizes[$row->design_id][$row->size] = (int) $row->qty;
-            }
-            $catReturnedSizes = [];
-            foreach (($returnedSizesRaw[$cat->id] ?? collect()) as $row) {
-                $catReturnedSizes[$row->design_id][$row->size] = (int) $row->qty;
-            }
+                $assigned  = (int) ($assignedPerSize[$size] ?? 0);
+                $previous  = (int) ($prevReturned[$size] ?? 0);
+                $remaining = max(0, $assigned - $previous);
 
-            $cat->designs->each(function ($design) use ($catUnits, $catAssigned, $catReturned, $catAssignedSizes, $catReturnedSizes, $sizes) {
-                $design->stitching_unit_id = $catUnits[$design->id] ?? null;
-                $design->assigned_qty   = (int) ($catAssigned[$design->id] ?? 0);
-                $design->returned_qty   = (int) ($catReturned[$design->id] ?? 0);
-                $design->remaining_qty  = max(0, $design->assigned_qty - $design->returned_qty);
-
-                $assignedBySize  = $catAssignedSizes[$design->id]  ?? [];
-                $returnedBySize  = $catReturnedSizes[$design->id]  ?? [];
-                $remainingBySize = [];
-                foreach ($sizes as $s) {
-                    $a = (int) ($assignedBySize[$s]  ?? 0);
-                    $r = (int) ($returnedBySize[$s]  ?? 0);
-                    $remainingBySize[$s] = max(0, $a - $r);
+                if ($qty > $remaining) {
+                    return back()->withInput()->withErrors([
+                        'items' => "Cannot return {$qty} " . strtoupper($size) . " {$component} — only {$remaining} pcs outstanding.",
+                    ]);
                 }
-                $design->assigned_sizes  = (object) array_map(fn($s) => (int)($assignedBySize[$s]  ?? 0), array_combine($sizes, $sizes));
-                $design->returned_sizes  = (object) array_map(fn($s) => (int)($returnedBySize[$s]  ?? 0), array_combine($sizes, $sizes));
-                $design->remaining_sizes = (object) $remainingBySize;
-            });
-        });
 
-        return view('production.stitching-returns.create', compact('catalogues', 'stitchingUnits'));
-    }
-
-    public function store(Request $request)
-    {
-        $activeUnitIds = StitchingUnit::where('is_active', true)->pluck('id')->toArray();
-
-        $validated = $request->validate([
-            'catalogue_id'      => 'required|exists:catalogues,id',
-            'design_id'         => ['required', Rule::exists('designs', 'id')->where('manufacturing_type', 'in_house')],
-            'stitching_unit_id' => ['required', Rule::in($activeUnitIds)],
-            'return_date'       => 'required|date',
-            'items'             => 'required|array',
-            'items.*.size'      => 'required|in:xs,s,m,l,xl',
-            'items.*.qty'       => 'nullable|integer|min:0',
-        ]);
-
-        $totalPieces = collect($validated['items'])->sum(fn($i) => (int) ($i['qty'] ?? 0));
-        if ($totalPieces === 0) {
-            return back()->withInput()->withErrors(['items' => 'Please enter at least one piece quantity.']);
+                $linesToSave[] = ['component' => $component, 'size' => $size, 'qty' => $qty];
+                $totalPieces  += $qty;
+            }
         }
 
-        // ── Remaining-qty constraint ────────────────────────────────────
-        $assignedToStitching = (int) DB::table('production_assignment_items')
-            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
-            ->where('production_assignments.catalogue_id', $validated['catalogue_id'])
-            ->where('production_assignments.design_id', $validated['design_id'])
-            ->where('production_assignments.destination', 'stitching_unit')
-            ->sum('production_assignment_items.quantity');
-
-        $alreadyReturned = (int) DB::table('stitching_return_items')
-            ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
-            ->where('stitching_returns.catalogue_id', $validated['catalogue_id'])
-            ->where('stitching_returns.design_id', $validated['design_id'])
-            ->sum('stitching_return_items.quantity');
-
-        $remainingQty = max(0, $assignedToStitching - $alreadyReturned);
-
-        if ($totalPieces > $remainingQty) {
+        if (empty($linesToSave)) {
             return back()->withInput()->withErrors([
-                'items' => "Cannot log {$totalPieces} pieces — only {$remainingQty} are still outstanding for this design (assigned: {$assignedToStitching}, already returned: {$alreadyReturned}).",
+                'items' => 'Enter at least one piece quantity to log a return.',
             ]);
         }
-        // ────────────────────────────────────────────────────────────────
 
-        $return = StitchingReturn::create([
-            'catalogue_id'      => $validated['catalogue_id'],
-            'design_id'         => $validated['design_id'],
-            'stitching_unit_id' => $validated['stitching_unit_id'],
-            'return_date'       => $validated['return_date'],
-            'logged_by'         => Auth::id(),
-        ]);
+        DB::transaction(function () use ($validated, $productionAssignment, $linesToSave) {
+            $return = StitchingReturn::create([
+                'catalogue_id'      => $productionAssignment->catalogue_id,
+                'design_id'         => $productionAssignment->design_id,
+                'stitching_unit_id' => $productionAssignment->stitching_unit_id,
+                'return_date'       => $validated['return_date'],
+                'logged_by'         => Auth::id(),
+            ]);
 
-        foreach ($validated['items'] as $item) {
-            $qty = (int) ($item['qty'] ?? 0);
-            if ($qty > 0) {
+            foreach ($linesToSave as $line) {
                 $return->items()->create([
-                    'size'     => $item['size'],
-                    'quantity' => $qty,
+                    'size'      => $line['size'],
+                    'component' => $line['component'],
+                    'quantity'  => $line['qty'],
                 ]);
             }
-        }
+        });
 
-        $unit = StitchingUnit::find($validated['stitching_unit_id']);
-        $unitLabel = $unit ? "Unit {$unit->number} — {$unit->name}" : "Unit #{$validated['stitching_unit_id']}";
+        $componentLabels = implode(' + ', array_map('ucfirst', $validated['components']));
 
-        return redirect()->route('stitching-returns.show', $return)
-            ->with('success', "Stitching return of {$totalPieces} pieces from {$unitLabel} recorded.");
+        return redirect()
+            ->route('stitching-assignments.show', $productionAssignment)
+            ->with('success', "{$totalPieces} pieces ({$componentLabels}) logged successfully.");
     }
 
     public function show(StitchingReturn $stitchingReturn)

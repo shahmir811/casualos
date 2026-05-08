@@ -50,22 +50,29 @@
     <div class="lg:col-span-2">
         <div class="card overflow-hidden">
             <div class="px-5 py-4 border-b border-[#F2F2F7]">
-                <h2 class="text-sm font-semibold text-[#1D1D1F]">Pieces Returned by Size</h2>
+                <h2 class="text-sm font-semibold text-[#1D1D1F]">Pieces Returned</h2>
             </div>
             <table class="w-full apple-table">
-                <thead><tr><th class="text-left">Size</th><th class="text-right">Quantity</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th class="text-left">Size</th>
+                        <th class="text-left">Component</th>
+                        <th class="text-right">Quantity</th>
+                    </tr>
+                </thead>
                 <tbody>
-                    @forelse($stitchingReturn->items as $item)
+                    @forelse($stitchingReturn->items->sortBy(['component','size']) as $item)
                     <tr>
                         <td class="uppercase font-medium">{{ $item->size }}</td>
+                        <td class="capitalize text-[#6E6E73]">{{ $item->component }}</td>
                         <td class="text-right text-green-700 font-medium">{{ $item->quantity }} pcs</td>
                     </tr>
                     @empty
-                    <tr><td colspan="2" class="text-center text-[#86868B] py-8">No size details recorded.</td></tr>
+                    <tr><td colspan="3" class="text-center text-[#86868B] py-8">No details recorded.</td></tr>
                     @endforelse
                     @if($stitchingReturn->items->count())
                     <tr class="border-t-2 border-[#E8E8ED]">
-                        <td class="font-semibold">Total</td>
+                        <td class="font-semibold" colspan="2">Total</td>
                         <td class="text-right font-bold text-green-700">{{ number_format($stitchingReturn->items->sum('quantity')) }} pcs</td>
                     </tr>
                     @endif
