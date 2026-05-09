@@ -126,6 +126,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         // Tarpai finishing
         Route::resource('tarpai-sends', TarpaiController::class)->only(['index','create','store','show']);
         Route::post('tarpai-sends/{send}/return', [TarpaiController::class, 'logReturn'])->name('tarpai.return');
+        Route::get('tarpai-sends/{tarpaiSend}/gate-pass', [TarpaiController::class, 'gatePass'])->name('tarpai.gate-pass');
 
         // Press & Pack
         Route::resource('press-pack', PressPackController::class)->only(['index','create','store']);

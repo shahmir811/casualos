@@ -2,67 +2,117 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TarpaiSend;
-use App\Models\TarpaiReturn;
 use App\Models\Catalogue;
+use App\Models\Design;
+use App\Models\StitchingReturnItem;
+use App\Models\TarpaiReturn;
+use App\Models\TarpaiSend;
+use App\Models\TarpaiSendItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class TarpaiController extends Controller
 {
     public function index()
     {
-        $sends = TarpaiSend::with(['catalogue', 'design', 'returns'])->latest()->paginate(20);
+        $sends = TarpaiSend::with(['catalogue', 'items', 'returns.items'])->latest()->paginate(20);
         return view('production.tarpai.index', compact('sends'));
     }
 
     public function create()
     {
         $catalogues = Catalogue::where('status', 'open')
-            ->with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')])
+            ->with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')->orderBy('name')])
             ->orderBy('name')
             ->get();
-        return view('production.tarpai.create', compact('catalogues'));
+
+        $availableQty = $this->computeAvailableQty($catalogues);
+
+        // Restore old quantities after a validation error
+        $oldQuantities = [];
+        foreach (old('designs', []) as $dData) {
+            $designId = $dData['design_id'] ?? null;
+            if (!$designId) continue;
+            $oldQuantities[$designId] = [];
+            foreach ($dData['items'] ?? [] as $item) {
+                $size = $item['size'] ?? null;
+                if ($size) $oldQuantities[$designId][$size] = (int)($item['qty'] ?? 0);
+            }
+        }
+
+        return view('production.tarpai.create', compact('catalogues', 'availableQty', 'oldQuantities'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'catalogue_id'    => 'required|exists:catalogues,id',
-            'design_id'       => ['required', Rule::exists('designs', 'id')->where('manufacturing_type', 'in_house')],
-            'sent_date'       => 'required|date',
-            'per_piece_price' => 'required|numeric|min:0',
-            'items'           => 'required|array',
-            'items.*.size'    => 'required|in:xs,s,m,l,xl',
-            'items.*.qty'     => 'required|integer|min:0',
+            'catalogue_id'           => 'required|exists:catalogues,id',
+            'tarpai_house'           => 'required|in:rashid_bhai,yousaf_bhai',
+            'sent_date'              => 'required|date',
+            'per_piece_price'        => 'required|numeric|min:0',
+            'designs'                => 'required|array',
+            'designs.*.design_id'    => 'required|exists:designs,id',
+            'designs.*.items'        => 'required|array',
+            'designs.*.items.*.size' => 'required|in:xs,s,m,l,xl',
+            'designs.*.items.*.qty'  => 'nullable|integer|min:0',
         ]);
 
-        // Ensure at least one piece is being sent
-        $totalPieces = collect($validated['items'])->sum(fn($i) => (int) $i['qty']);
+        // At least one piece across all designs
+        $totalPieces = 0;
+        foreach ($validated['designs'] as $d) {
+            $totalPieces += collect($d['items'])->sum(fn($i) => (int) ($i['qty'] ?? 0));
+        }
         if ($totalPieces === 0) {
-            return back()
-                ->withInput()
-                ->withErrors(['items' => 'Please enter at least one piece quantity to log a Tarpai send.']);
+            return back()->withInput()
+                ->withErrors(['designs' => 'Please enter at least one piece quantity to log a Tarpai send.']);
         }
 
-        $send = TarpaiSend::create([
-            'catalogue_id'    => $validated['catalogue_id'],
-            'design_id'       => $validated['design_id'],
-            'sent_date'       => $validated['sent_date'],
-            'per_piece_price' => $validated['per_piece_price'],
-            'logged_by'       => Auth::id(),
-        ]);
+        // Validate no quantity exceeds available kameez pieces
+        foreach ($validated['designs'] as $designData) {
+            $designId = $designData['design_id'];
+            $design   = Design::find($designId);
 
-        // Save per-size quantities
-        foreach ($validated['items'] as $item) {
-            if ((int) $item['qty'] > 0) {
-                $send->items()->create([
-                    'size'     => $item['size'],
-                    'quantity' => (int) $item['qty'],
-                ]);
+            $stitchingKameez = $this->getStitchingKameezBySize($validated['catalogue_id'], $designId);
+            $alreadySent     = $this->getAlreadySentBySize($validated['catalogue_id'], $designId);
+
+            foreach ($designData['items'] as $item) {
+                $qty  = (int) $item['qty'];
+                $size = $item['size'];
+                if ($qty === 0) continue;
+                $available = max(0, ($stitchingKameez[$size] ?? 0) - ($alreadySent[$size] ?? 0));
+                if ($qty > $available) {
+                    $name = $design?->name ?? "Design #{$designId}";
+                    return back()->withInput()->withErrors([
+                        'designs' => "{$name} (" . strtoupper($size) . "): entered {$qty} but only {$available} available.",
+                    ]);
+                }
             }
         }
+
+        $send = null;
+        DB::transaction(function () use ($validated, &$send) {
+            $send = TarpaiSend::create([
+                'catalogue_id'    => $validated['catalogue_id'],
+                'tarpai_house'    => $validated['tarpai_house'],
+                'sent_date'       => $validated['sent_date'],
+                'per_piece_price' => $validated['per_piece_price'],
+                'logged_by'       => Auth::id(),
+            ]);
+
+            foreach ($validated['designs'] as $designData) {
+                foreach ($designData['items'] as $item) {
+                    if ((int) $item['qty'] > 0) {
+                        $send->items()->create([
+                            'design_id' => $designData['design_id'],
+                            'size'      => $item['size'],
+                            'quantity'  => (int) $item['qty'],
+                        ]);
+                    }
+                }
+            }
+        });
 
         return redirect()->route('tarpai-sends.show', $send)
             ->with('success', 'Tarpai send recorded.');
@@ -70,34 +120,135 @@ class TarpaiController extends Controller
 
     public function show(TarpaiSend $tarpaiSend)
     {
-        $tarpaiSend->load(['catalogue', 'design', 'items', 'returns.items', 'loggedBy']);
-        return view('production.tarpai.show', compact('tarpaiSend'));
+        $tarpaiSend->load(['catalogue', 'items.design', 'returns.items', 'loggedBy']);
+
+        $sizes = ['xs', 's', 'm', 'l', 'xl'];
+
+        // Group sent items by design_id
+        $sentByDesign = $tarpaiSend->items->groupBy('design_id');
+
+        // Group all returned items by design_id across all return batches
+        $returnedByDesign = $tarpaiSend->returns->flatMap->items->groupBy('design_id');
+
+        // Outstanding qty per design per size
+        $outstandingByDesign = [];
+        foreach ($sentByDesign as $designId => $sentItems) {
+            $returnedItems = $returnedByDesign[$designId] ?? collect();
+            foreach ($sizes as $size) {
+                $sent     = $sentItems->where('size', $size)->sum('quantity');
+                $returned = $returnedItems->where('size', $size)->sum('quantity');
+                $outstandingByDesign[$designId][$size] = max(0, $sent - $returned);
+            }
+        }
+
+        $designsById = $tarpaiSend->items->pluck('design')->filter()->unique('id')->keyBy('id');
+
+        return view('production.tarpai.show', compact(
+            'tarpaiSend', 'sentByDesign', 'outstandingByDesign', 'designsById', 'sizes'
+        ));
     }
 
     public function logReturn(Request $request, TarpaiSend $send)
     {
         $validated = $request->validate([
-            'return_date' => 'required|date',
-            'items'       => 'required|array',
-            'items.*.size'=> 'required|in:xs,s,m,l,xl',
-            'items.*.qty' => 'required|integer|min:0',
+            'return_date'            => 'required|date',
+            'designs'                => 'required|array',
+            'designs.*.design_id'    => 'nullable|exists:designs,id',
+            'designs.*.items'        => 'required|array',
+            'designs.*.items.*.size' => 'required|in:xs,s,m,l,xl',
+            'designs.*.items.*.qty'  => 'nullable|integer|min:0',
         ]);
 
-        $return = TarpaiReturn::create([
-            'tarpai_send_id' => $send->id,
-            'return_date'    => $validated['return_date'],
-            'logged_by'      => Auth::id(),
-        ]);
+        $totalReturning = 0;
+        foreach ($validated['designs'] as $d) {
+            $totalReturning += collect($d['items'])->sum(fn($i) => (int) ($i['qty'] ?? 0));
+        }
+        if ($totalReturning === 0) {
+            return back()->withErrors(['designs' => 'Please enter at least one piece quantity to log a return.']);
+        }
 
-        foreach ($validated['items'] as $item) {
-            if ($item['qty'] > 0) {
-                $return->items()->create([
-                    'size'     => $item['size'],
-                    'quantity' => $item['qty'],
-                ]);
+        DB::transaction(function () use ($send, $validated) {
+            $return = TarpaiReturn::create([
+                'tarpai_send_id' => $send->id,
+                'return_date'    => $validated['return_date'],
+                'logged_by'      => Auth::id(),
+            ]);
+
+            foreach ($validated['designs'] as $designData) {
+                // Empty string comes from old records where design_id was null
+                $designId = ($designData['design_id'] ?? null) ?: null;
+                foreach ($designData['items'] as $item) {
+                    if ((int) ($item['qty'] ?? 0) > 0) {
+                        $return->items()->create([
+                            'design_id' => $designId,
+                            'size'      => $item['size'],
+                            'quantity'  => (int) $item['qty'],
+                        ]);
+                    }
+                }
+            }
+        });
+
+        return back()->with('success', 'Tarpai return logged.');
+    }
+
+    public function gatePass(TarpaiSend $tarpaiSend)
+    {
+        $tarpaiSend->load(['catalogue', 'items.design', 'loggedBy']);
+        $designGroups = $tarpaiSend->items->groupBy('design_id');
+        $designsById  = $tarpaiSend->items->pluck('design')->filter()->unique('id')->keyBy('id');
+        return view('production.tarpai.gate-pass', compact('tarpaiSend', 'designGroups', 'designsById'));
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+
+    private function computeAvailableQty(Collection $catalogues): array
+    {
+        $available = [];
+        $sizes = ['xs', 's', 'm', 'l', 'xl'];
+
+        foreach ($catalogues as $cat) {
+            $available[$cat->id] = [];
+            foreach ($cat->designs as $design) {
+                $kameez = $this->getStitchingKameezBySize($cat->id, $design->id);
+                $sent   = $this->getAlreadySentBySize($cat->id, $design->id);
+
+                $perSize = [];
+                foreach ($sizes as $size) {
+                    $perSize[$size] = max(0, ($kameez[$size] ?? 0) - ($sent[$size] ?? 0));
+                }
+                $available[$cat->id][$design->id] = $perSize;
             }
         }
 
-        return back()->with('success', 'Tarpai return logged.');
+        return $available;
+    }
+
+    private function getStitchingKameezBySize(int $catalogueId, int $designId): array
+    {
+        return StitchingReturnItem::whereHas(
+            'stitchingReturn',
+            fn($q) => $q->where('catalogue_id', $catalogueId)->where('design_id', $designId)
+        )
+        ->where('component', 'kameez')
+        ->selectRaw('size, SUM(quantity) as total')
+        ->groupBy('size')
+        ->pluck('total', 'size')
+        ->map(fn($v) => (int) $v)
+        ->toArray();
+    }
+
+    private function getAlreadySentBySize(int $catalogueId, int $designId): array
+    {
+        return TarpaiSendItem::whereHas(
+            'send',
+            fn($q) => $q->where('catalogue_id', $catalogueId)
+        )
+        ->where('design_id', $designId)
+        ->selectRaw('size, SUM(quantity) as total')
+        ->groupBy('size')
+        ->pluck('total', 'size')
+        ->map(fn($v) => (int) $v)
+        ->toArray();
     }
 }
