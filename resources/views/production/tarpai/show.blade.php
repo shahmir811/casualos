@@ -110,28 +110,37 @@
     @if($tarpaiSend->returns->count())
     <div class="card overflow-hidden">
         <div class="px-5 py-4 border-b border-[#F2F2F7]"><h2 class="text-sm font-semibold text-[#1D1D1F]">Return History</h2></div>
-        <table class="w-full apple-table">
-            <thead>
-                <tr>
-                    <th class="text-left">Return #</th>
-                    <th class="text-left">Return Date</th>
-                    <th class="text-right">Pieces Returned</th>
-                    <th class="text-left">Designs</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($tarpaiSend->returns as $ret)
-                <tr>
-                    <td class="text-[#6E6E73] text-xs">RTN-{{ $loop->iteration }}</td>
-                    <td class="text-[#6E6E73]">{{ $ret->return_date->format('d M Y') }}</td>
-                    <td class="text-right text-green-700 font-medium">{{ $ret->items->sum('quantity') }} pcs</td>
-                    <td class="text-xs text-[#6E6E73]">
-                        {{ $ret->items->pluck('design_id')->unique()->map(fn($id) => $designsById[$id]?->name ?? "D#{$id}")->implode(', ') }}
-                    </td>
-                </tr>
+        <div class="divide-y divide-[#F2F2F7]">
+            @foreach($tarpaiSend->returns as $ret)
+            @php $retByDesign = $ret->items->groupBy('design_id'); @endphp
+            <div class="px-5 py-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-semibold text-[#6E6E73]">RTN-{{ $loop->iteration }}</span>
+                        <span class="text-sm text-[#1D1D1F]">{{ $ret->return_date->format('d M Y') }}</span>
+                    </div>
+                    <span class="text-sm font-semibold text-green-700">{{ $ret->items->sum('quantity') }} pcs returned</span>
+                </div>
+                @foreach($retByDesign as $dId => $dItems)
+                @php $dName = $designsById[$dId]?->name ?? ($dId ? "Design #{$dId}" : 'Unknown Design'); @endphp
+                <div class="bg-[#F9F9FB] rounded-lg px-4 py-3 {{ !$loop->first ? 'mt-2' : '' }}">
+                    <p class="text-xs font-semibold text-[#1D1D1F] mb-2">{{ $dName }}</p>
+                    <div class="flex gap-5 flex-wrap">
+                        @foreach($sizes as $size)
+                        @php $qty = $dItems->where('size', $size)->sum('quantity'); @endphp
+                        @if($qty > 0)
+                        <div class="text-center">
+                            <p class="text-xs font-semibold text-[#6E6E73] uppercase tracking-widest">{{ strtoupper($size) }}</p>
+                            <p class="text-sm font-semibold text-green-700">{{ $qty }}</p>
+                        </div>
+                        @endif
+                        @endforeach
+                    </div>
+                </div>
                 @endforeach
-            </tbody>
-        </table>
+            </div>
+            @endforeach
+        </div>
     </div>
     @endif
 
@@ -195,11 +204,12 @@
                                value="0"
                                @input="setQty({{ $designId }}, '{{ $size }}', $event.target.value)"
                                :readonly="getMax({{ $designId }}, '{{ $size }}') === 0"
+                               class="apple-input text-center"
                                :class="getMax({{ $designId }}, '{{ $size }}') === 0
-                                   ? 'w-full text-center px-1 py-2 text-sm bg-[#F5F5F7] text-[#C7C7CC] rounded-lg border border-[#E8E8ED] cursor-not-allowed outline-none'
+                                   ? 'text-[#C7C7CC] cursor-not-allowed'
                                    : isInvalid({{ $designId }}, '{{ $size }}')
-                                       ? 'w-full text-center px-1 py-2 text-sm border-2 border-red-500 bg-red-50 rounded-lg outline-none'
-                                       : 'apple-input text-center px-1'">
+                                       ? '!bg-red-50 !border !border-red-500'
+                                       : ''">
                         <p class="text-xs text-center mt-1"
                            :class="isInvalid({{ $designId }}, '{{ $size }}') && getMax({{ $designId }}, '{{ $size }}') > 0
                                ? 'text-red-500 font-medium'
