@@ -258,7 +258,7 @@ class ProductionAssignmentController extends Controller
             'stitching_unit_id' => ['required', Rule::in($activeUnitIds)],
             'items'            => 'required|array',
             'items.*.size'     => 'required|in:xs,s,m,l,xl',
-            'items.*.qty'      => 'required|integer|min:0',
+            'items.*.qty'      => 'nullable|integer|min:0',
         ]);
 
         $totalItemsQty = collect($validated['items'])->sum(fn($i) => (int) $i['qty']);

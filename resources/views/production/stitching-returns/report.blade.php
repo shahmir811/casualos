@@ -331,7 +331,10 @@
     </div>
 
     @foreach($batchComponents as $comp)
-    @php $compItems = $ret->items->where('component', $comp)->sortBy('size'); @endphp
+    @php
+        $sizeOrder = ['xs' => 0, 's' => 1, 'm' => 2, 'l' => 3, 'xl' => 4];
+        $compItems = $ret->items->where('component', $comp)->sortBy(fn($i) => $sizeOrder[$i->size] ?? 99);
+    @endphp
     <div class="comp-block">
         <div class="comp-block-title">{{ $compLabels[$comp] ?? ucfirst($comp) }}</div>
         <div class="size-row">

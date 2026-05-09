@@ -378,11 +378,14 @@
                 </div>
                 {{-- Size breakdown per component --}}
                 @foreach($batchComponents as $comp)
-                @php $compItems = $ret->items->where('component', $comp); @endphp
+                @php
+                    $sizeOrder = ['xs' => 0, 's' => 1, 'm' => 2, 'l' => 3, 'xl' => 4];
+                    $compItems = $ret->items->where('component', $comp)->sortBy(fn($i) => $sizeOrder[$i->size] ?? 99);
+                @endphp
                 <div class="mb-2">
                     <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1">{{ ucfirst($comp) }}</p>
                     <div class="flex gap-3 flex-wrap">
-                        @foreach($compItems->sortBy('size') as $item)
+                        @foreach($compItems as $item)
                         <span class="text-xs text-[#1D1D1F]">
                             <span class="font-semibold uppercase">{{ $item->size }}</span>: {{ $item->quantity }}
                         </span>

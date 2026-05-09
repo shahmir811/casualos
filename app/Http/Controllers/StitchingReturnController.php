@@ -165,7 +165,7 @@ class StitchingReturnController extends Controller
             ->where('catalogue_id',      $productionAssignment->catalogue_id)
             ->where('design_id',         $productionAssignment->design_id)
             ->where('stitching_unit_id', $productionAssignment->stitching_unit_id)
-            ->oldest()
+            ->latest()
             ->get();
 
         $assignedPerSize = $productionAssignment->items->pluck('quantity', 'size')->toArray();
