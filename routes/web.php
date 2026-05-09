@@ -120,6 +120,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         // Stitching returns (assignment-centric)
         Route::resource('stitching-returns', StitchingReturnController::class)->only(['index', 'show']);
         Route::get('stitching-assignments/{productionAssignment}', [StitchingReturnController::class, 'showAssignment'])->name('stitching-assignments.show');
+        Route::get('stitching-assignments/{productionAssignment}/report', [StitchingReturnController::class, 'reportAssignment'])->name('stitching-assignments.report');
         Route::post('stitching-assignments/{productionAssignment}/return', [StitchingReturnController::class, 'storeReturn'])->name('stitching-assignments.return');
 
         // Tarpai finishing

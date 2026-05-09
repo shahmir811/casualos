@@ -10,10 +10,20 @@
     $dTotal = collect($sizes)->sum(fn($s) => $matrix[$s]['dupatta']['returned']);
 @endphp
 
-<div class="flex items-center gap-3 mb-7">
-    <a href="{{ route('stitching-returns.index') }}" class="text-[#0066CC] hover:underline text-sm">Stitching Returns</a>
-    <span class="text-[#86868B]">/</span>
-    <span class="text-[#1D1D1F] text-sm font-medium">PA-{{ str_pad($productionAssignment->id, 4, '0', STR_PAD_LEFT) }}</span>
+<div class="flex items-center justify-between mb-7">
+    <div class="flex items-center gap-3">
+        <a href="{{ route('stitching-returns.index') }}" class="text-[#0066CC] hover:underline text-sm">Stitching Returns</a>
+        <span class="text-[#86868B]">/</span>
+        <span class="text-[#1D1D1F] text-sm font-medium">PA-{{ str_pad($productionAssignment->id, 4, '0', STR_PAD_LEFT) }}</span>
+    </div>
+    <a href="{{ route('stitching-assignments.report', $productionAssignment) }}"
+       target="_blank"
+       class="btn-secondary flex items-center gap-1.5 text-sm">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+        </svg>
+        Download Report
+    </a>
 </div>
 
 {{-- Stat cards --}}
@@ -89,31 +99,41 @@
         <div class="card p-5"
              x-data="{
                 selectedComponents: [],
-                sizes: { xs: 0, s: 0, m: 0, l: 0, xl: 0 },
-                remaining: {{ Js::from($remainingPerSizePerComponent) }},
-                maxForSize(size) {
-                    if (this.selectedComponents.length === 0) return 0;
-                    return Math.min(...this.selectedComponents.map(c => (this.remaining[size] && this.remaining[size][c] != null) ? this.remaining[size][c] : 0));
+                componentSizes: {
+                    kameez:  { xs: 0, s: 0, m: 0, l: 0, xl: 0 },
+                    shalwar: { xs: 0, s: 0, m: 0, l: 0, xl: 0 },
+                    dupatta: { xs: 0, s: 0, m: 0, l: 0, xl: 0 },
                 },
-                sizeOverLimit(size) {
-                    return (parseInt(this.sizes[size]) || 0) > this.maxForSize(size);
+                remaining: {{ Js::from($remainingPerSizePerComponent) }},
+                maxFor(comp, size) {
+                    return (this.remaining[size] && this.remaining[size][comp] != null) ? this.remaining[size][comp] : 0;
+                },
+                overLimitFor(comp, size) {
+                    return (parseInt(this.componentSizes[comp][size]) || 0) > this.maxFor(comp, size);
+                },
+                compTotal(comp) {
+                    return Object.values(this.componentSizes[comp]).reduce((sum, v) => sum + (parseInt(v) || 0), 0);
                 },
                 get totalQty() {
-                    return Object.values(this.sizes).reduce((sum, v) => sum + (parseInt(v) || 0), 0);
+                    return this.selectedComponents.reduce((sum, c) => sum + this.compTotal(c), 0);
                 },
                 get overLimit() {
-                    return ['xs','s','m','l','xl'].some(s => this.sizeOverLimit(s));
+                    return this.selectedComponents.some(c =>
+                        ['xs','s','m','l','xl'].some(s => this.overLimitFor(c, s))
+                    );
                 },
                 get canSubmit() {
                     return this.selectedComponents.length > 0 && this.totalQty > 0 && !this.overLimit;
                 },
-                onComponentChange() {
-                    this.sizes = { xs: 0, s: 0, m: 0, l: 0, xl: 0 };
+                onToggle(comp) {
+                    if (!this.selectedComponents.includes(comp)) {
+                        this.componentSizes[comp] = { xs: 0, s: 0, m: 0, l: 0, xl: 0 };
+                    }
                 }
              }">
 
             <h3 class="text-sm font-semibold text-[#1D1D1F] mb-1">Log Return Batch</h3>
-            <p class="text-xs text-[#86868B] mb-4">Select which components are being returned in this handover.</p>
+            <p class="text-xs text-[#86868B] mb-4">Select components and enter quantities per size for each.</p>
 
             @if($errors->any())
             <div class="mb-3 px-3 py-2 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg">
@@ -136,81 +156,80 @@
                     <input type="date" name="return_date" value="{{ old('return_date', date('Y-m-d')) }}" class="apple-input" required>
                 </div>
 
-                {{-- Component checkboxes --}}
+                {{-- Per-component checkboxes + size grids --}}
                 <div>
                     <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
                         Components Returned
                     </label>
-                    <div class="space-y-2">
+                    <div class="space-y-3">
                         @foreach(['kameez' => $kTotal, 'shalwar' => $sTotal, 'dupatta' => $dTotal] as $comp => $compReturned)
-                        @php
-                            $compAssigned  = $totalAssigned;
-                            $compRemaining = max(0, $compAssigned - $compReturned);
-                        @endphp
-                        <label class="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors
-                                      {{ $compRemaining === 0 ? 'opacity-50 cursor-not-allowed bg-[#F5F5F7]' : 'bg-[#F5F5F7] hover:bg-[#EEEEF2]' }}">
-                            <div class="flex items-center gap-2.5">
-                                <input type="checkbox"
-                                       name="components[]"
-                                       value="{{ $comp }}"
-                                       x-model="selectedComponents"
-                                       @change="onComponentChange()"
-                                       {{ $compRemaining === 0 ? 'disabled' : '' }}
-                                       class="w-4 h-4 rounded accent-[#0071E3]">
-                                <span class="text-sm font-medium text-[#1D1D1F] capitalize">{{ $comp }}</span>
-                            </div>
-                            <span class="text-[11px] {{ $compRemaining > 0 ? 'text-[#FF9500] font-semibold' : 'text-[#34C759] font-semibold' }}">
-                                {{ $compRemaining > 0 ? $compRemaining . ' outstanding' : '✓ done' }}
-                            </span>
-                        </label>
-                        @endforeach
-                    </div>
-                </div>
-
-                {{-- Size grid (shown once a component is selected) --}}
-                <div x-show="selectedComponents.length > 0" x-cloak>
-                    <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
-                        Pieces by Size
-                        <span class="normal-case font-normal ml-1">(same qty applies to each selected component)</span>
-                    </label>
-                    <div class="grid grid-cols-5 gap-2">
-                        @foreach(['xs','s','m','l','xl'] as $size)
+                        @php $compRemaining = max(0, $totalAssigned - $compReturned); @endphp
                         <div>
-                            <label class="block text-[10px] font-semibold uppercase tracking-widest mb-1.5 text-center transition-colors"
-                                   :class="sizeOverLimit('{{ $size }}') ? 'text-[#FF3B30]' : 'text-[#6E6E73]'">
-                                {{ strtoupper($size) }}
+                            <label class="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors
+                                          {{ $compRemaining === 0 ? 'opacity-50 cursor-not-allowed bg-[#F5F5F7]' : 'bg-[#F5F5F7] hover:bg-[#EEEEF2]' }}">
+                                <div class="flex items-center gap-2.5">
+                                    <input type="checkbox"
+                                           name="components[]"
+                                           value="{{ $comp }}"
+                                           x-model="selectedComponents"
+                                           @change="onToggle('{{ $comp }}')"
+                                           {{ $compRemaining === 0 ? 'disabled' : '' }}
+                                           class="w-4 h-4 rounded accent-[#0071E3]">
+                                    <span class="text-sm font-medium text-[#1D1D1F]">{{ ucfirst($comp) }}</span>
+                                </div>
+                                <span class="text-[11px] {{ $compRemaining > 0 ? 'text-[#FF9500] font-semibold' : 'text-[#34C759] font-semibold' }}">
+                                    {{ $compRemaining > 0 ? $compRemaining . ' outstanding' : '✓ done' }}
+                                </span>
                             </label>
-                            <input type="hidden" name="items[{{ $loop->index }}][size]" value="{{ $size }}">
-                            <input type="number"
-                                   name="items[{{ $loop->index }}][qty]"
-                                   min="0"
-                                   x-model.number="sizes.{{ $size }}"
-                                   class="apple-input text-center text-sm transition-all"
-                                   :class="sizeOverLimit('{{ $size }}') ? 'border-[#FF3B30] bg-[#FFF0EF] text-[#FF3B30]' : ''">
-                            <div class="mt-1 text-center">
-                                <template x-if="!sizeOverLimit('{{ $size }}')">
-                                    <span class="text-[10px] font-medium"
-                                          :class="maxForSize('{{ $size }}') > 0 ? 'text-[#86868B]' : 'text-[#C7C7CC]'"
-                                          x-text="maxForSize('{{ $size }}') + ' left'"></span>
-                                </template>
-                                <template x-if="sizeOverLimit('{{ $size }}')">
-                                    <span class="text-[10px] font-semibold text-[#FF3B30]"
-                                          x-text="'max ' + maxForSize('{{ $size }}')"></span>
-                                </template>
+
+                            {{-- Per-component size grid --}}
+                            <div x-show="selectedComponents.includes('{{ $comp }}')" x-cloak
+                                 class="mt-2 pl-2 border-l-2 border-[#0071E3]/20 space-y-1">
+                                <div class="grid grid-cols-5 gap-1.5">
+                                    @foreach(['xs','s','m','l','xl'] as $size)
+                                    <div>
+                                        <label class="block text-[10px] font-semibold uppercase tracking-widest mb-1 text-center transition-colors"
+                                               :class="overLimitFor('{{ $comp }}', '{{ $size }}') ? 'text-[#FF3B30]' : 'text-[#6E6E73]'">
+                                            {{ strtoupper($size) }}
+                                        </label>
+                                        <input type="number"
+                                               name="component_items[{{ $comp }}][{{ $size }}]"
+                                               min="0"
+                                               x-model.number="componentSizes.{{ $comp }}.{{ $size }}"
+                                               class="apple-input text-center text-sm"
+                                               :class="overLimitFor('{{ $comp }}', '{{ $size }}') ? 'border-[#FF3B30] bg-[#FFF0EF] text-[#FF3B30]' : ''">
+                                        <div class="mt-0.5 text-center">
+                                            <span class="text-[9px]"
+                                                  :class="overLimitFor('{{ $comp }}', '{{ $size }}') ? 'text-[#FF3B30] font-semibold' : (maxFor('{{ $comp }}', '{{ $size }}') > 0 ? 'text-[#86868B]' : 'text-[#C7C7CC]')"
+                                                  x-text="overLimitFor('{{ $comp }}', '{{ $size }}') ? 'max ' + maxFor('{{ $comp }}', '{{ $size }}') : maxFor('{{ $comp }}', '{{ $size }}') + ' left'">
+                                            </span>
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+                                <div class="flex items-center justify-between pt-1">
+                                    <span class="text-[10px] text-[#6E6E73]">{{ ucfirst($comp) }} total:</span>
+                                    <span class="text-xs font-semibold"
+                                          :class="['xs','s','m','l','xl'].some(s => overLimitFor('{{ $comp }}', s)) ? 'text-[#FF3B30]' : (compTotal('{{ $comp }}') > 0 ? 'text-[#34C759]' : 'text-[#1D1D1F]')"
+                                          x-text="compTotal('{{ $comp }}')"></span>
+                                </div>
                             </div>
                         </div>
                         @endforeach
                     </div>
-                    <div class="flex items-center justify-between mt-3 pt-2 border-t border-[#F2F2F7]">
-                        <span class="text-xs text-[#6E6E73]">Total pieces:</span>
-                        <span class="text-sm font-semibold"
-                              :class="overLimit ? 'text-[#FF3B30]' : (totalQty > 0 ? 'text-[#34C759]' : 'text-[#1D1D1F]')"
-                              x-text="totalQty"></span>
-                    </div>
-                    <p x-show="overLimit" x-cloak class="mt-1 text-xs text-[#FF3B30] font-medium">
-                        ⚠ A size exceeds its remaining quantity.
-                    </p>
                 </div>
+
+                {{-- Grand total --}}
+                <div x-show="selectedComponents.length > 0" x-cloak
+                     class="flex items-center justify-between pt-2 border-t border-[#F2F2F7]">
+                    <span class="text-xs text-[#6E6E73]">Total pieces:</span>
+                    <span class="text-sm font-semibold"
+                          :class="overLimit ? 'text-[#FF3B30]' : (totalQty > 0 ? 'text-[#34C759]' : 'text-[#1D1D1F]')"
+                          x-text="totalQty"></span>
+                </div>
+                <p x-show="overLimit" x-cloak class="mt-1 text-xs text-[#FF3B30] font-medium">
+                    ⚠ A size exceeds its remaining quantity.
+                </p>
 
                 <button type="submit"
                         class="btn-primary w-full justify-center transition-opacity"
@@ -334,7 +353,7 @@
             @foreach($stitchingReturns as $batchIndex => $ret)
             @php
                 $batchComponents = $ret->items->pluck('component')->unique()->values();
-                $batchTotal      = $ret->items->sum('quantity') / max(1, $batchComponents->count());
+                $batchTotal      = $ret->items->sum('quantity');
             @endphp
             <div class="{{ !$loop->last ? 'border-b border-[#F2F2F7]' : '' }} px-5 py-4">
                 <div class="flex items-center justify-between mb-3">
@@ -354,7 +373,7 @@
                     </div>
                     <div class="text-right">
                         <span class="text-sm font-semibold text-green-700">{{ number_format((int)$batchTotal) }} pcs</span>
-                        <span class="text-xs text-[#86868B] ml-1">per component</span>
+                        <span class="text-xs text-[#86868B] ml-1">total</span>
                     </div>
                 </div>
                 {{-- Size breakdown per component --}}
