@@ -15,26 +15,29 @@ class PaymentController extends Controller
     public function store(Request $request, Order $order)
     {
         $request->validate([
-            'amount'         => 'required|numeric|min:1',
-            'payment_type'   => 'required|in:cash,bank_transfer,easypaisa,jazzcash,advance',
-            'payment_date'   => 'required|date',
-            'notes'          => 'nullable|string',
-            'receipt_image'  => 'required|file|image|mimes:jpeg,jpg,png,webp|max:5120',
+            'amount'          => 'required|numeric|min:1',
+            'payment_type'    => 'required|in:cash,bank_transfer,advance',
+            'bank_account_id' => 'required_if:payment_type,bank_transfer|nullable|exists:bank_accounts,id',
+            'payment_date'    => 'required|date',
+            'notes'           => 'nullable|string',
+            'receipt_image'   => 'required_if:payment_type,bank_transfer|nullable|file|image|mimes:jpeg,jpg,png,webp|max:5120',
         ]);
 
-        // Store the receipt image
-        $receiptPath = $request->file('receipt_image')->store('receipts', 'public');
+        $receiptPath = $request->hasFile('receipt_image')
+            ? $request->file('receipt_image')->store('receipts', 'public')
+            : null;
 
         DB::transaction(function () use ($request, $receiptPath, $order) {
             $payment = Payment::create([
-                'order_id'      => $order->id,
-                'customer_id'   => $order->customer_id,
-                'amount'        => $request->amount,
-                'payment_type'  => $request->payment_type,
-                'payment_date'  => $request->payment_date,
-                'notes'         => $request->notes ?? null,
-                'receipt_image' => $receiptPath,
-                'logged_by'     => Auth::id(),
+                'order_id'        => $order->id,
+                'customer_id'     => $order->customer_id,
+                'amount'          => $request->amount,
+                'payment_type'    => $request->payment_type,
+                'bank_account_id' => $request->payment_type === 'bank_transfer' ? $request->bank_account_id : null,
+                'payment_date'    => $request->payment_date,
+                'notes'           => $request->notes ?? null,
+                'receipt_image'   => $receiptPath,
+                'logged_by'       => Auth::id(),
             ]);
 
             // Update order financials

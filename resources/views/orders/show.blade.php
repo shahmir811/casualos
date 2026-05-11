@@ -165,7 +165,9 @@
               action="{{ route('orders.payments.store', $order) }}"
               enctype="multipart/form-data"
               x-data="{
+                paymentType: '{{ old('payment_type', 'cash') }}',
                 preview: null,
+                get isBankTransfer() { return this.paymentType === 'bank_transfer'; },
                 handleFile(e) {
                     const file = e.target.files[0];
                     if (!file) { this.preview = null; return; }
@@ -186,12 +188,28 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Payment Method <span class="text-[#FF3B30]">*</span></label>
-                    <select name="payment_type" required class="apple-input">
-                        <option value="cash"          {{ old('payment_type') === 'cash'          ? 'selected' : '' }}>Cash</option>
-                        <option value="bank_transfer" {{ old('payment_type') === 'bank_transfer' ? 'selected' : '' }}>Bank Transfer</option>
-                        <option value="advance"       {{ old('payment_type') === 'advance'       ? 'selected' : '' }}>From Advance Credit</option>
+                    <select name="payment_type" required class="apple-input" x-model="paymentType">
+                        <option value="cash">Cash</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="advance">From Advance Credit</option>
                     </select>
                 </div>
+
+                {{-- Bank account — only when Bank Transfer selected --}}
+                <div x-show="isBankTransfer" x-cloak class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
+                        Bank Account <span class="text-[#FF3B30]">*</span>
+                    </label>
+                    <select name="bank_account_id" class="apple-input" :required="isBankTransfer">
+                        <option value="">— Select bank account —</option>
+                        @foreach($bankAccounts as $bank)
+                        <option value="{{ $bank->id }}" {{ old('bank_account_id') == $bank->id ? 'selected' : '' }}>
+                            {{ $bank->title }}
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <div>
                     <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Payment Date <span class="text-[#FF3B30]">*</span></label>
                     <input type="date" name="payment_date" value="{{ old('payment_date', date('Y-m-d')) }}" required class="apple-input">
@@ -202,8 +220,8 @@
                 </div>
             </div>
 
-            {{-- Receipt Upload --}}
-            <div>
+            {{-- Receipt Upload — only when Bank Transfer selected --}}
+            <div x-show="isBankTransfer" x-cloak>
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
                     Payment Receipt <span class="text-[#FF3B30]">*</span>
                     <span class="font-normal normal-case ml-1">· JPG, PNG or WebP · max 5 MB</span>
@@ -215,7 +233,7 @@
                     <label class="flex-1 flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl py-7 px-4 cursor-pointer transition-colors bg-[#F5F5F7]"
                            :class="preview ? 'border-[#30D158] bg-[#F0FFF4]' : 'border-[#D2D2D7] hover:border-[#0071E3]'">
                         <input type="file" name="receipt_image" accept="image/jpeg,image/jpg,image/png,image/webp"
-                               class="sr-only" required @change="handleFile($event)">
+                               class="sr-only" :required="isBankTransfer" @change="handleFile($event)">
 
                         <template x-if="!preview">
                             <div class="text-center pointer-events-none">
@@ -262,6 +280,9 @@
                 <td class="text-[#6E6E73] text-xs whitespace-nowrap">{{ $payment->payment_date->format('d M Y') }}</td>
                 <td>
                     <span class="badge bg-green-100 text-green-700">{{ ucwords(str_replace('_', ' ', $payment->payment_type)) }}</span>
+                    @if($payment->payment_type === 'bank_transfer' && $payment->bankAccount)
+                    <span class="ml-1 text-xs text-[#6E6E73]">· {{ $payment->bankAccount->title }}</span>
+                    @endif
                 </td>
                 <td class="text-[#6E6E73] text-sm">{{ $payment->notes ?? '—' }}</td>
                 <td class="text-right text-[#30D158] font-mono font-medium">PKR {{ number_format($payment->amount, 0) }}</td>

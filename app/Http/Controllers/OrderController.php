@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Catalogue;
+use App\Models\BankAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -72,8 +73,9 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load(['customer', 'catalogue', 'items.design', 'payments', 'reductions.items']);
-        return view('orders.show', compact('order'));
+        $order->load(['customer', 'catalogue', 'items.design', 'payments.bankAccount', 'reductions.items']);
+        $bankAccounts = BankAccount::where('is_active', true)->orderBy('title')->get();
+        return view('orders.show', compact('order', 'bankAccounts'));
     }
 
     public function edit(Order $order)
