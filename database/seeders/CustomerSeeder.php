@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class CustomerSeeder extends Seeder
 {
@@ -264,11 +265,12 @@ class CustomerSeeder extends Seeder
             Customer::firstOrCreate(
                 ['email' => strtolower($data['email'])],
                 [
-                    'name'                  => $data['name'],
-                    'city'                  => $data['city'],
-                    'contact_number'        => $data['contact_number'],
+                    'name'                   => $data['name'],
+                    'city'                   => $data['city'],
+                    'contact_number'         => $data['contact_number'],
                     'advance_credit_balance' => 0.00,
-                    'created_by'            => $admin->id,
+                    'created_by'             => $admin->id,
+                    'portal_token'           => Str::uuid()->toString(),
                 ]
             );
         }

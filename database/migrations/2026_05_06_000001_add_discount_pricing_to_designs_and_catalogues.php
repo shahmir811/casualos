@@ -8,10 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Note: selling_price was already renamed to normal_price in a partial run.
-        // This migration only adds the two new columns.
         Schema::table('designs', function (Blueprint $table) {
-            $table->decimal('discount_price', 10, 2)->nullable()->after('normal_price');
+            $table->decimal('discount_price', 10, 2)->nullable()->after('selling_price');
         });
 
         Schema::table('catalogues', function (Blueprint $table) {

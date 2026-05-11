@@ -38,10 +38,26 @@ return new class extends Migration
             $table->foreignId('logged_by')->constrained('users');
             $table->timestamps();
         });
+
+        /**
+         * Naeem Pakki return line items — one row per size per return batch.
+         * Restructured by 2026_05_05_000001 (size → np_design_id).
+         */
+        Schema::create('naeem_pakki_return_items', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('naeem_pakki_return_id')
+                  ->constrained('naeem_pakki_returns')
+                  ->cascadeOnDelete();
+            $table->string('size');
+            $table->unsignedSmallInteger('quantity');
+            $table->timestamps();
+            $table->unique(['naeem_pakki_return_id', 'size']);
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('naeem_pakki_return_items');
         Schema::dropIfExists('naeem_pakki_returns');
         Schema::dropIfExists('naeem_pakki_sends');
     }
