@@ -7,9 +7,20 @@ use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $customers = Customer::withCount('orders')->orderBy('name')->paginate(20);
+        $search = $request->query('search');
+
+        $customers = Customer::withCount('orders')
+            ->when($search, fn($q) => $q->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('contact_number', 'like', "%{$search}%");
+            }))
+            ->orderBy('name')
+            ->paginate(20)
+            ->withQueryString();
+
         return view('customers.index', compact('customers'));
     }
 

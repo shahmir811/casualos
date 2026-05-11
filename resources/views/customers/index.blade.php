@@ -21,14 +21,30 @@
 
 {{-- Search --}}
 <form method="GET" class="mb-5">
-    <div class="relative">
+    <div class="relative flex items-center">
+        {{-- search icon (left, decorative) --}}
+        <svg class="absolute left-3.5 w-4 h-4 text-[#86868B] pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+
         <input type="text" name="search" value="{{ request('search') }}"
             placeholder="Search by name, email, or phone..."
-            class="apple-input pr-10">
-        <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868B] hover:text-[#1D1D1F] transition-colors">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
+            class="w-full bg-white border border-[#D2D2D7] rounded-xl text-[#1D1D1F] text-sm pl-10 pr-24 py-2.5
+                   placeholder-[#86868B] outline-none transition-all
+                   focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20">
+
+        {{-- clear link (only visible when there's a search term) --}}
+        @if(request('search'))
+        <a href="{{ route('customers.index') }}"
+           class="absolute right-20 text-xs text-[#86868B] hover:text-[#1D1D1F] transition-colors">
+            Clear
+        </a>
+        @endif
+
+        <button type="submit"
+            class="absolute right-2 bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-medium
+                   px-3.5 py-1.5 rounded-lg transition-colors">
+            Search
         </button>
     </div>
 </form>
