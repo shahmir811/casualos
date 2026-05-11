@@ -84,6 +84,7 @@
             <th style="width:5.5%">Total Bill</th>
             <th style="width:5.5%">Received</th>
             <th style="width:5.5%">Receivable</th>
+            <th style="width:5%">Title Given</th>
             @foreach($bankAccounts as $bank)
             <th style="width:4.5%">{{ $bank->title }}</th>
             @endforeach
@@ -116,8 +117,9 @@
         $totalQty     = $qtyPerDesign * $catalogue->number_of_designs;
         $rate         = $totalQty > 0 ? (int) round($order->total_amount / $totalQty) : 0;
 
-        $bankPmts = [];
-        $miscAmt  = 0;
+        $bankPmts   = [];
+        $miscAmt    = 0;
+        $titleGiven = '';
         foreach ($order->payments as $payment) {
             if ($payment->payment_type === 'advance') {
                 $miscAmt += $payment->amount;
@@ -125,6 +127,12 @@
                 $bankPmts[$payment->bank_account_id] = ($bankPmts[$payment->bank_account_id] ?? 0) + $payment->amount;
             }
         }
+        $titleGiven = $order->payments
+            ->where('payment_type', 'bank_transfer')
+            ->filter(fn($p) => $p->bankAccount)
+            ->map(fn($p) => $p->bankAccount->title)
+            ->unique()
+            ->implode('/');
 
         $totals['xs']             += $xs;
         $totals['s']              += $s;
@@ -156,6 +164,7 @@
         <td class="td-right">{{ number_format($order->total_amount, 0) }}</td>
         <td class="td-right">{{ $order->total_paid > 0 ? number_format($order->total_paid, 0) : '' }}</td>
         <td class="td-right">{{ $order->outstanding_balance > 0 ? number_format($order->outstanding_balance, 0) : '' }}</td>
+        <td class="td-left">{{ $titleGiven }}</td>
         @foreach($bankAccounts as $bank)
         @php $bankAmt = $bankPmts[$bank->id] ?? 0; @endphp
         <td class="td-right">{{ $bankAmt > 0 ? number_format($bankAmt, 0) : '' }}</td>
@@ -178,6 +187,7 @@
         <td class="td-right">{{ number_format($totals['total_bill'], 0) }}</td>
         <td class="td-right">{{ number_format($totals['received'], 0) }}</td>
         <td class="td-right">{{ number_format($totals['receivable'], 0) }}</td>
+        <td></td>
         @foreach($bankAccounts as $bank)
         <td class="td-right">{{ $totals['bank_' . $bank->id] > 0 ? number_format($totals['bank_' . $bank->id], 0) : '' }}</td>
         @endforeach
