@@ -10,12 +10,12 @@ class Design extends Model
     use HasFactory;
 
     protected $fillable = [
-        'catalogue_id', 'name', 'photo', 'normal_price', 'discount_price',
+        'catalogue_id', 'name', 'photo', 'selling_price', 'discount_price',
         'manufacturing_type', 'needs_naeem_pakki', 'sort_order',
     ];
 
     protected $casts = [
-        'normal_price'      => 'decimal:2',
+        'selling_price'      => 'decimal:2',
         'discount_price'    => 'decimal:2',
         'needs_naeem_pakki' => 'boolean',
     ];

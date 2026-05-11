@@ -145,8 +145,8 @@
                     <h3 class="text-[#1D1D1F] text-sm font-semibold leading-tight mb-1.5">{{ $design->name }}</h3>
                     <div class="space-y-0.5">
                         <div class="flex items-center gap-2">
-                            <span class="text-[#6E6E73] text-xs font-medium uppercase tracking-wide" style="min-width:52px;">Normal</span>
-                            <span class="text-[#1D1D1F] text-sm font-semibold">PKR {{ number_format($design->normal_price, 0) }}</span>
+                            <span class="text-[#6E6E73] text-xs font-medium uppercase tracking-wide" style="min-width:52px;">Selling</span>
+                            <span class="text-[#1D1D1F] text-sm font-semibold">PKR {{ number_format($design->selling_price, 0) }}</span>
                         </div>
                         @if($design->discount_price)
                         <div class="flex items-center gap-2">

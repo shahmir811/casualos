@@ -70,7 +70,7 @@ class PublicOrderController extends Controller
         $totalAmount = (int) round($catalogue->designs->sum(function ($design) use ($piecesPerDesign, $useDiscount) {
             $price = ($useDiscount && $design->discount_price !== null)
                 ? round((float) $design->discount_price)
-                : round((float) $design->normal_price);
+                : round((float) $design->selling_price);
             return $piecesPerDesign * $price;
         }));
 
@@ -117,7 +117,7 @@ class PublicOrderController extends Controller
             foreach ($catalogue->designs as $design) {
                 $unitPrice  = (int) round(($useDiscount && $design->discount_price !== null)
                     ? (float) $design->discount_price
-                    : (float) $design->normal_price);
+                    : (float) $design->selling_price);
                 $lineAmount = $piecesPerDesign * $unitPrice;
 
                 $order->items()->create([

@@ -236,10 +236,10 @@
     $designsJson = $catalogue->designs->map(fn($d) => [
         'id'             => $d->id,
         'name'           => $d->name,
-        'normal_price'   => (int) round((float) $d->normal_price),
+        'selling_price'   => (int) round((float) $d->selling_price),
         'discount_price' => $d->discount_price !== null
             ? (int) round((float) $d->discount_price)
-            : (int) round((float) $d->normal_price),
+            : (int) round((float) $d->selling_price),
     ])->values()->toJson();
     $numDesigns  = $catalogue->designs->count();
     $benchmark   = $catalogue->quantity_benchmark ?? 'null';
@@ -374,7 +374,7 @@
                         @endif
                     </div>
                     <p style="font-size:0.7rem;color:#1D1D1F;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $design->name }}</p>
-                    <p style="font-size:0.65rem;color:#86868B;">PKR {{ number_format($design->normal_price, 0) }}</p>
+                    <p style="font-size:0.65rem;color:#86868B;">PKR {{ number_format($design->selling_price, 0) }}</p>
                 </div>
                 @endforeach
             </div>
@@ -549,7 +549,7 @@ function orderCalc(designs, numDesigns, benchmark) {
 
         // Effective price per design based on current tier
         effectivePrice(d) {
-            return this.useDiscount ? d.discount_price : d.normal_price;
+            return this.useDiscount ? d.discount_price : d.selling_price;
         },
 
         // Total amount for one size key across all designs
