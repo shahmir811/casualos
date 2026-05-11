@@ -21,7 +21,7 @@ class ProductionTrackerController extends Controller
         // All catalogues for the selector dropdown
         $catalogues = Catalogue::orderByDesc('created_at')->get();
 
-        $selectedId = $request->get('catalogue_id', $catalogues->first()?->id);
+        $selectedId = $request->input('catalogue_id', $catalogues->first()?->id);
         $catalogue  = $catalogues->find($selectedId);
 
         if (! $catalogue) {
@@ -62,23 +62,28 @@ class ProductionTrackerController extends Controller
 
         /* ----------------------------------------------------------------
          | 3. Naeem Pakki — sent & returned per design
-         | naeem_pakki_send_items → naeem_pakki_sends → production_assignments
+         |
+         | naeem_pakki_sends has catalogue_id + design_id directly (no sub-items table).
+         |
+         | naeem_pakki_returns links to production_assignment_id (naeem_pakki_send_id
+         | was dropped in migration 2026_05_05_000001). Per-design qty lives in
+         | naeem_pakki_return_items, joined to production_assignment_np_designs for design_id.
          * -------------------------------------------------------------- */
-        $npSent = DB::table('naeem_pakki_send_items')
-            ->join('naeem_pakki_sends', 'naeem_pakki_sends.id', '=', 'naeem_pakki_send_items.naeem_pakki_send_id')
-            ->join('production_assignments', 'production_assignments.id', '=', 'naeem_pakki_sends.production_assignment_id')
+        $npSent = DB::table('production_assignment_np_designs')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_np_designs.production_assignment_id')
             ->where('production_assignments.catalogue_id', $catId)
-            ->select('production_assignments.design_id', DB::raw('SUM(naeem_pakki_send_items.quantity) as qty'))
-            ->groupBy('production_assignments.design_id')
+            ->where('production_assignments.destination', 'naeem_pakki')
+            ->select('production_assignment_np_designs.design_id', DB::raw('SUM(production_assignment_np_designs.quantity) as qty'))
+            ->groupBy('production_assignment_np_designs.design_id')
             ->pluck('qty', 'design_id');
 
         $npReturned = DB::table('naeem_pakki_return_items')
             ->join('naeem_pakki_returns', 'naeem_pakki_returns.id', '=', 'naeem_pakki_return_items.naeem_pakki_return_id')
-            ->join('naeem_pakki_sends', 'naeem_pakki_sends.id', '=', 'naeem_pakki_returns.naeem_pakki_send_id')
-            ->join('production_assignments', 'production_assignments.id', '=', 'naeem_pakki_sends.production_assignment_id')
+            ->join('production_assignments', 'production_assignments.id', '=', 'naeem_pakki_returns.production_assignment_id')
+            ->join('production_assignment_np_designs', 'production_assignment_np_designs.id', '=', 'naeem_pakki_return_items.np_design_id')
             ->where('production_assignments.catalogue_id', $catId)
-            ->select('production_assignments.design_id', DB::raw('SUM(naeem_pakki_return_items.quantity) as qty'))
-            ->groupBy('production_assignments.design_id')
+            ->select('production_assignment_np_designs.design_id', DB::raw('SUM(naeem_pakki_return_items.quantity) as qty'))
+            ->groupBy('production_assignment_np_designs.design_id')
             ->pluck('qty', 'design_id');
 
         /* ----------------------------------------------------------------
@@ -97,16 +102,16 @@ class ProductionTrackerController extends Controller
         $tarpaiSent = DB::table('tarpai_send_items')
             ->join('tarpai_sends', 'tarpai_sends.id', '=', 'tarpai_send_items.tarpai_send_id')
             ->where('tarpai_sends.catalogue_id', $catId)
-            ->select('tarpai_sends.design_id', DB::raw('SUM(tarpai_send_items.quantity) as qty'))
-            ->groupBy('tarpai_sends.design_id')
+            ->select('tarpai_send_items.design_id', DB::raw('SUM(tarpai_send_items.quantity) as qty'))
+            ->groupBy('tarpai_send_items.design_id')
             ->pluck('qty', 'design_id');
 
         $tarpaiReturned = DB::table('tarpai_return_items')
             ->join('tarpai_returns', 'tarpai_returns.id', '=', 'tarpai_return_items.tarpai_return_id')
             ->join('tarpai_sends', 'tarpai_sends.id', '=', 'tarpai_returns.tarpai_send_id')
             ->where('tarpai_sends.catalogue_id', $catId)
-            ->select('tarpai_sends.design_id', DB::raw('SUM(tarpai_return_items.quantity) as qty'))
-            ->groupBy('tarpai_sends.design_id')
+            ->select('tarpai_return_items.design_id', DB::raw('SUM(tarpai_return_items.quantity) as qty'))
+            ->groupBy('tarpai_return_items.design_id')
             ->pluck('qty', 'design_id');
 
         /* ----------------------------------------------------------------
