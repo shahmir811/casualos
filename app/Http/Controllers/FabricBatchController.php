@@ -38,7 +38,7 @@ class FabricBatchController extends Controller
                 'designs.needs_naeem_pakki',
                 DB::raw('SUM(fabric_batch_items.quantity) as qty')
             )
-            ->groupBy('fabric_batches.catalogue_id', 'fabric_batch_items.design_id', 'designs.name', 'designs.needs_naeem_pakki')
+            ->groupBy('fabric_batches.catalogue_id', 'fabric_batch_items.design_id', 'designs.name', 'designs.needs_naeem_pakki', 'designs.sort_order')
             ->orderBy('designs.sort_order')
             ->get()
             ->groupBy('catalogue_id');
@@ -65,7 +65,7 @@ class FabricBatchController extends Controller
             'notes'        => 'nullable|string',
             'items'        => 'required|array',
             'items.*.design_id' => ['required', Rule::exists('designs', 'id')->where('manufacturing_type', 'in_house')],
-            'items.*.quantity'  => 'required|integer|min:0',
+            'items.*.quantity'  => 'nullable|integer|min:0',
         ]);
 
         // Only keep designs where fabric was actually received (qty > 0)

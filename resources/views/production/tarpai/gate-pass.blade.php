@@ -254,7 +254,7 @@
         <div style="margin-top:32px; color:#6E6E73; font-size:11px;">Signature &amp; Date</div>
     </div>
     <div class="sig-box">
-        <div class="sig-label">Return Acknowledgement</div>
+        <div class="sig-label">Signed By Guard</div>
         <div class="sig-name">&nbsp;</div>
         <div style="margin-top:32px; color:#6E6E73; font-size:11px;">Signature &amp; Date</div>
     </div>

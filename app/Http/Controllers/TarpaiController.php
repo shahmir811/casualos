@@ -15,10 +15,17 @@ use Illuminate\Support\Facades\DB;
 
 class TarpaiController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $sends = TarpaiSend::with(['catalogue', 'items', 'returns.items'])->latest()->paginate(20);
-        return view('production.tarpai.index', compact('sends'));
+        $house = $request->input('house');
+
+        $sends = TarpaiSend::with(['catalogue', 'items', 'returns.items'])
+            ->when($house, fn($q) => $q->where('tarpai_house', $house))
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('production.tarpai.index', compact('sends', 'house'));
     }
 
     public function create()

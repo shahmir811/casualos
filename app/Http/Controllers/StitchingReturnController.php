@@ -83,8 +83,68 @@ class StitchingReturnController extends Controller
             ->get()
             ->groupBy('stitching_unit_id');
 
+        // Per-design report: assigned vs returned per component
+        $designAssigned = DB::table('production_assignment_items')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
+            ->join('designs', 'designs.id', '=', 'production_assignments.design_id')
+            ->join('catalogues', 'catalogues.id', '=', 'production_assignments.catalogue_id')
+            ->where('production_assignments.destination', 'stitching_unit')
+            ->select(
+                'production_assignments.catalogue_id',
+                'production_assignments.design_id',
+                'catalogues.name as catalogue_name',
+                'designs.name as design_name',
+                'designs.sort_order',
+                DB::raw('SUM(production_assignment_items.quantity) as total_assigned')
+            )
+            ->groupBy(
+                'production_assignments.catalogue_id',
+                'production_assignments.design_id',
+                'catalogues.name',
+                'designs.name',
+                'designs.sort_order'
+            )
+            ->orderBy('catalogues.name')
+            ->orderBy('designs.sort_order')
+            ->get();
+
+        $designReturnedRaw = DB::table('stitching_return_items')
+            ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
+            ->whereNotNull('stitching_returns.stitching_unit_id')
+            ->select(
+                'stitching_returns.catalogue_id',
+                'stitching_returns.design_id',
+                'stitching_return_items.component',
+                DB::raw('SUM(stitching_return_items.quantity) as qty')
+            )
+            ->groupBy(
+                'stitching_returns.catalogue_id',
+                'stitching_returns.design_id',
+                'stitching_return_items.component'
+            )
+            ->get()
+            ->groupBy(fn($r) => "{$r->catalogue_id}_{$r->design_id}");
+
+        $designReport = $designAssigned->map(function ($row) use ($designReturnedRaw) {
+            $key  = "{$row->catalogue_id}_{$row->design_id}";
+            $rets = $designReturnedRaw[$key] ?? collect();
+            $assigned = (int) $row->total_assigned;
+            $kameez   = (int) ($rets->firstWhere('component', 'kameez')?->qty  ?? 0);
+            $shalwar  = (int) ($rets->firstWhere('component', 'shalwar')?->qty ?? 0);
+            $dupatta  = (int) ($rets->firstWhere('component', 'dupatta')?->qty ?? 0);
+            return (object) [
+                'catalogue_name' => $row->catalogue_name,
+                'design_name'    => $row->design_name,
+                'assigned'       => $assigned,
+                'kameez'         => $kameez,
+                'shalwar'        => $shalwar,
+                'dupatta'        => $dupatta,
+                'is_complete'    => $assigned > 0 && $kameez >= $assigned && $shalwar >= $assigned && $dupatta >= $assigned,
+            ];
+        });
+
         return view('production.stitching-returns.index', compact(
-            'assignments', 'stitchingUnits', 'unitAssigned', 'unitReturned'
+            'assignments', 'stitchingUnits', 'unitAssigned', 'unitReturned', 'designReport'
         ));
     }
 
