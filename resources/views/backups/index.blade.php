@@ -114,13 +114,6 @@
 
     </div>
 
-    {{-- Info note --}}
-    <div class="flex items-start gap-3 px-4 py-3 bg-[#F5F5F7] border border-[#E8E8ED] rounded-xl text-xs text-[#6E6E73]">
-        <svg class="w-4 h-4 flex-shrink-0 mt-0.5 text-[#86868B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
-        </svg>
-        Backups are stored at <code class="mx-1 px-1 bg-white rounded border border-[#E8E8ED] text-[#1D1D1F]">storage/app/backups/</code> on the server. Download and store copies off-site for safekeeping.
-    </div>
 
 </div>
 @endsection

@@ -28,7 +28,7 @@ class BackupDatabase extends Command
         // ── Create backup ──────────────────────────────────────────────
         $backupDir   = 'backups';
         $filename    = 'backup_' . now()->format('Y-m-d_H-i-s') . '.sql';
-        $storagePath = storage_path('app/' . $backupDir . '/' . $filename);
+        $storagePath = Storage::disk('local')->path($backupDir . '/' . $filename);
 
         Storage::disk('local')->makeDirectory($backupDir);
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Catalogue;
 use App\Models\BankAccount;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -104,6 +105,27 @@ class OrderController extends Controller
         $order->update(['status' => 'confirmed']);
 
         return back()->with('success', 'Order #' . $order->order_number . ' confirmed.');
+    }
+
+    public function downloadPdf(Request $request)
+    {
+        $request->validate(['catalogue_id' => 'required|exists:catalogues,id']);
+
+        $catalogue = Catalogue::findOrFail($request->catalogue_id);
+
+        $orders = Order::with(['customer', 'items', 'payments.bankAccount'])
+            ->where('catalogue_id', $catalogue->id)
+            ->orderBy('submitted_at')
+            ->get();
+
+        $bankAccounts = BankAccount::orderBy('id')->get();
+
+        $pdf = Pdf::loadView('orders.pdf', compact('orders', 'catalogue', 'bankAccounts'))
+            ->setPaper('a3', 'landscape');
+
+        $filename = strtolower(str_replace([' ', '/'], '-', $catalogue->name)) . '-payments.pdf';
+
+        return $pdf->download($filename);
     }
 
     public function markStitching(Order $order)
