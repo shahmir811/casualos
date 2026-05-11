@@ -199,10 +199,10 @@
     {{-- ===== SUMMARY PANEL (shown only when a catalogue is selected) ===== --}}
     @if($selectedCatalogue)
     @php
-        $totalProduction = $selectedCatalogue->qty_per_design * $selectedCatalogue->number_of_designs;
-        $totalOrdered    = $summary['total_pieces'];
-        $remaining       = $totalProduction - $totalOrdered;
-        $pct             = $totalProduction > 0 ? min(100, round($totalOrdered / $totalProduction * 100)) : 0;
+        $qtyPerDesign         = $selectedCatalogue->qty_per_design;
+        $totalOrdered         = $summary['total_pieces'];   // suits ordered (per-design unit)
+        $remaining            = $qtyPerDesign - $totalOrdered;
+        $pct                  = $qtyPerDesign > 0 ? min(100, round($totalOrdered / $qtyPerDesign * 100)) : 0;
     @endphp
     <div class="flex-shrink-0 w-52 space-y-3">
 
@@ -228,11 +228,11 @@
             <p class="text-[10px] font-bold text-[#86868B] uppercase tracking-widest mb-3">Production</p>
             <div class="space-y-2.5">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs text-[#6E6E73]">Total Production</span>
-                    <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($totalProduction) }}</span>
+                    <span class="text-xs text-[#6E6E73]">Per Design Qty</span>
+                    <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($qtyPerDesign) }}</span>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span class="text-xs text-[#6E6E73]">Total Ordered</span>
+                    <span class="text-xs text-[#6E6E73]">Ordered per design</span>
                     <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($totalOrdered) }}</span>
                 </div>
                 <div class="pt-2 mt-1 border-t border-[#F2F2F7] flex items-center justify-between">
