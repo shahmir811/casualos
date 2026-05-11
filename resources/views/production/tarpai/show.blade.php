@@ -119,7 +119,18 @@
                         <span class="text-xs font-semibold text-[#6E6E73]">RTN-{{ $loop->iteration }}</span>
                         <span class="text-sm text-[#1D1D1F]">{{ $ret->return_date->format('d M Y') }}</span>
                     </div>
-                    <span class="text-sm font-semibold text-green-700">{{ $ret->items->sum('quantity') }} pcs returned</span>
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-semibold text-green-700">{{ $ret->items->sum('quantity') }} pcs returned</span>
+                        <form method="POST" action="{{ route('tarpai.return.destroy', [$tarpaiSend, $ret]) }}"
+                              onsubmit="return confirm('Delete this return entry? The pieces will go back to outstanding.')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit"
+                                    class="text-xs text-red-500 hover:text-red-700 font-medium underline underline-offset-2">
+                                Delete
+                            </button>
+                        </form>
+                    </div>
                 </div>
                 @foreach($retByDesign as $dId => $dItems)
                 @php $dName = $designsById[$dId]?->name ?? ($dId ? "Design #{$dId}" : 'Unknown Design'); @endphp

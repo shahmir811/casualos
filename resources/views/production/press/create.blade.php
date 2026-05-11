@@ -14,6 +14,7 @@
         catalogues: {{ Js::from($catalogues) }},
         availableQty: {{ Js::from($availableQty) }},
         oldQuantities: {{ Js::from($oldQuantities) }},
+        inputValues: {},
         get designs() {
             const cat = this.catalogues.find(c => c.id == this.selectedCatalogueId);
             return cat ? cat.designs : [];
@@ -23,6 +24,24 @@
         },
         oldQty(designId, size) {
             return this.oldQuantities[designId]?.[size] ?? 0;
+        },
+        updateQty(designId, size, value) {
+            const key = designId + '_' + size;
+            this.inputValues[key] = parseInt(value) || 0;
+        },
+        currentQty(designId, size) {
+            const key = designId + '_' + size;
+            return this.inputValues[key] ?? this.oldQty(designId, size);
+        },
+        isOverLimit(designId, size) {
+            const avail = this.availableFor(designId, size);
+            if (avail === 0) return false;
+            return this.currentQty(designId, size) > avail;
+        },
+        get hasAnyError() {
+            return this.designs.some(d =>
+                ['xs','s','m','l','xl'].some(s => this.isOverLimit(d.id, s))
+            );
         }
      }">
 
@@ -79,7 +98,10 @@
                                            min="0"
                                            :max="availableFor(design.id, size)"
                                            :value="oldQty(design.id, size)"
-                                           class="apple-input text-center">
+                                           :disabled="availableFor(design.id, size) === 0"
+                                           @input="updateQty(design.id, size, $event.target.value)"
+                                           class="apple-input text-center"
+                                           :class="isOverLimit(design.id, size) ? 'ring-2 ring-red-400 bg-red-50 text-red-600' : ''">
                                 </div>
                             </template>
                         </div>
@@ -93,7 +115,11 @@
         </div>
 
         <div class="flex gap-3" x-show="designs.length > 0" x-cloak>
-            <button type="submit" class="btn-primary">Record Press Send</button>
+            <button type="submit" class="btn-primary"
+                    :disabled="hasAnyError"
+                    :class="hasAnyError ? 'opacity-50 cursor-not-allowed' : ''">
+                Record Press Send
+            </button>
             <a href="{{ route('press-sends.index') }}" class="btn-secondary">Cancel</a>
         </div>
     </form>

@@ -33,6 +33,62 @@
     </a>
 </div>
 
+{{-- ── Available Pieces Summary ────────────────────────────────── --}}
+@foreach($designSummary as $catGroup)
+<div class="card overflow-hidden mb-5">
+    <div class="px-5 py-3 border-b border-[#F2F2F7] flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-[#1D1D1F]">
+            Returned from Tarpai — {{ $catGroup['catalogue'] }}
+            @if($house)
+                <span class="ml-2 badge {{ $house === 'rashid_bhai' ? 'bg-purple-100 text-purple-700' : 'bg-indigo-100 text-indigo-700' }}">
+                    {{ $house === 'rashid_bhai' ? 'Rashid Bhai' : 'Yousaf Bhai' }}
+                </span>
+            @endif
+        </h3>
+        <span class="text-xs text-[#86868B]">Pieces back from tarpai, ready for press</span>
+    </div>
+    <div class="overflow-x-auto">
+    <table class="w-full apple-table" style="min-width:600px;">
+        <thead>
+            <tr>
+                <th class="text-left">Design</th>
+                @foreach($sizes as $size)<th class="text-right">{{ strtoupper($size) }}</th>@endforeach
+                <th class="text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($catGroup['designs'] as $row)
+            <tr>
+                <td class="font-medium text-[#1D1D1F] text-sm">{{ $row['name'] }}</td>
+                @foreach($sizes as $size)
+                <td class="text-right text-sm {{ $row['sizes'][$size] > 0 ? 'font-medium text-[#1D1D1F]' : 'text-[#D2D2D7]' }}">
+                    {{ $row['sizes'][$size] > 0 ? number_format($row['sizes'][$size]) : '—' }}
+                </td>
+                @endforeach
+                <td class="text-right font-bold {{ $row['total'] > 0 ? 'text-[#0071E3]' : 'text-[#D2D2D7]' }}">
+                    {{ $row['total'] > 0 ? number_format($row['total']) : '—' }}
+                </td>
+            </tr>
+            @endforeach
+            @if($catGroup['designs']->count() > 1)
+            <tr style="background:#F5F5F7; border-top:2px solid #E8E8ED;">
+                <td class="font-semibold text-xs text-[#6E6E73]">Totals</td>
+                @foreach($sizes as $size)
+                <td class="text-right font-semibold text-sm">
+                    {{ number_format($catGroup['designs']->sum(fn($r) => $r['sizes'][$size])) }}
+                </td>
+                @endforeach
+                <td class="text-right font-bold text-[#0071E3]">
+                    {{ number_format($catGroup['designs']->sum('total')) }}
+                </td>
+            </tr>
+            @endif
+        </tbody>
+    </table>
+    </div>
+</div>
+@endforeach
+
 <div class="card overflow-hidden">
     <table class="w-full apple-table">
         <thead>
@@ -57,7 +113,28 @@
             @endphp
             <tr>
                 <td class="font-medium text-[#0066CC]">TP-{{ str_pad($send->id, 4, '0', STR_PAD_LEFT) }}</td>
-                <td>{{ $send->catalogue->name ?? '—' }}</td>
+                <td>
+                    <div class="font-medium text-[#1D1D1F] text-sm">{{ $send->catalogue->name ?? '—' }}</div>
+                    @php
+                        $designs = $send->items->pluck('design')->filter()->unique('id');
+                        $palette = [
+                            'bg-blue-100 text-blue-700',
+                            'bg-purple-100 text-purple-700',
+                            'bg-emerald-100 text-emerald-700',
+                            'bg-amber-100 text-amber-700',
+                            'bg-rose-100 text-rose-700',
+                            'bg-teal-100 text-teal-700',
+                            'bg-orange-100 text-orange-700',
+                        ];
+                    @endphp
+                    @if($designs->isNotEmpty())
+                    <div class="flex flex-wrap gap-1 mt-1">
+                        @foreach($designs as $design)
+                        <span class="badge text-[10px] {{ $palette[$design->id % count($palette)] }}">{{ $design->name }}</span>
+                        @endforeach
+                    </div>
+                    @endif
+                </td>
                 <td>
                     <span class="badge {{ $send->tarpai_house === 'rashid_bhai' ? 'bg-purple-100 text-purple-700' : 'bg-indigo-100 text-indigo-700' }}">
                         {{ $send->tarpaiHouseLabel() }}
