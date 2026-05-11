@@ -10,7 +10,7 @@ class TarpaiSend extends Model
 {
     use LogsActivity;
 
-    protected $fillable = ['catalogue_id', 'design_id', 'sent_date', 'per_piece_price', 'logged_by'];
+    protected $fillable = ['catalogue_id', 'tarpai_house', 'sent_date', 'per_piece_price', 'logged_by'];
 
     protected $casts = [
         'sent_date'       => 'date',
@@ -25,11 +25,6 @@ class TarpaiSend extends Model
     public function catalogue(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Catalogue::class);
-    }
-
-    public function design(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-    {
-        return $this->belongsTo(Design::class);
     }
 
     public function items(): \Illuminate\Database\Eloquent\Relations\HasMany
@@ -50,5 +45,14 @@ class TarpaiSend extends Model
     public function loggedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'logged_by');
+    }
+
+    public function tarpaiHouseLabel(): string
+    {
+        return match($this->tarpai_house) {
+            'rashid_bhai' => 'Rashid Bhai',
+            'yousaf_bhai' => 'Yousaf Bhai',
+            default       => '—',
+        };
     }
 }

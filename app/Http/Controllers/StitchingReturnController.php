@@ -154,28 +154,80 @@ class StitchingReturnController extends Controller
         ));
     }
 
+    public function reportAssignment(ProductionAssignment $productionAssignment)
+    {
+        $productionAssignment->load(['catalogue', 'design', 'stitchingUnit', 'items', 'loggedBy']);
+
+        $sizes      = ['xs', 's', 'm', 'l', 'xl'];
+        $components = ['kameez', 'shalwar', 'dupatta'];
+
+        $stitchingReturns = StitchingReturn::with(['items', 'loggedBy'])
+            ->where('catalogue_id',      $productionAssignment->catalogue_id)
+            ->where('design_id',         $productionAssignment->design_id)
+            ->where('stitching_unit_id', $productionAssignment->stitching_unit_id)
+            ->latest()
+            ->get();
+
+        $assignedPerSize = $productionAssignment->items->pluck('quantity', 'size')->toArray();
+
+        $returnedRaw = DB::table('stitching_return_items')
+            ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
+            ->where('stitching_returns.catalogue_id',      $productionAssignment->catalogue_id)
+            ->where('stitching_returns.design_id',         $productionAssignment->design_id)
+            ->where('stitching_returns.stitching_unit_id', $productionAssignment->stitching_unit_id)
+            ->select(
+                'stitching_return_items.size',
+                'stitching_return_items.component',
+                DB::raw('SUM(stitching_return_items.quantity) as qty')
+            )
+            ->groupBy('stitching_return_items.size', 'stitching_return_items.component')
+            ->get()
+            ->groupBy('size');
+
+        $matrix = [];
+        foreach ($sizes as $size) {
+            $assigned = (int) ($assignedPerSize[$size] ?? 0);
+            $sizeRows = $returnedRaw[$size] ?? collect();
+            foreach ($components as $component) {
+                $returned = (int) ($sizeRows->firstWhere('component', $component)?->qty ?? 0);
+                $matrix[$size][$component] = [
+                    'assigned'    => $assigned,
+                    'returned'    => $returned,
+                    'outstanding' => max(0, $assigned - $returned),
+                ];
+            }
+        }
+
+        $totalAssigned = $productionAssignment->items->sum('quantity');
+
+        return view('production.stitching-returns.report', compact(
+            'productionAssignment', 'stitchingReturns', 'matrix',
+            'sizes', 'components', 'totalAssigned'
+        ));
+    }
+
     public function storeReturn(Request $request, ProductionAssignment $productionAssignment)
     {
         $productionAssignment->load('items');
 
-        $validated = $request->validate([
-            'return_date'  => 'required|date',
-            'components'   => 'required|array|min:1',
-            'components.*' => 'in:kameez,shalwar,dupatta',
-            'items'        => 'required|array',
-            'items.*.size' => 'required|in:xs,s,m,l,xl',
-            'items.*.qty'  => 'nullable|integer|min:0',
+        $request->validate([
+            'return_date'         => 'required|date',
+            'components'          => 'required|array|min:1',
+            'components.*'        => 'in:kameez,shalwar,dupatta',
+            'component_items'     => 'required|array',
+            'component_items.*.*' => 'nullable|integer|min:0',
         ]);
 
+        $components      = $request->input('components', []);
         $assignedPerSize = $productionAssignment->items->pluck('quantity', 'size')->toArray();
 
-        // Already returned per (component, size) for the selected components
+        // Already returned per (component, size)
         $alreadyReturned = DB::table('stitching_return_items')
             ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
             ->where('stitching_returns.catalogue_id',      $productionAssignment->catalogue_id)
             ->where('stitching_returns.design_id',         $productionAssignment->design_id)
             ->where('stitching_returns.stitching_unit_id', $productionAssignment->stitching_unit_id)
-            ->whereIn('stitching_return_items.component', $validated['components'])
+            ->whereIn('stitching_return_items.component', $components)
             ->select(
                 'stitching_return_items.component',
                 'stitching_return_items.size',
@@ -186,15 +238,15 @@ class StitchingReturnController extends Controller
             ->groupBy('component')
             ->map(fn($rows) => $rows->pluck('qty', 'size'));
 
-        // Validate quantities and build lines to save
         $linesToSave = [];
         $totalPieces = 0;
 
-        foreach ($validated['components'] as $component) {
+        foreach ($components as $component) {
             $prevReturned = $alreadyReturned[$component] ?? collect();
-            foreach ($validated['items'] as $item) {
-                $size = $item['size'];
-                $qty  = (int) ($item['qty'] ?? 0);
+            $sizeData     = $request->input("component_items.{$component}", []);
+
+            foreach (['xs', 's', 'm', 'l', 'xl'] as $size) {
+                $qty = (int) ($sizeData[$size] ?? 0);
                 if ($qty === 0) continue;
 
                 $assigned  = (int) ($assignedPerSize[$size] ?? 0);
@@ -218,12 +270,12 @@ class StitchingReturnController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($validated, $productionAssignment, $linesToSave) {
+        DB::transaction(function () use ($request, $productionAssignment, $linesToSave) {
             $return = StitchingReturn::create([
                 'catalogue_id'      => $productionAssignment->catalogue_id,
                 'design_id'         => $productionAssignment->design_id,
                 'stitching_unit_id' => $productionAssignment->stitching_unit_id,
-                'return_date'       => $validated['return_date'],
+                'return_date'       => $request->input('return_date'),
                 'logged_by'         => Auth::id(),
             ]);
 
@@ -236,7 +288,7 @@ class StitchingReturnController extends Controller
             }
         });
 
-        $componentLabels = implode(' + ', array_map('ucfirst', $validated['components']));
+        $componentLabels = implode(' + ', array_map('ucfirst', $components));
 
         return redirect()
             ->route('stitching-assignments.show', $productionAssignment)
