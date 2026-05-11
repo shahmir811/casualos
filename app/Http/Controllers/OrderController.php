@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Catalogue;
-use App\Models\Customer;
+use App\Models\BankAccount;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -26,6 +27,14 @@ class OrderController extends Controller
         // Filter by status
         if ($request->input('status')) {
             $query->where('status', $request->input('status'));
+        }
+
+        // Search by customer name or city
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('submitted_name', 'like', '%' . $search . '%')
+                  ->orWhere('submitted_city', 'like', '%' . $search . '%');
+            });
         }
 
         // When filtering by catalogue, load all (no pagination) — mirrors the PDF sheet
@@ -65,8 +74,9 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load(['customer', 'catalogue', 'items.design', 'payments', 'reductions.items']);
-        return view('orders.show', compact('order'));
+        $order->load(['customer', 'catalogue', 'items.design', 'payments.bankAccount', 'reductions.items']);
+        $bankAccounts = BankAccount::where('is_active', true)->orderBy('title')->get();
+        return view('orders.show', compact('order', 'bankAccounts'));
     }
 
     public function edit(Order $order)
@@ -97,6 +107,27 @@ class OrderController extends Controller
         return back()->with('success', 'Order #' . $order->order_number . ' confirmed.');
     }
 
+    public function downloadPdf(Request $request)
+    {
+        $request->validate(['catalogue_id' => 'required|exists:catalogues,id']);
+
+        $catalogue = Catalogue::findOrFail($request->catalogue_id);
+
+        $orders = Order::with(['customer', 'items', 'payments.bankAccount'])
+            ->where('catalogue_id', $catalogue->id)
+            ->orderBy('submitted_at')
+            ->get();
+
+        $bankAccounts = BankAccount::orderBy('id')->get();
+
+        $pdf = Pdf::loadView('orders.pdf', compact('orders', 'catalogue', 'bankAccounts'))
+            ->setPaper('a3', 'landscape');
+
+        $filename = strtolower(str_replace([' ', '/'], '-', $catalogue->name)) . '-payments.pdf';
+
+        return $pdf->download($filename);
+    }
+
     public function markStitching(Order $order)
     {
         if (!in_array(Auth::user()->role, ['admin', 'manager'])) {
@@ -112,13 +143,4 @@ class OrderController extends Controller
         return back()->with('success', 'Order #' . $order->order_number . ' moved to stitching.');
     }
 
-    public function flagged()
-    {
-        $orders = Order::where('is_flagged', true)
-            ->with(['customer', 'catalogue'])
-            ->latest()
-            ->paginate(20);
-
-        return view('orders.flagged', compact('orders'));
-    }
 }

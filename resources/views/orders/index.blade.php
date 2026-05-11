@@ -5,7 +5,7 @@
 @section('content')
 
 {{-- ===== PAGE HEADER ===== --}}
-<div class="flex items-center justify-between mb-6">
+<div class="mb-6 flex items-start justify-between gap-4">
     <div>
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Orders</h1>
         <p class="text-[#6E6E73] text-sm mt-0.5">
@@ -17,13 +17,16 @@
             @endif
         </p>
     </div>
-    <a href="{{ route('orders.flagged') }}"
-       class="btn-secondary flex items-center gap-2 !text-[#FF3B30] !border-[#FF3B30]/30 hover:!bg-[#FFF0EF]">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 21V5a1 1 0 011-1h13l3 5-3 5H4"/>
+    @if($selectedCatalogue)
+    <a href="{{ route('orders.pdf', ['catalogue_id' => $selectedCatalogueId]) }}"
+       class="btn-secondary flex-shrink-0 flex items-center gap-1.5 text-sm"
+       target="_blank">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
         </svg>
-        Flagged Orders
+        Download Payment Sheet
     </a>
+    @endif
 </div>
 
 {{-- ===== FILTERS ===== --}}
@@ -51,8 +54,14 @@
             <option value="dispatched" {{ request('status') === 'dispatched' ? 'selected' : '' }}>Dispatched</option>
         </select>
     </div>
+    <div>
+        <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-wide mb-1">Search</label>
+        <input type="text" name="search" value="{{ request('search') }}"
+               placeholder="Customer name or city…"
+               class="apple-input" style="min-width:220px;">
+    </div>
     <button type="submit" class="btn-primary self-end">Apply</button>
-    @if(request()->hasAny(['catalogue_id','status']))
+    @if(request()->hasAny(['catalogue_id', 'status', 'search']))
         <a href="{{ route('orders.index') }}" class="text-[#0066CC] text-sm hover:underline self-end pb-2">Clear</a>
     @endif
 </form>
@@ -199,10 +208,10 @@
     {{-- ===== SUMMARY PANEL (shown only when a catalogue is selected) ===== --}}
     @if($selectedCatalogue)
     @php
-        $totalProduction = $selectedCatalogue->qty_per_design * $selectedCatalogue->number_of_designs;
-        $totalOrdered    = $summary['total_pieces'];
-        $remaining       = $totalProduction - $totalOrdered;
-        $pct             = $totalProduction > 0 ? min(100, round($totalOrdered / $totalProduction * 100)) : 0;
+        $qtyPerDesign         = $selectedCatalogue->qty_per_design;
+        $totalOrdered         = $summary['total_pieces'];   // suits ordered (per-design unit)
+        $remaining            = $qtyPerDesign - $totalOrdered;
+        $pct                  = $qtyPerDesign > 0 ? min(100, round($totalOrdered / $qtyPerDesign * 100)) : 0;
     @endphp
     <div class="flex-shrink-0 w-52 space-y-3">
 
@@ -228,11 +237,11 @@
             <p class="text-[10px] font-bold text-[#86868B] uppercase tracking-widest mb-3">Production</p>
             <div class="space-y-2.5">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs text-[#6E6E73]">Total Production</span>
-                    <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($totalProduction) }}</span>
+                    <span class="text-xs text-[#6E6E73]">Per Design Qty</span>
+                    <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($qtyPerDesign) }}</span>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span class="text-xs text-[#6E6E73]">Total Ordered</span>
+                    <span class="text-xs text-[#6E6E73]">Ordered per design</span>
                     <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($totalOrdered) }}</span>
                 </div>
                 <div class="pt-2 mt-1 border-t border-[#F2F2F7] flex items-center justify-between">

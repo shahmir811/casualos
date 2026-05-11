@@ -27,6 +27,7 @@ use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductionTrackerController;
+use App\Http\Controllers\BankAccountController;
 
 /*
 |--------------------------------------------------------------------------
@@ -84,11 +85,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     |------------------------------------------------------------------
     */
     Route::middleware('role:admin|accountant')->group(function () {
+        Route::get('orders/pdf', [OrderController::class, 'downloadPdf'])->name('orders.pdf');
         Route::resource('orders', OrderController::class)->except(['create','store','destroy']);
         Route::post('orders/{order}/confirm',  [OrderController::class, 'confirm'])->name('orders.confirm');
         Route::post('orders/{order}/stitch',   [OrderController::class, 'markStitching'])->name('orders.stitch');
-        Route::get('flagged-orders',           [OrderController::class, 'flagged'])->name('orders.flagged');
-
         // Payments
         Route::resource('orders.payments', PaymentController::class)->only(['store']);
         Route::post('orders/{order}/apply-credit', [PaymentController::class, 'applyCredit'])->name('orders.apply-credit');
@@ -182,6 +182,11 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::resource('stitching-units', StitchingUnitController::class)->only(['index', 'create', 'store', 'edit', 'update']);
         Route::post('stitching-units/{stitchingUnit}/toggle', [StitchingUnitController::class, 'toggle'])->name('stitching-units.toggle');
+
+        // Bank account management
+        Route::get('bank-accounts', [BankAccountController::class, 'index'])->name('bank-accounts.index');
+        Route::post('bank-accounts', [BankAccountController::class, 'store'])->name('bank-accounts.store');
+        Route::post('bank-accounts/{bankAccount}/toggle', [BankAccountController::class, 'toggle'])->name('bank-accounts.toggle');
     });
 
     /*

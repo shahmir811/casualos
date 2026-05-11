@@ -78,6 +78,15 @@ The `Catalogue::availablePieces()` method returns `totalPieces() - sum(all order
 6. On submit, the system looks up the email in the Customer Master List
 7. Each saved order gets a randomly generated `order_number` (not a sequential ID). This is displayed everywhere instead of the database `id`.
 
+### Bank Accounts
+
+Bank accounts are managed in the `bank_accounts` table (admin-only). Each has:
+
+- `title` — display name (e.g. "HBL", "Meezan", "Saleem")
+- `is_active` — inactive accounts are hidden from the payment method dropdown
+
+When recording a payment via **Bank Transfer**, the accountant or admin must select an active bank account from the dropdown. For **Cash** and **From Advance Credit** payments, no bank account is required and no receipt is required. Bank accounts are seeded — the 8 default accounts are: Saleem, Ehsan SB, Farhan, Meezan, HBL, Adnan, Osama, Akram.
+
 ### Stitching Units
 
 Stitching units are managed in the `stitching_units` table (not hardcoded integers). Each unit has:
@@ -143,7 +152,7 @@ financial or order data.
 
 ### Route middleware groups currently in `routes/web.php`
 
-- `role:admin` — user management, order reductions
+- `role:admin` — user management, order reductions, bank accounts, stitching units
 - `role:admin|accountant` — customers, orders, payments, reports
 - `role:manager` — all production routes, dispatch, wages
 - No role restriction (auth only) — dashboard, catalogues (accessible to all including designer)
@@ -167,8 +176,10 @@ advance_received | order_charged | payment_received | credit_applied | order_red
 ### `payments.payment_type`
 
 ```
-cash | bank_transfer | easypaisa | jazzcash | advance
+cash | bank_transfer | advance
 ```
+
+`easypaisa` and `jazzcash` have been removed from the system. Do not add them back.
 
 ### `designs.manufacturing_type`
 
@@ -210,11 +221,9 @@ When a customer submits the order form:
 
 - System looks up `submitted_email` in the `customers` table
 - **If found:** Order is linked to that customer (`customer_id` set), saved normally
-- **If NOT found:** The order is **still saved** with `customer_id = null` and
-  `is_flagged = true`. The admin reviews flagged orders and creates/links the customer.
-  **The order must NOT be rejected.** Showing an error and discarding the order is wrong.
-
-Route exists: `GET /flagged-orders` → `OrderController@flagged`
+- **If NOT found:** The order is **rejected** and the customer sees an "Account Not Found"
+  modal telling them to contact the Casual Lite admin. The flagged-orders feature has been
+  removed from the system.
 
 ### 5.2 Dispatch Rules
 
@@ -316,6 +325,16 @@ tab displays quantities **broken down per size** (XS / S / M / L / XL) for each 
 There is no "Forgot Password" link on the login page. Intentional — the admin resets
 passwords manually. Do not add one.
 
+### 5.12 Bank Transfer Payment Rules
+
+When `payment_type = 'bank_transfer'`:
+- `bank_account_id` is **required** — must reference an active `bank_accounts` record
+- `receipt_image` is **required** — the payment slip must be uploaded (JPG, PNG, WebP, max 5 MB)
+
+For `cash` and `advance` payments: no bank account and no receipt image required.
+
+These rules are enforced in `PaymentController::store()` via `required_if` validation and in `orders/show.blade.php` via Alpine.js conditional rendering.
+
 ---
 
 ## 6. Production Flow (In-House)
@@ -396,7 +415,6 @@ returns that cause discrepancies — it flags them for review.
 | `order.thankyou` | `GET /order/{token}/thankyou` | Thank-you page                 |
 | `portal.show`    | `GET /portal/{token}`         | Customer portal (email entry)  |
 | `portal.verify`  | `POST /portal/{token}/verify` | Portal email verification      |
-| `orders.flagged` | `GET /flagged-orders`         | Admin view of unmatched orders |
 | `dispatch.store` | `POST /dispatch/{order}`      | Record a dispatch batch        |
 
 **Never use `order.show` — it does not exist. The correct route name is `order.public`.**
@@ -418,7 +436,8 @@ returns that cause discrepancies — it flags them for review.
 - **Discount pricing** — catalogues have `quantity_benchmark`; designs have `selling_price` + optional `discount_price`; the order form applies the correct price tier live and on submission
 - **Random order numbers** — `orders.order_number` is a randomly generated unique identifier displayed everywhere instead of the database `id`
 - Orders view and management — Order Status card shown to all roles; only admin/manager can change status
-- Payment recording (with receipt image upload and preview)
+- Payment recording — receipt upload and bank account selection are conditional on payment method (bank transfer requires both; cash and advance require neither)
+- **Bank Accounts** — `bank_accounts` table, admin-only management page, seeded with 8 accounts (Saleem, Ehsan SB, Farhan, Meezan, HBL, Adnan, Osama, Akram); `payments.bank_account_id` FK added; bank account title shown in payment history
 - Apply advance credit to orders
 - Customer ledger view
 - Order reduction (admin only) — _financial surplus-to-advance logic still incomplete_
@@ -444,8 +463,7 @@ returns that cause discrepancies — it flags them for review.
 ### Known Bugs / Incomplete Features (must fix)
 
 1. **`order.show` route name used in controller** — should be `order.public`
-2. **Unknown email = order saved flagged** — currently the order is rejected; must be saved with `is_flagged=true`, `customer_id=null`
-3. **Dispatch payment check missing** — `DispatchController::store()` has no outstanding balance guard
+2. **Dispatch payment check missing** — `DispatchController::store()` has no outstanding balance guard
 4. **Cargo document is text, not file** — must be a file upload stored on disk
 5. **Packed inventory not deducted after dispatch** — `DispatchController::store()` must decrement press_pack_records
 6. **Order status auto-transition to stitching** — ✅ Fixed: `FabricBatchController::store()` auto-transitions confirmed orders on fabric batch creation
@@ -464,6 +482,8 @@ All migrations have been run. No pending migrations. For reference, the full set
 - `2026_05_06_000003` — migrates `stitching_unit` integer columns to FK on `production_assignments` and `stitching_returns`
 - `2026_05_06_000004` — adds `per_piece_rate` to `stitching_units`
 - `2026_05_06_000005` — adds `stitching_unit_id` FK to `wages`; drops `wage_rate` from `catalogues`
+- `2026_05_11_000001` — creates `bank_accounts` table
+- `2026_05_11_000002` — adds `bank_account_id` nullable FK to `payments`
 
 ---
 

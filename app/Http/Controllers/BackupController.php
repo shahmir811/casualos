@@ -35,7 +35,7 @@ class BackupController extends Controller
                     'name'       => $name,
                     'path'       => $path,
                     'size_human' => $this->humanSize($size),
-                    'created_at' => \Carbon\Carbon::createFromTimestamp($time),
+                    'created_at' => \Carbon\Carbon::createFromTimestamp($time, config('app.timezone')),
                 ];
             })
             ->sortByDesc(fn($f) => $f->created_at)
@@ -52,7 +52,7 @@ class BackupController extends Controller
         Storage::disk($this->backupDisk)->makeDirectory($this->backupDir);
 
         $filename    = 'backup_' . now()->format('Y-m-d_H-i-s') . '.sql';
-        $storagePath = storage_path('app/' . $this->backupDir . '/' . $filename);
+        $storagePath = Storage::disk($this->backupDisk)->path($this->backupDir . '/' . $filename);
 
         try {
             $sql = $this->generateSqlDump();
