@@ -62,6 +62,61 @@
     @endforeach
 </div>
 
+{{-- ── Per-design report ───────────────────────────────────────────── --}}
+@if($designReport->isNotEmpty())
+<div class="card overflow-hidden mb-6">
+    <div class="px-5 py-4 border-b border-[#F2F2F7]">
+        <h2 class="text-sm font-semibold text-[#1D1D1F]">Return Summary by Design</h2>
+        <p class="text-xs text-[#86868B] mt-0.5">Totals across all stitching units</p>
+    </div>
+    <table class="w-full apple-table">
+        <thead>
+            <tr>
+                <th class="text-left">Design</th>
+                <th class="text-left hidden md:table-cell">Catalogue</th>
+                <th class="text-right">Assigned</th>
+                <th class="text-right">Kameez</th>
+                <th class="text-right">Shalwar</th>
+                <th class="text-right">Dupatta</th>
+                <th class="text-center">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($designReport as $row)
+            @php
+                $allDone = $row->is_complete;
+                $anyRet  = $row->kameez + $row->shalwar + $row->dupatta > 0;
+
+                $colFn = function(int $ret, int $assigned): string {
+                    if ($assigned === 0) return 'text-[#D2D2D7]';
+                    if ($ret >= $assigned) return 'font-semibold text-[#34C759]';
+                    if ($ret > 0)         return 'font-semibold text-[#FF9500]';
+                    return 'text-[#D2D2D7]';
+                };
+            @endphp
+            <tr>
+                <td class="font-medium text-[#1D1D1F]">{{ $row->design_name }}</td>
+                <td class="text-[#6E6E73] text-xs hidden md:table-cell">{{ $row->catalogue_name }}</td>
+                <td class="text-right tabular-nums">{{ number_format($row->assigned) }}</td>
+                <td class="text-right tabular-nums {{ $colFn($row->kameez, $row->assigned) }}">{{ number_format($row->kameez) }}</td>
+                <td class="text-right tabular-nums {{ $colFn($row->shalwar, $row->assigned) }}">{{ number_format($row->shalwar) }}</td>
+                <td class="text-right tabular-nums {{ $colFn($row->dupatta, $row->assigned) }}">{{ number_format($row->dupatta) }}</td>
+                <td class="text-center">
+                    @if($allDone)
+                        <span class="badge bg-green-100 text-green-700">Complete</span>
+                    @elseif($anyRet)
+                        <span class="badge bg-orange-100 text-orange-700">Partial</span>
+                    @else
+                        <span class="badge bg-[#F5F5F7] text-[#86868B]">Pending</span>
+                    @endif
+                </td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+</div>
+@endif
+
 {{-- ── Assignments table ──────────────────────────────────────────── --}}
 <div class="card overflow-hidden">
 
