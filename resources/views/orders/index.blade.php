@@ -5,25 +5,16 @@
 @section('content')
 
 {{-- ===== PAGE HEADER ===== --}}
-<div class="flex items-center justify-between mb-6">
-    <div>
-        <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Orders</h1>
-        <p class="text-[#6E6E73] text-sm mt-0.5">
-            @if($selectedCatalogue)
-                {{ $selectedCatalogue->name }} &mdash;
-                {{ ($orders instanceof \Illuminate\Pagination\LengthAwarePaginator) ? $orders->total() : $orders->count() }} orders
-            @else
-                All catalogues — select a catalogue to see the full response sheet
-            @endif
-        </p>
-    </div>
-    <a href="{{ route('orders.flagged') }}"
-       class="btn-secondary flex items-center gap-2 !text-[#FF3B30] !border-[#FF3B30]/30 hover:!bg-[#FFF0EF]">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 21V5a1 1 0 011-1h13l3 5-3 5H4"/>
-        </svg>
-        Flagged Orders
-    </a>
+<div class="mb-6">
+    <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Orders</h1>
+    <p class="text-[#6E6E73] text-sm mt-0.5">
+        @if($selectedCatalogue)
+            {{ $selectedCatalogue->name }} &mdash;
+            {{ ($orders instanceof \Illuminate\Pagination\LengthAwarePaginator) ? $orders->total() : $orders->count() }} orders
+        @else
+            All catalogues — select a catalogue to see the full response sheet
+        @endif
+    </p>
 </div>
 
 {{-- ===== FILTERS ===== --}}
@@ -51,8 +42,14 @@
             <option value="dispatched" {{ request('status') === 'dispatched' ? 'selected' : '' }}>Dispatched</option>
         </select>
     </div>
+    <div>
+        <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-wide mb-1">Search</label>
+        <input type="text" name="search" value="{{ request('search') }}"
+               placeholder="Customer name or city…"
+               class="apple-input" style="min-width:220px;">
+    </div>
     <button type="submit" class="btn-primary self-end">Apply</button>
-    @if(request()->hasAny(['catalogue_id','status']))
+    @if(request()->hasAny(['catalogue_id', 'status', 'search']))
         <a href="{{ route('orders.index') }}" class="text-[#0066CC] text-sm hover:underline self-end pb-2">Clear</a>
     @endif
 </form>

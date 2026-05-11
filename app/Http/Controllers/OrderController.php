@@ -27,6 +27,14 @@ class OrderController extends Controller
             $query->where('status', $request->input('status'));
         }
 
+        // Search by customer name or city
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('submitted_name', 'like', '%' . $search . '%')
+                  ->orWhere('submitted_city', 'like', '%' . $search . '%');
+            });
+        }
+
         // When filtering by catalogue, load all (no pagination) — mirrors the PDF sheet
         $orders = $selectedCatalogueId
             ? $query->get()
@@ -111,13 +119,4 @@ class OrderController extends Controller
         return back()->with('success', 'Order #' . $order->order_number . ' moved to stitching.');
     }
 
-    public function flagged()
-    {
-        $orders = Order::where('is_flagged', true)
-            ->with(['customer', 'catalogue'])
-            ->latest()
-            ->paginate(20);
-
-        return view('orders.flagged', compact('orders'));
-    }
 }

@@ -87,8 +87,6 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::resource('orders', OrderController::class)->except(['create','store','destroy']);
         Route::post('orders/{order}/confirm',  [OrderController::class, 'confirm'])->name('orders.confirm');
         Route::post('orders/{order}/stitch',   [OrderController::class, 'markStitching'])->name('orders.stitch');
-        Route::get('flagged-orders',           [OrderController::class, 'flagged'])->name('orders.flagged');
-
         // Payments
         Route::resource('orders.payments', PaymentController::class)->only(['store']);
         Route::post('orders/{order}/apply-credit', [PaymentController::class, 'applyCredit'])->name('orders.apply-credit');
