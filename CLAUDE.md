@@ -210,11 +210,9 @@ When a customer submits the order form:
 
 - System looks up `submitted_email` in the `customers` table
 - **If found:** Order is linked to that customer (`customer_id` set), saved normally
-- **If NOT found:** The order is **still saved** with `customer_id = null` and
-  `is_flagged = true`. The admin reviews flagged orders and creates/links the customer.
-  **The order must NOT be rejected.** Showing an error and discarding the order is wrong.
-
-Route exists: `GET /flagged-orders` → `OrderController@flagged`
+- **If NOT found:** The order is **rejected** and the customer sees an "Account Not Found"
+  modal telling them to contact the Casual Lite admin. The flagged-orders feature has been
+  removed from the system.
 
 ### 5.2 Dispatch Rules
 
@@ -396,7 +394,6 @@ returns that cause discrepancies — it flags them for review.
 | `order.thankyou` | `GET /order/{token}/thankyou` | Thank-you page                 |
 | `portal.show`    | `GET /portal/{token}`         | Customer portal (email entry)  |
 | `portal.verify`  | `POST /portal/{token}/verify` | Portal email verification      |
-| `orders.flagged` | `GET /flagged-orders`         | Admin view of unmatched orders |
 | `dispatch.store` | `POST /dispatch/{order}`      | Record a dispatch batch        |
 
 **Never use `order.show` — it does not exist. The correct route name is `order.public`.**
@@ -444,8 +441,7 @@ returns that cause discrepancies — it flags them for review.
 ### Known Bugs / Incomplete Features (must fix)
 
 1. **`order.show` route name used in controller** — should be `order.public`
-2. **Unknown email = order saved flagged** — currently the order is rejected; must be saved with `is_flagged=true`, `customer_id=null`
-3. **Dispatch payment check missing** — `DispatchController::store()` has no outstanding balance guard
+2. **Dispatch payment check missing** — `DispatchController::store()` has no outstanding balance guard
 4. **Cargo document is text, not file** — must be a file upload stored on disk
 5. **Packed inventory not deducted after dispatch** — `DispatchController::store()` must decrement press_pack_records
 6. **Order status auto-transition to stitching** — ✅ Fixed: `FabricBatchController::store()` auto-transitions confirmed orders on fabric batch creation
