@@ -15,6 +15,24 @@
     </a>
 </div>
 
+<div class="flex items-center gap-2 mb-4">
+    <a href="{{ route('tarpai-sends.index') }}"
+       class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors
+              {{ !$house ? 'bg-[#1D1D1F] text-white border-[#1D1D1F]' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-[#1D1D1F]' }}">
+        All
+    </a>
+    <a href="{{ route('tarpai-sends.index', ['house' => 'rashid_bhai']) }}"
+       class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors
+              {{ $house === 'rashid_bhai' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-purple-400' }}">
+        Rashid Bhai
+    </a>
+    <a href="{{ route('tarpai-sends.index', ['house' => 'yousaf_bhai']) }}"
+       class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors
+              {{ $house === 'yousaf_bhai' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-indigo-400' }}">
+        Yousaf Bhai
+    </a>
+</div>
+
 <div class="card overflow-hidden">
     <table class="w-full apple-table">
         <thead>

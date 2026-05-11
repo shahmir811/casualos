@@ -375,7 +375,7 @@ Dispatch (batch-wise, full payment required, deducts packed inventory)
 - `needs_naeem_pakki` is set on the **Design** at catalogue creation time, not at assignment time.
 - Naeem Pakki sends and returns are **piece-based only** — no size breakdown. Sizes are irrelevant until stitching.
 - `naeem_pakki_sends` links directly to `catalogue_id` + `design_id` (NOT to `production_assignments`).
-- `naeem_pakki_returns` has a single `quantity` column — no items sub-table.
+- `naeem_pakki_returns` has **no `quantity` column** — totals are computed from `naeem_pakki_return_items`. Each return batch has a header row (`naeem_pakki_returns`) and one `naeem_pakki_return_items` row per design returned (`np_design_id` + `quantity`).
 - Per-piece rate (`per_piece_price`) is recorded on each send record. Different sends for the same design can have different rates.
 - **Production Assignments for NP:** Manager uses the New Assignment form, selects Naeem Pakki as destination, and sees a table of all NP-eligible designs. Can assign multiple designs at once, each with qty + rate. One `ProductionAssignment` record is created per design. Quantity is stored as a single `production_assignment_items` row with `size = 'np'`.
 - **Available qty guard:** The available qty shown in the NP assignment table = fabric received (from `fabric_batch_items`) minus already assigned (from `production_assignment_items`). The form prevents submitting if any qty exceeds available.
@@ -484,6 +484,8 @@ All migrations have been run. No pending migrations. For reference, the full set
 - `2026_05_06_000005` — adds `stitching_unit_id` FK to `wages`; drops `wage_rate` from `catalogues`
 - `2026_05_11_000001` — creates `bank_accounts` table
 - `2026_05_11_000002` — adds `bank_account_id` nullable FK to `payments`
+- `2026_05_11_112300` — drops orphaned `quantity` column from `naeem_pakki_returns` (totals now computed from `naeem_pakki_return_items`)
+- `2026_05_11_113000` — adds `tarpai_house` enum and drops `design_id` from `tarpai_sends` (finishing the partial refactor that `2026_05_09_000002` assumed had already run)
 
 ---
 
