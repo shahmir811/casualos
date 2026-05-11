@@ -6,34 +6,27 @@ use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
-class PressPack extends Model
+class PressReturn extends Model
 {
     use LogsActivity;
 
-    protected $table = 'press_pack_records';
+    protected $fillable = ['press_send_id', 'return_date', 'logged_by'];
 
-    protected $fillable = ['catalogue_id', 'design_id', 'packed_date', 'logged_by'];
-
-    protected $casts = ['packed_date' => 'date'];
+    protected $casts = ['return_date' => 'date'];
 
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()->logAll();
     }
 
-    public function catalogue(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function send(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(Catalogue::class);
-    }
-
-    public function design(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-    {
-        return $this->belongsTo(Design::class);
+        return $this->belongsTo(PressSend::class, 'press_send_id');
     }
 
     public function items(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(PressPackItem::class, 'press_pack_record_id');
+        return $this->hasMany(PressReturnItem::class, 'press_return_id');
     }
 
     public function loggedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo

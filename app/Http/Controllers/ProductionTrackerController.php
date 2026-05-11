@@ -125,13 +125,14 @@ class ProductionTrackerController extends Controller
             ->pluck('qty', 'design_id');
 
         /* ----------------------------------------------------------------
-         | 7. Packed per design
+         | 7. Packed per design (press_return_items = pieces returned from press = packed)
          * -------------------------------------------------------------- */
-        $packed = DB::table('press_pack_record_items')
-            ->join('press_pack_records', 'press_pack_records.id', '=', 'press_pack_record_items.press_pack_record_id')
-            ->where('press_pack_records.catalogue_id', $catId)
-            ->select('press_pack_records.design_id', DB::raw('SUM(press_pack_record_items.quantity) as qty'))
-            ->groupBy('press_pack_records.design_id')
+        $packed = DB::table('press_return_items')
+            ->join('press_returns', 'press_returns.id', '=', 'press_return_items.press_return_id')
+            ->join('press_sends', 'press_sends.id', '=', 'press_returns.press_send_id')
+            ->where('press_sends.catalogue_id', $catId)
+            ->select('press_return_items.design_id', DB::raw('SUM(press_return_items.quantity) as qty'))
+            ->groupBy('press_return_items.design_id')
             ->pluck('qty', 'design_id');
 
         /* ----------------------------------------------------------------

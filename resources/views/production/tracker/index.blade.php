@@ -39,7 +39,7 @@
             ['label' => 'At Stitching',     'value' => $summary->atStitching,   'color' => '#AF52DE',  'note' => 'Waiting to be stitched'],
             ['label' => 'In Factory',       'value' => $summary->inFactory,     'color' => '#34C759',  'note' => 'Stitched, awaiting tarpai'],
             ['label' => 'At Tarpai',        'value' => $summary->atTarpai,      'color' => '#FF6B35',  'note' => 'Sent, not returned'],
-            ['label' => 'Post-Tarpai',      'value' => $summary->postTarpai,    'color' => '#007AFF',  'note' => 'Ready to pack'],
+            ['label' => 'Post-Tarpai',      'value' => $summary->postTarpai,    'color' => '#007AFF',  'note' => 'Waiting for press / at press'],
             ['label' => 'Packed',           'value' => $summary->packed,        'color' => '#1D1D1F',  'note' => 'Press & pack done'],
         ];
         @endphp
@@ -202,7 +202,7 @@
             <span>→</span>
             <span class="font-medium" style="color:#FF6B35">Tarpai (finishing)</span>
             <span>→</span>
-            <span class="font-medium" style="color:#007AFF">Ready to Pack</span>
+            <span class="font-medium" style="color:#007AFF">Press (send → return)</span>
             <span>→</span>
             <span class="font-medium text-[#1D1D1F]">Packed ✓</span>
         </div>
