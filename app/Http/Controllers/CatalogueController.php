@@ -65,7 +65,7 @@ class CatalogueController extends Controller
 
         if ($request->hasFile('cover_photo')) {
             $validated['cover_photo'] = $request->file('cover_photo')
-                ->store('catalogues', 'public');
+                ->store('catalogues');
         }
 
         $catalogue = Catalogue::create($validated);
@@ -134,10 +134,10 @@ class CatalogueController extends Controller
 
         if ($request->hasFile('cover_photo')) {
             if ($catalogue->cover_photo) {
-                Storage::disk('public')->delete($catalogue->cover_photo);
+                Storage::delete($catalogue->cover_photo);
             }
             $validated['cover_photo'] = $request->file('cover_photo')
-                ->store('catalogues', 'public');
+                ->store('catalogues');
         }
 
         $catalogue->update($validated);
@@ -158,7 +158,7 @@ class CatalogueController extends Controller
         }
 
         if ($catalogue->cover_photo) {
-            Storage::disk('public')->delete($catalogue->cover_photo);
+            Storage::delete($catalogue->cover_photo);
         }
 
         $catalogue->delete();

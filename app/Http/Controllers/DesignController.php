@@ -66,7 +66,7 @@ class DesignController extends Controller
             && !empty($validated['needs_naeem_pakki']);
 
         if ($request->hasFile('photo')) {
-            $validated['photo'] = $request->file('photo')->store('designs', 'public');
+            $validated['photo'] = $request->file('photo')->store('designs');
         }
 
         $design = Design::create($validated);
@@ -117,9 +117,9 @@ class DesignController extends Controller
 
         if ($request->hasFile('photo')) {
             if ($design->photo) {
-                Storage::disk('public')->delete($design->photo);
+                Storage::delete($design->photo);
             }
-            $validated['photo'] = $request->file('photo')->store('designs', 'public');
+            $validated['photo'] = $request->file('photo')->store('designs');
         }
 
         $design->update($validated);
@@ -140,7 +140,7 @@ class DesignController extends Controller
         }
 
         if ($design->photo) {
-            Storage::disk('public')->delete($design->photo);
+            Storage::delete($design->photo);
         }
 
         $catalogueId = $design->catalogue_id;
