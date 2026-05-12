@@ -26,17 +26,15 @@ class BackupDatabase extends Command
         $this->line('──────────────────────────');
 
         // ── Create backup ──────────────────────────────────────────────
-        $backupDir   = 'backups';
-        $filename    = 'backup_' . now()->format('Y-m-d_H-i-s') . '.sql';
-        $storagePath = Storage::disk('local')->path($backupDir . '/' . $filename);
-
-        Storage::disk('local')->makeDirectory($backupDir);
+        $backupDir = 'backups';
+        $filename  = 'backup_' . now()->format('Y-m-d_H-i-s') . '.sql';
+        $path      = $backupDir . '/' . $filename;
 
         $this->line("Generating SQL dump...");
 
         try {
             $sql = $backupCtrl->generateSqlDump();
-            file_put_contents($storagePath, $sql);
+            Storage::put($path, $sql);
 
             $size = $this->humanSize(strlen($sql));
             $this->info("✓ Backup created: {$filename} ({$size})");
@@ -45,7 +43,7 @@ class BackupDatabase extends Command
                 ->log("Scheduled backup created: {$filename} ({$size})");
 
         } catch (\Throwable $e) {
-            @unlink($storagePath);
+            Storage::delete($path);
             $this->error("✗ Backup FAILED: " . $e->getMessage());
 
             activity()
@@ -61,16 +59,14 @@ class BackupDatabase extends Command
             $this->line("Pruning backups older than {$pruneDays} days...");
             $pruned = 0;
 
-            $files = Storage::disk('local')->files($backupDir);
-
-            foreach ($files as $path) {
-                if (!str_ends_with($path, '.sql')) continue;
-                $modified = Storage::disk('local')->lastModified($path);
+            foreach (Storage::files($backupDir) as $filePath) {
+                if (!str_ends_with($filePath, '.sql')) continue;
+                $modified = Storage::lastModified($filePath);
 
                 if (now()->diffInDays(\Carbon\Carbon::createFromTimestamp($modified)) >= $pruneDays) {
-                    Storage::disk('local')->delete($path);
+                    Storage::delete($filePath);
                     $pruned++;
-                    $this->line("  Deleted: " . basename($path));
+                    $this->line("  Deleted: " . basename($filePath));
                 }
             }
 
