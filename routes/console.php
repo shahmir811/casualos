@@ -21,8 +21,8 @@ Artisan::command('inspire', function () {
 |
 */
 
-// Daily database backup at midnight, auto-prune backups older than 30 days
+// Backup every 6 hours, auto-prune backups older than 30 days
 Schedule::command('backup:database --prune=30')
-    ->dailyAt('00:00')
+    ->everySixHours()
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/backup.log'));
