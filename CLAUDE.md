@@ -205,6 +205,14 @@ xs | s | m | l | xl | np
 open | closed
 ```
 
+### `tarpai_sends.tarpai_house`
+
+```
+rashid_bhai | yousaf_bhai | in_house
+```
+
+Gate pass is only generated for `rashid_bhai` and `yousaf_bhai`. Never for `in_house`.
+
 ### `order_reductions.adjustment_type`
 
 ```
@@ -394,6 +402,18 @@ Dispatch (batch-wise, full payment required, deducts packed inventory)
 - Tables: `press_sends` (header) + `press_send_items` (design+size+qty) + `press_returns` (header, FK to press_send) + `press_return_items` (design+size+qty).
 - `PressSend` and `PressReturn` use `LogsActivity`. `PressSendItem` and `PressReturnItem` do not.
 
+### Tarpai — house options and gate pass rule
+
+`tarpai_sends.tarpai_house` has three valid values:
+
+| Value          | Label        | Gate Pass | Badge colour |
+| -------------- | ------------ | --------- | ------------ |
+| `rashid_bhai`  | Rashid Bhai  | Yes       | Purple       |
+| `yousaf_bhai`  | Yousaf Bhai  | Yes       | Indigo       |
+| `in_house`     | In-House     | **No**    | Emerald      |
+
+**In-House sends never generate a gate pass.** The "Print Gate Pass" button on the Tarpai Send show page and the "Gate Pass" link in the Tarpai index table are both hidden when `tarpai_house = 'in_house'`. Do not render or link to the gate-pass route for in_house rows.
+
 ### Tarpai pricing
 
 Same as above — per-piece rate is per design, stored on `TarpaiSendItem`.
@@ -505,6 +525,7 @@ All migrations have been run. No pending migrations. For reference, the full set
 - `2026_05_11_112300` — drops orphaned `quantity` column from `naeem_pakki_returns` (totals now computed from `naeem_pakki_return_items`)
 - `2026_05_11_113000` — adds `tarpai_house` enum and drops `design_id` from `tarpai_sends` (finishing the partial refactor that `2026_05_09_000002` assumed had already run)
 - `2026_05_11_120000` — drops `press_pack_records` + `press_pack_record_items`; creates `press_sends`, `press_send_items`, `press_returns`, `press_return_items`
+- `2026_05_11_200000` — adds `in_house` to `tarpai_sends.tarpai_house` enum (valid values: `rashid_bhai`, `yousaf_bhai`, `in_house`)
 
 ---
 

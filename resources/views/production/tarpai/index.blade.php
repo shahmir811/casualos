@@ -31,6 +31,11 @@
               {{ $house === 'yousaf_bhai' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-indigo-400' }}">
         Yousaf Bhai
     </a>
+    <a href="{{ route('tarpai-sends.index', ['house' => 'in_house']) }}"
+       class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors
+              {{ $house === 'in_house' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-emerald-400' }}">
+        In-House
+    </a>
 </div>
 
 {{-- ── Available Pieces Summary ────────────────────────────────── --}}
@@ -136,7 +141,7 @@
                     @endif
                 </td>
                 <td>
-                    <span class="badge {{ $send->tarpai_house === 'rashid_bhai' ? 'bg-purple-100 text-purple-700' : 'bg-indigo-100 text-indigo-700' }}">
+                    <span class="badge {{ $send->tarpai_house === 'rashid_bhai' ? 'bg-purple-100 text-purple-700' : ($send->tarpai_house === 'yousaf_bhai' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700') }}">
                         {{ $send->tarpaiHouseLabel() }}
                     </span>
                 </td>
@@ -155,6 +160,7 @@
                 </td>
                 <td class="text-right">
                     <div class="flex items-center justify-end gap-3">
+                        @if($send->tarpai_house !== 'in_house')
                         <a href="{{ route('tarpai.gate-pass', $send) }}" target="_blank"
                            class="text-[#6E6E73] hover:text-[#1D1D1F] text-xs flex items-center gap-1" title="Print Gate Pass">
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -162,6 +168,7 @@
                             </svg>
                             Gate Pass
                         </a>
+                        @endif
                         <a href="{{ route('tarpai-sends.show', $send) }}" class="text-[#0066CC] text-sm hover:underline">View →</a>
                     </div>
                 </td>

@@ -124,7 +124,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('stitching-assignments/{productionAssignment}/return', [StitchingReturnController::class, 'storeReturn'])->name('stitching-assignments.return');
 
         // Tarpai finishing
-        Route::resource('tarpai-sends', TarpaiController::class)->only(['index','create','store','show']);
+        Route::resource('tarpai-sends', TarpaiController::class)->only(['index','create','store','show','destroy']);
         Route::post('tarpai-sends/{send}/return', [TarpaiController::class, 'logReturn'])->name('tarpai.return');
         Route::delete('tarpai-sends/{send}/returns/{return}', [TarpaiController::class, 'destroyReturn'])->name('tarpai.return.destroy');
         Route::get('tarpai-sends/{tarpaiSend}/gate-pass', [TarpaiController::class, 'gatePass'])->name('tarpai.gate-pass');

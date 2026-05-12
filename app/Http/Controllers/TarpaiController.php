@@ -93,7 +93,7 @@ class TarpaiController extends Controller
     {
         $validated = $request->validate([
             'catalogue_id'           => 'required|exists:catalogues,id',
-            'tarpai_house'           => 'required|in:rashid_bhai,yousaf_bhai',
+            'tarpai_house'           => 'required|in:rashid_bhai,yousaf_bhai,in_house',
             'sent_date'              => 'required|date',
             'per_piece_price'        => 'required|numeric|min:0',
             'designs'                => 'required|array',
@@ -234,6 +234,36 @@ class TarpaiController extends Controller
         });
 
         return back()->with('success', 'Tarpai return logged.');
+    }
+
+    public function destroy(TarpaiSend $tarpaiSend)
+    {
+        $tarpaiSend->load(['items.design', 'returns.items', 'catalogue']);
+
+        DB::transaction(function () use ($tarpaiSend) {
+            activity()
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'tarpai_send_id'  => $tarpaiSend->id,
+                    'catalogue'       => $tarpaiSend->catalogue?->name,
+                    'tarpai_house'    => $tarpaiSend->tarpai_house,
+                    'sent_date'       => $tarpaiSend->sent_date?->format('Y-m-d'),
+                    'per_piece_price' => $tarpaiSend->per_piece_price,
+                    'total_pieces'    => $tarpaiSend->items->sum('quantity'),
+                    'return_batches'  => $tarpaiSend->returns->count(),
+                    'items'           => $tarpaiSend->items->map(fn($i) => [
+                        'design'   => $i->design?->name,
+                        'size'     => $i->size,
+                        'quantity' => $i->quantity,
+                    ])->toArray(),
+                ])
+                ->log("Tarpai send deleted: TP-{$tarpaiSend->id}");
+
+            $tarpaiSend->delete();
+        });
+
+        return redirect()->route('tarpai-sends.index')
+            ->with('success', 'Tarpai send TP-' . str_pad($tarpaiSend->id, 4, '0', STR_PAD_LEFT) . ' and all its returns have been deleted.');
     }
 
     public function destroyReturn(TarpaiSend $send, TarpaiReturn $return)

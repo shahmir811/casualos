@@ -52,6 +52,7 @@ class TarpaiSend extends Model
         return match($this->tarpai_house) {
             'rashid_bhai' => 'Rashid Bhai',
             'yousaf_bhai' => 'Yousaf Bhai',
+            'in_house'    => 'In-House',
             default       => '—',
         };
     }
