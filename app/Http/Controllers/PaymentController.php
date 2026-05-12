@@ -24,7 +24,7 @@ class PaymentController extends Controller
         ]);
 
         $receiptPath = $request->hasFile('receipt_image')
-            ? $request->file('receipt_image')->store('receipts', 'public')
+            ? $request->file('receipt_image')->store('receipts')
             : null;
 
         DB::transaction(function () use ($request, $receiptPath, $order) {

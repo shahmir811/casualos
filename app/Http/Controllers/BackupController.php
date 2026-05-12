@@ -10,26 +10,23 @@ use Illuminate\Support\Facades\Storage;
  * BackupController — Admin only.
  *
  * Creates pure-PHP MySQL dumps via PDO (no mysqldump binary needed).
- * Stores .sql files in storage/app/backups/ (disk: local).
+ * Stores .sql files under backups/ on the configured filesystem disk.
  */
 class BackupController extends Controller
 {
-    protected string $backupDisk = 'local';
-    protected string $backupDir  = 'backups';
+    protected string $backupDir = 'backups';
 
     /* ------------------------------------------------------------------ */
     /*  INDEX — list all backup files                                       */
     /* ------------------------------------------------------------------ */
     public function index()
     {
-        Storage::disk($this->backupDisk)->makeDirectory($this->backupDir);
-
-        $files = collect(Storage::disk($this->backupDisk)->files($this->backupDir))
+        $files = collect(Storage::files($this->backupDir))
             ->filter(fn($f) => str_ends_with($f, '.sql'))
             ->map(function ($path) {
                 $name = basename($path);
-                $size = Storage::disk($this->backupDisk)->size($path);
-                $time = Storage::disk($this->backupDisk)->lastModified($path);
+                $size = Storage::size($path);
+                $time = Storage::lastModified($path);
 
                 return (object) [
                     'name'       => $name,
@@ -47,16 +44,14 @@ class BackupController extends Controller
     /* ------------------------------------------------------------------ */
     /*  STORE — generate a new SQL dump via PHP/PDO                        */
     /* ------------------------------------------------------------------ */
-    public function store(Request $request)
+    public function store()
     {
-        Storage::disk($this->backupDisk)->makeDirectory($this->backupDir);
-
-        $filename    = 'backup_' . now()->format('Y-m-d_H-i-s') . '.sql';
-        $storagePath = Storage::disk($this->backupDisk)->path($this->backupDir . '/' . $filename);
+        $filename = 'backup_' . now()->format('Y-m-d_H-i-s') . '.sql';
+        $path     = $this->backupDir . '/' . $filename;
 
         try {
             $sql = $this->generateSqlDump();
-            file_put_contents($storagePath, $sql);
+            Storage::put($path, $sql);
 
             activity()
                 ->causedBy(auth()->user())
@@ -65,7 +60,7 @@ class BackupController extends Controller
             return back()->with('success', "Backup created successfully: {$filename}");
 
         } catch (\Throwable $e) {
-            @unlink($storagePath);
+            Storage::delete($path);
 
             activity()
                 ->causedBy(auth()->user())
@@ -82,7 +77,7 @@ class BackupController extends Controller
     {
         $path = $this->backupDir . '/' . basename($filename);
 
-        if (!Storage::disk($this->backupDisk)->exists($path)) {
+        if (!Storage::exists($path)) {
             abort(404, 'Backup file not found.');
         }
 
@@ -90,7 +85,10 @@ class BackupController extends Controller
             ->causedBy(auth()->user())
             ->log("Downloaded backup: {$filename}");
 
-        return Storage::disk($this->backupDisk)->download($path, $filename);
+        return response()->streamDownload(
+            fn () => print(Storage::get($path)),
+            $filename
+        );
     }
 
     /* ------------------------------------------------------------------ */
@@ -100,11 +98,11 @@ class BackupController extends Controller
     {
         $path = $this->backupDir . '/' . basename($filename);
 
-        if (!Storage::disk($this->backupDisk)->exists($path)) {
+        if (!Storage::exists($path)) {
             return back()->with('error', 'Backup file not found.');
         }
 
-        Storage::disk($this->backupDisk)->delete($path);
+        Storage::delete($path);
 
         activity()
             ->causedBy(auth()->user())
