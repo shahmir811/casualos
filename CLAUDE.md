@@ -205,6 +205,14 @@ xs | s | m | l | xl | np
 open | closed
 ```
 
+### `tarpai_sends.tarpai_house`
+
+```
+rashid_bhai | yousaf_bhai | in_house
+```
+
+Gate pass is only generated for `rashid_bhai` and `yousaf_bhai`. Never for `in_house`.
+
 ### `order_reductions.adjustment_type`
 
 ```
@@ -360,9 +368,12 @@ Production Assignment (ProductionAssignment) — New Assignment form
         ↓
 StitchingReturn (daily, by design + size)
     ↓ Size-level reconciliation flagged if mismatch
-[Shirts only] TarpaiSend → TarpaiReturn
+TarpaiSend → TarpaiReturn (every kameez of every in-house design goes through Tarpai — no exceptions)
     ↓
-PressPack (all designs, by size) → enters Packed Inventory
+PressSend → PressReturn (= Packed Inventory)
+    Manager sends pieces to the press unit (capped by Tarpai returns - already press sent).
+    Returns are always against a specific PressSend. Partial returns across multiple trips allowed.
+    Pieces returned from press are already packed — PressReturn IS the packed inventory entry.
     ↓
 [Outsourced designs arrive separately as OutsourcedBatch → also enters Packed Inventory]
     ↓
@@ -380,6 +391,28 @@ Dispatch (batch-wise, full payment required, deducts packed inventory)
 - **Production Assignments for NP:** Manager uses the New Assignment form, selects Naeem Pakki as destination, and sees a table of all NP-eligible designs. Can assign multiple designs at once, each with qty + rate. One `ProductionAssignment` record is created per design. Quantity is stored as a single `production_assignment_items` row with `size = 'np'`.
 - **Available qty guard:** The available qty shown in the NP assignment table = fabric received (from `fabric_batch_items`) minus already assigned (from `production_assignment_items`). The form prevents submitting if any qty exceeds available.
 - `NaeemPakkiSend` and `NaeemPakkiReturn` models do **NOT** use `LogsActivity` trait — only `Order` and `Catalogue` do.
+
+### Press — key rules
+
+- **Every kameez** of every in-house design goes through Tarpai before press. No design skips Tarpai.
+- **Available qty guard for PressSend:** `tarpai_return_items` total (for catalogue+design+size) minus `press_send_items` total already sent. The form prevents submitting more than available.
+- **PressReturn always references a specific PressSend.** Partial returns are allowed — one send can have multiple return trips.
+- **PressReturn = Packed Inventory.** There is no separate "log as packed" step. When the manager records a press return, those pieces are immediately available for dispatch.
+- **Packed Inventory** is computed from `press_return_items` (by catalogue+design+size). Dispatch must deduct from `press_return_items`.
+- Tables: `press_sends` (header) + `press_send_items` (design+size+qty) + `press_returns` (header, FK to press_send) + `press_return_items` (design+size+qty).
+- `PressSend` and `PressReturn` use `LogsActivity`. `PressSendItem` and `PressReturnItem` do not.
+
+### Tarpai — house options and gate pass rule
+
+`tarpai_sends.tarpai_house` has three valid values:
+
+| Value          | Label        | Gate Pass | Badge colour |
+| -------------- | ------------ | --------- | ------------ |
+| `rashid_bhai`  | Rashid Bhai  | Yes       | Purple       |
+| `yousaf_bhai`  | Yousaf Bhai  | Yes       | Indigo       |
+| `in_house`     | In-House     | **No**    | Emerald      |
+
+**In-House sends never generate a gate pass.** The "Print Gate Pass" button on the Tarpai Send show page and the "Gate Pass" link in the Tarpai index table are both hidden when `tarpai_house = 'in_house'`. Do not render or link to the gate-pass route for in_house rows.
 
 ### Tarpai pricing
 
@@ -415,7 +448,12 @@ returns that cause discrepancies — it flags them for review.
 | `order.thankyou` | `GET /order/{token}/thankyou` | Thank-you page                 |
 | `portal.show`    | `GET /portal/{token}`         | Customer portal (email entry)  |
 | `portal.verify`  | `POST /portal/{token}/verify` | Portal email verification      |
-| `dispatch.store` | `POST /dispatch/{order}`      | Record a dispatch batch        |
+| `dispatch.store`    | `POST /dispatch/{order}`               | Record a dispatch batch        |
+| `press-sends.index` | `GET /press-sends`                     | Press sends list               |
+| `press-sends.create`| `GET /press-sends/create`              | Log a press send               |
+| `press-sends.store` | `POST /press-sends`                    | Save a press send              |
+| `press-sends.show`  | `GET /press-sends/{pressSend}`         | Press send detail + return form|
+| `press.return`      | `POST /press-sends/{pressSend}/return` | Log a press return             |
 
 **Never use `order.show` — it does not exist. The correct route name is `order.public`.**
 
@@ -452,8 +490,8 @@ returns that cause discrepancies — it flags them for review.
 - Naeem Pakki sends and returns — sidebar nav link added; `LogsActivity` removed from both models
 - Stitching returns (size-level reconciliation)
 - Tarpai sends and returns
-- Press & Pack records
-- Packed inventory tracker
+- **Press sends and returns** — complete rework: `press_sends` + `press_send_items` + `press_returns` + `press_return_items` tables; available qty guard sources from Tarpai returns; returns reference a specific send and are the packed inventory entry; old `press_pack_records` table removed
+- Packed inventory tracker (sourced from `press_return_items`)
 - Outsourced batch arrivals
 - Dispatch management (create batches)
 - **Worker wages** — rate is now sourced from `stitching_units.per_piece_rate` (not catalogue); wage form has a unit selector that auto-populates the rate; `wages.stitching_unit_id` FK added
@@ -465,7 +503,7 @@ returns that cause discrepancies — it flags them for review.
 1. **`order.show` route name used in controller** — should be `order.public`
 2. **Dispatch payment check missing** — `DispatchController::store()` has no outstanding balance guard
 4. **Cargo document is text, not file** — must be a file upload stored on disk
-5. **Packed inventory not deducted after dispatch** — `DispatchController::store()` must decrement press_pack_records
+5. **Packed inventory not deducted after dispatch** — `DispatchController::store()` must decrement `press_return_items` quantities (old `press_pack_records` table has been removed)
 6. **Order status auto-transition to stitching** — ✅ Fixed: `FabricBatchController::store()` auto-transitions confirmed orders on fabric batch creation
 7. **Order reduction surplus logic** — three-case financial logic not implemented
 8. **`running_advance_balance` hardcoded to 0** in all ledger entries — must be actual customer balance
@@ -486,6 +524,8 @@ All migrations have been run. No pending migrations. For reference, the full set
 - `2026_05_11_000002` — adds `bank_account_id` nullable FK to `payments`
 - `2026_05_11_112300` — drops orphaned `quantity` column from `naeem_pakki_returns` (totals now computed from `naeem_pakki_return_items`)
 - `2026_05_11_113000` — adds `tarpai_house` enum and drops `design_id` from `tarpai_sends` (finishing the partial refactor that `2026_05_09_000002` assumed had already run)
+- `2026_05_11_120000` — drops `press_pack_records` + `press_pack_record_items`; creates `press_sends`, `press_send_items`, `press_returns`, `press_return_items`
+- `2026_05_11_200000` — adds `in_house` to `tarpai_sends.tarpai_house` enum (valid values: `rashid_bhai`, `yousaf_bhai`, `in_house`)
 
 ---
 

@@ -292,12 +292,12 @@
                 Tarpai
             </a>
 
-            <a href="{{ route('press-pack.index') }}"
-               class="nav-item {{ request()->routeIs('press-pack.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
+            <a href="{{ route('press-sends.index') }}"
+               class="nav-item {{ request()->routeIs('press-sends.*') || request()->routeIs('press.return') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                 </svg>
-                Press & Pack
+                Press
             </a>
 
             <a href="{{ route('dispatch.index') }}"

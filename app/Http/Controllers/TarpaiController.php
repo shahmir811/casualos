@@ -19,13 +19,50 @@ class TarpaiController extends Controller
     {
         $house = $request->input('house');
 
-        $sends = TarpaiSend::with(['catalogue', 'items', 'returns.items'])
+        $sends = TarpaiSend::with(['catalogue', 'items.design', 'returns.items'])
             ->when($house, fn($q) => $q->where('tarpai_house', $house))
             ->latest()
             ->paginate(20)
             ->withQueryString();
 
-        return view('production.tarpai.index', compact('sends', 'house'));
+        // Summary: pieces returned FROM Tarpai per catalogue → design → size (respects house filter)
+        $openCatalogues = Catalogue::where('status', 'open')
+            ->with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')->orderBy('name')])
+            ->orderBy('name')
+            ->get();
+
+        $catIds = $openCatalogues->pluck('id');
+        $sizes  = ['xs', 's', 'm', 'l', 'xl'];
+
+        $returnTotals = DB::table('tarpai_return_items')
+            ->join('tarpai_returns', 'tarpai_returns.id', '=', 'tarpai_return_items.tarpai_return_id')
+            ->join('tarpai_sends', 'tarpai_sends.id', '=', 'tarpai_returns.tarpai_send_id')
+            ->whereIn('tarpai_sends.catalogue_id', $catIds)
+            ->when($house, fn($q) => $q->where('tarpai_sends.tarpai_house', $house))
+            ->select(
+                'tarpai_sends.catalogue_id',
+                'tarpai_return_items.design_id',
+                'tarpai_return_items.size',
+                DB::raw('SUM(tarpai_return_items.quantity) as total')
+            )
+            ->groupBy('tarpai_sends.catalogue_id', 'tarpai_return_items.design_id', 'tarpai_return_items.size')
+            ->get()
+            ->groupBy(['catalogue_id', 'design_id']);
+
+        $designSummary = $openCatalogues->map(function ($cat) use ($returnTotals, $sizes) {
+            $designs = $cat->designs->map(function ($design) use ($cat, $returnTotals, $sizes) {
+                $perSize = [];
+                foreach ($sizes as $size) {
+                    $perSize[$size] = (int) ($returnTotals[$cat->id][$design->id] ?? collect())
+                        ->where('size', $size)->sum('total');
+                }
+                return ['name' => $design->name, 'sizes' => $perSize, 'total' => array_sum($perSize)];
+            });
+
+            return ['catalogue' => $cat->name, 'designs' => $designs];
+        });
+
+        return view('production.tarpai.index', compact('sends', 'house', 'designSummary', 'sizes'));
     }
 
     public function create()
@@ -56,7 +93,7 @@ class TarpaiController extends Controller
     {
         $validated = $request->validate([
             'catalogue_id'           => 'required|exists:catalogues,id',
-            'tarpai_house'           => 'required|in:rashid_bhai,yousaf_bhai',
+            'tarpai_house'           => 'required|in:rashid_bhai,yousaf_bhai,in_house',
             'sent_date'              => 'required|date',
             'per_piece_price'        => 'required|numeric|min:0',
             'designs'                => 'required|array',
@@ -197,6 +234,65 @@ class TarpaiController extends Controller
         });
 
         return back()->with('success', 'Tarpai return logged.');
+    }
+
+    public function destroy(TarpaiSend $tarpaiSend)
+    {
+        $tarpaiSend->load(['items.design', 'returns.items', 'catalogue']);
+
+        DB::transaction(function () use ($tarpaiSend) {
+            activity()
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'tarpai_send_id'  => $tarpaiSend->id,
+                    'catalogue'       => $tarpaiSend->catalogue?->name,
+                    'tarpai_house'    => $tarpaiSend->tarpai_house,
+                    'sent_date'       => $tarpaiSend->sent_date?->format('Y-m-d'),
+                    'per_piece_price' => $tarpaiSend->per_piece_price,
+                    'total_pieces'    => $tarpaiSend->items->sum('quantity'),
+                    'return_batches'  => $tarpaiSend->returns->count(),
+                    'items'           => $tarpaiSend->items->map(fn($i) => [
+                        'design'   => $i->design?->name,
+                        'size'     => $i->size,
+                        'quantity' => $i->quantity,
+                    ])->toArray(),
+                ])
+                ->log("Tarpai send deleted: TP-{$tarpaiSend->id}");
+
+            $tarpaiSend->delete();
+        });
+
+        return redirect()->route('tarpai-sends.index')
+            ->with('success', 'Tarpai send TP-' . str_pad($tarpaiSend->id, 4, '0', STR_PAD_LEFT) . ' and all its returns have been deleted.');
+    }
+
+    public function destroyReturn(TarpaiSend $send, TarpaiReturn $return)
+    {
+        if ($return->tarpai_send_id !== $send->id) {
+            abort(403);
+        }
+
+        $return->load('items');
+
+        DB::transaction(function () use ($send, $return) {
+            activity()
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'tarpai_send_id' => $send->id,
+                    'return_date'    => $return->return_date?->format('Y-m-d'),
+                    'pieces'         => $return->items->sum('quantity'),
+                    'items'          => $return->items->map(fn($i) => [
+                        'design_id' => $i->design_id,
+                        'size'      => $i->size,
+                        'quantity'  => $i->quantity,
+                    ])->toArray(),
+                ])
+                ->log("Tarpai return deleted: RTN for TP-{$send->id} (return_id={$return->id})");
+
+            $return->delete();
+        });
+
+        return back()->with('success', 'Return entry deleted.');
     }
 
     public function gatePass(TarpaiSend $tarpaiSend)

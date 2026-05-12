@@ -14,6 +14,8 @@
         availableQty: {{ Js::from($availableQty) }},
         quantities: {{ Js::from($oldQuantities) }},
         sizes: ['xs','s','m','l','xl'],
+        tarpaiHouse: '{{ old('tarpai_house', '') }}',
+        perPieceRate: {{ old('tarpai_house') === 'in_house' ? 0 : (int) old('per_piece_price', 30) }},
 
         get selectedCatalogue() {
             return this.catalogues.find(c => c.id == this.selectedCatalogueId) || null;
@@ -27,6 +29,9 @@
 
         onCatalogueChange() {
             this.quantities = {};
+        },
+        onHouseChange() {
+            this.perPieceRate = this.tarpaiHouse === 'in_house' ? 0 : 30;
         },
         getAvail(designId, size) {
             return this.availableQty?.[this.selectedCatalogueId]?.[designId]?.[size] ?? 0;
@@ -83,10 +88,11 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Tarpai House</label>
-                    <select name="tarpai_house" class="apple-input" required>
+                    <select name="tarpai_house" x-model="tarpaiHouse" @change="onHouseChange()" class="apple-input" required>
                         <option value="">— Select house —</option>
-                        <option value="rashid_bhai" {{ old('tarpai_house') === 'rashid_bhai' ? 'selected' : '' }}>Rashid Bhai</option>
-                        <option value="yousaf_bhai" {{ old('tarpai_house') === 'yousaf_bhai' ? 'selected' : '' }}>Yousaf Bhai</option>
+                        <option value="rashid_bhai">Rashid Bhai</option>
+                        <option value="yousaf_bhai">Yousaf Bhai</option>
+                        <option value="in_house">In-House</option>
                     </select>
                 </div>
 
@@ -97,7 +103,14 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Per Piece Rate (Rs.)</label>
-                    <input type="number" name="per_piece_price" value="{{ old('per_piece_price', 30) }}" step="0.01" min="0" class="apple-input" required>
+                    <input type="number" name="per_piece_price"
+                           x-model="perPieceRate"
+                           :disabled="tarpaiHouse === 'in_house'"
+                           step="0.01" min="0"
+                           :class="tarpaiHouse === 'in_house'
+                               ? 'apple-input opacity-50 cursor-not-allowed bg-[#F5F5F7]'
+                               : 'apple-input'"
+                           required>
                 </div>
             </div>
         </div>

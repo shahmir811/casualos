@@ -2,20 +2,23 @@
 @section('title', 'Packed Inventory')
 @section('content')
 
-<div class="flex items-center gap-3 mb-7">
-    <a href="{{ route('reports.index') }}" class="text-[#0066CC] hover:underline text-sm">Reports</a>
-    <span class="text-[#86868B]">/</span>
-    <span class="text-[#1D1D1F] text-sm font-medium">Packed Inventory</span>
-</div>
-
-<div class="mb-6">
-    <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Packed Inventory</h1>
-    <p class="text-[#6E6E73] text-sm mt-1">All pressed and packed pieces by catalogue and design</p>
+<div class="flex items-center justify-between mb-7">
+    <div>
+        <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Packed Inventory</h1>
+        <p class="text-[#6E6E73] text-sm mt-1">Pieces returned from press, ready for dispatch — grouped by catalogue and design</p>
+    </div>
+    <a href="{{ route('press-sends.create') }}" class="btn-primary">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        Log Press Send
+    </a>
 </div>
 
 @php
-    $sizes       = ['xs', 's', 'm', 'l', 'xl'];
-    $grandTotal  = $grouped->flatten()->sum('quantity');
+    $sizes = ['xs', 's', 'm', 'l', 'xl'];
+    $grandTotal = 0;
+    foreach ($grouped as $catItems) {
+        $grandTotal += $catItems->sum('quantity');
+    }
 @endphp
 
 <div class="grid grid-cols-2 gap-4 mb-6">
@@ -24,17 +27,13 @@
         <p class="text-3xl font-light text-[#1D1D1F]">{{ number_format($grandTotal) }}</p>
         <p class="text-[#86868B] text-xs mt-1">pieces across {{ $grouped->count() }} catalogue(s)</p>
     </div>
-    <div class="stat-card">
-        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Catalogues</p>
-        <p class="text-3xl font-light text-[#1D1D1F]">{{ $grouped->count() }}</p>
-    </div>
 </div>
 
 @forelse($grouped as $catalogueId => $catItems)
 @php
-    $catName  = $catItems->first()->pressReturn->send->catalogue->name ?? 'Unknown';
-    $catTotal = $catItems->sum('quantity');
-    $byDesign = $catItems->groupBy('design_id');
+    $catName      = $catItems->first()->pressReturn->send->catalogue->name ?? 'Unknown';
+    $catTotal     = $catItems->sum('quantity');
+    $byDesign     = $catItems->groupBy('design_id');
 @endphp
 <div class="mb-6">
     <h2 class="text-sm font-semibold text-[#1D1D1F] mb-3 flex items-center gap-2">
@@ -53,9 +52,12 @@
             </thead>
             <tbody>
                 @foreach($byDesign as $designId => $designItems)
-                @php $designTotal = $designItems->sum('quantity'); @endphp
+                @php
+                    $designName  = $designItems->first()->design->name ?? '—';
+                    $designTotal = $designItems->sum('quantity');
+                @endphp
                 <tr>
-                    <td class="font-medium">{{ $designItems->first()->design->name ?? '—' }}</td>
+                    <td class="font-medium">{{ $designName }}</td>
                     @foreach($sizes as $size)
                     <td class="text-right">{{ number_format($designItems->where('size', $size)->sum('quantity')) ?: '—' }}</td>
                     @endforeach
@@ -71,7 +73,9 @@
     </div>
 </div>
 @empty
-<div class="card p-12 text-center text-[#86868B]">No packed inventory records found.</div>
+<div class="card p-12 text-center">
+    <p class="text-[#86868B]">No packed inventory yet. Log press sends and returns to build inventory.</p>
+</div>
 @endforelse
 
 @endsection

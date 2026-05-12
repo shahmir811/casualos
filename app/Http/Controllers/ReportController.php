@@ -6,7 +6,7 @@ use App\Models\Catalogue;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\CustomerLedger;
-use App\Models\PressPack;
+use App\Models\PressReturnItem;
 use App\Models\Wage;
 use App\Models\Design;
 use App\Models\DispatchBatch;
@@ -83,11 +83,14 @@ class ReportController extends Controller
 
     public function packedInventory()
     {
-        $records = PressPack::with(['catalogue', 'design', 'items'])
-            ->orderBy('packed_date', 'desc')
-            ->get();
+        $returnItems = PressReturnItem::with([
+            'pressReturn.send.catalogue',
+            'design',
+        ])->get();
 
-        return view('reports.packed-inventory', compact('records'));
+        $grouped = $returnItems->groupBy(fn($item) => $item->pressReturn->send->catalogue_id);
+
+        return view('reports.packed-inventory', compact('grouped'));
     }
 
     public function payrollHistory(Request $request)

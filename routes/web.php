@@ -17,7 +17,7 @@ use App\Http\Controllers\ProductionAssignmentController;
 use App\Http\Controllers\NaeemPakkiController;
 use App\Http\Controllers\StitchingReturnController;
 use App\Http\Controllers\TarpaiController;
-use App\Http\Controllers\PressPackController;
+use App\Http\Controllers\PressController;
 use App\Http\Controllers\OutsourcedBatchController;
 use App\Http\Controllers\DispatchController;
 use App\Http\Controllers\WagesController;
@@ -124,12 +124,14 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('stitching-assignments/{productionAssignment}/return', [StitchingReturnController::class, 'storeReturn'])->name('stitching-assignments.return');
 
         // Tarpai finishing
-        Route::resource('tarpai-sends', TarpaiController::class)->only(['index','create','store','show']);
+        Route::resource('tarpai-sends', TarpaiController::class)->only(['index','create','store','show','destroy']);
         Route::post('tarpai-sends/{send}/return', [TarpaiController::class, 'logReturn'])->name('tarpai.return');
+        Route::delete('tarpai-sends/{send}/returns/{return}', [TarpaiController::class, 'destroyReturn'])->name('tarpai.return.destroy');
         Route::get('tarpai-sends/{tarpaiSend}/gate-pass', [TarpaiController::class, 'gatePass'])->name('tarpai.gate-pass');
 
-        // Press & Pack
-        Route::resource('press-pack', PressPackController::class)->only(['index','create','store']);
+        // Press sends and returns
+        Route::resource('press-sends', PressController::class)->only(['index', 'create', 'store', 'show']);
+        Route::post('press-sends/{pressSend}/return', [PressController::class, 'logReturn'])->name('press.return');
 
         // Outsourced batch arrivals
         Route::resource('outsourced-batches', OutsourcedBatchController::class)->only(['index','create','store','show']);
@@ -148,7 +150,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
 
     // Packed Inventory (manager + admin)
-    Route::get('packed-inventory', [PressPackController::class, 'inventory'])->name('packed-inventory.index');
+    Route::get('packed-inventory', [PressController::class, 'inventory'])->name('packed-inventory.index');
 
     // Production Tracker (manager + admin)
     Route::get('production-tracker', [ProductionTrackerController::class, 'index'])->name('production.tracker');
