@@ -95,7 +95,7 @@ class TarpaiController extends Controller
             'catalogue_id'           => 'required|exists:catalogues,id',
             'tarpai_house'           => 'required|in:rashid_bhai,yousaf_bhai,in_house',
             'sent_date'              => 'required|date',
-            'per_piece_price'        => 'required|numeric|min:0',
+            'per_piece_price'        => 'nullable|numeric|min:0',
             'designs'                => 'required|array',
             'designs.*.design_id'    => 'required|exists:designs,id',
             'designs.*.items'        => 'required|array',
@@ -141,7 +141,7 @@ class TarpaiController extends Controller
                 'catalogue_id'    => $validated['catalogue_id'],
                 'tarpai_house'    => $validated['tarpai_house'],
                 'sent_date'       => $validated['sent_date'],
-                'per_piece_price' => $validated['per_piece_price'],
+                'per_piece_price' => $validated['per_piece_price'] ?? 0,
                 'logged_by'       => Auth::id(),
             ]);
 

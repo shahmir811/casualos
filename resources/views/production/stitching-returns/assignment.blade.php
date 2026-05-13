@@ -196,8 +196,9 @@
                                                name="component_items[{{ $comp }}][{{ $size }}]"
                                                min="0"
                                                x-model.number="componentSizes.{{ $comp }}.{{ $size }}"
+                                               :disabled="maxFor('{{ $comp }}', '{{ $size }}') === 0"
                                                class="apple-input text-center text-sm"
-                                               :class="overLimitFor('{{ $comp }}', '{{ $size }}') ? 'border-[#FF3B30] bg-[#FFF0EF] text-[#FF3B30]' : ''">
+                                               :class="maxFor('{{ $comp }}', '{{ $size }}') === 0 ? 'opacity-40 cursor-not-allowed bg-[#F5F5F7]' : (overLimitFor('{{ $comp }}', '{{ $size }}') ? 'border-[#FF3B30] bg-[#FFF0EF] text-[#FF3B30]' : '')">
                                         <div class="mt-0.5 text-center">
                                             <span class="text-[9px]"
                                                   :class="overLimitFor('{{ $comp }}', '{{ $size }}') ? 'text-[#FF3B30] font-semibold' : (maxFor('{{ $comp }}', '{{ $size }}') > 0 ? 'text-[#86868B]' : 'text-[#C7C7CC]')"
