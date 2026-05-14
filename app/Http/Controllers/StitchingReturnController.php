@@ -19,32 +19,27 @@ class StitchingReturnController extends Controller
             ->latest()
             ->paginate(20);
 
-        // Bulk-load return totals per (catalogue, design, stitching_unit, component)
-        $catalogueIds = $assignments->pluck('catalogue_id')->unique()->values()->toArray();
+        // Bulk-load return totals per assignment
+        $assignmentIds = $assignments->pluck('id')->toArray();
 
         $returnTotalsRaw = DB::table('stitching_return_items')
             ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
-            ->whereIn('stitching_returns.catalogue_id', $catalogueIds)
-            ->whereNotNull('stitching_returns.stitching_unit_id')
+            ->whereIn('stitching_returns.production_assignment_id', $assignmentIds)
             ->select(
-                'stitching_returns.catalogue_id',
-                'stitching_returns.design_id',
-                'stitching_returns.stitching_unit_id',
+                'stitching_returns.production_assignment_id',
                 'stitching_return_items.component',
                 DB::raw('SUM(stitching_return_items.quantity) as qty')
             )
             ->groupBy(
-                'stitching_returns.catalogue_id',
-                'stitching_returns.design_id',
-                'stitching_returns.stitching_unit_id',
+                'stitching_returns.production_assignment_id',
                 'stitching_return_items.component'
             )
             ->get()
-            ->groupBy(fn($r) => "{$r->catalogue_id}_{$r->design_id}_{$r->stitching_unit_id}");
+            ->groupBy('production_assignment_id');
 
         // Attach computed stats to each assignment
         $assignments->each(function ($a) use ($returnTotalsRaw) {
-            $key     = "{$a->catalogue_id}_{$a->design_id}_{$a->stitching_unit_id}";
+            $key     = $a->id;
             $rows    = $returnTotalsRaw[$key] ?? collect();
             $a->total_assigned   = $a->items->sum('quantity');
             $a->kameez_returned  = (int) ($rows->firstWhere('component', 'kameez')?->qty ?? 0);
