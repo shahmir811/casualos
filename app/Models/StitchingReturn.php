@@ -10,7 +10,7 @@ class StitchingReturn extends Model
 {
     use LogsActivity;
 
-    protected $fillable = ['catalogue_id', 'design_id', 'stitching_unit_id', 'return_date', 'logged_by'];
+    protected $fillable = ['catalogue_id', 'design_id', 'stitching_unit_id', 'production_assignment_id', 'return_date', 'logged_by'];
 
     protected $casts = ['return_date' => 'date'];
 
@@ -37,6 +37,11 @@ class StitchingReturn extends Model
     public function stitchingUnit(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(StitchingUnit::class);
+    }
+
+    public function productionAssignment(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(ProductionAssignment::class);
     }
 
     public function loggedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo

@@ -174,8 +174,8 @@ class ProductionAssignmentController extends Controller
         $request->validate([
             'np_items'                   => 'required|array',
             'np_items.*.design_id'       => 'required|exists:designs,id',
-            'np_items.*.quantity'        => 'required|integer|min:0',
-            'np_items.*.per_piece_price' => 'required|numeric|min:0',
+            'np_items.*.quantity'        => 'nullable|integer|min:0',
+            'np_items.*.per_piece_price' => 'nullable|numeric|min:0',
         ]);
 
         $items = collect($request->np_items)
@@ -190,7 +190,8 @@ class ProductionAssignmentController extends Controller
         $catalogueId = $request->catalogue_id;
 
         // ── Availability check per design (before creating anything) ─────
-        foreach ($items as $designId => $item) {
+        foreach ($items as $item) {
+            $designId = (int) $item['design_id'];
             $qty = (int) $item['quantity'];
 
             $fabricReceived = (int) DB::table('fabric_batch_items')
@@ -199,21 +200,13 @@ class ProductionAssignmentController extends Controller
                 ->where('fabric_batch_items.design_id', $designId)
                 ->sum('fabric_batch_items.quantity');
 
-            // Old-style (design_id on parent assignment)
-            $oldAssigned = (int) DB::table('production_assignment_items')
-                ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
-                ->where('production_assignments.catalogue_id', $catalogueId)
-                ->where('production_assignments.design_id', $designId)
-                ->sum('production_assignment_items.quantity');
-
-            // New-style (design_id on np_designs row)
-            $newAssigned = (int) DB::table('production_assignment_np_designs')
+            $npAssigned = (int) DB::table('production_assignment_np_designs')
                 ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_np_designs.production_assignment_id')
                 ->where('production_assignments.catalogue_id', $catalogueId)
                 ->where('production_assignment_np_designs.design_id', $designId)
                 ->sum('production_assignment_np_designs.quantity');
 
-            $available = max(0, $fabricReceived - $oldAssigned - $newAssigned);
+            $available = max(0, $fabricReceived - $npAssigned);
 
             if ($qty > $available) {
                 $designName = Design::find($designId)?->name ?? "Design #{$designId}";
@@ -236,11 +229,11 @@ class ProductionAssignmentController extends Controller
         ]);
 
         // Create one np_designs row per selected design
-        foreach ($items as $designId => $item) {
+        foreach ($items as $item) {
             $assignment->npDesigns()->create([
-                'design_id'       => $designId,
+                'design_id'       => (int) $item['design_id'],
                 'quantity'        => (int) $item['quantity'],
-                'per_piece_price' => (float) $item['per_piece_price'],
+                'per_piece_price' => (float) ($item['per_piece_price'] ?? 0),
             ]);
         }
 

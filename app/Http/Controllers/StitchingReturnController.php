@@ -155,11 +155,9 @@ class StitchingReturnController extends Controller
         $sizes      = ['xs', 's', 'm', 'l', 'xl'];
         $components = ['kameez', 'shalwar', 'dupatta'];
 
-        // All returns for this assignment (matched by catalogue + design + stitching unit)
+        // All returns for this assignment
         $stitchingReturns = StitchingReturn::with(['items', 'loggedBy'])
-            ->where('catalogue_id',      $productionAssignment->catalogue_id)
-            ->where('design_id',         $productionAssignment->design_id)
-            ->where('stitching_unit_id', $productionAssignment->stitching_unit_id)
+            ->where('production_assignment_id', $productionAssignment->id)
             ->latest()
             ->get();
 
@@ -169,9 +167,7 @@ class StitchingReturnController extends Controller
         // Returned totals per (size, component)
         $returnedRaw = DB::table('stitching_return_items')
             ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
-            ->where('stitching_returns.catalogue_id',      $productionAssignment->catalogue_id)
-            ->where('stitching_returns.design_id',         $productionAssignment->design_id)
-            ->where('stitching_returns.stitching_unit_id', $productionAssignment->stitching_unit_id)
+            ->where('stitching_returns.production_assignment_id', $productionAssignment->id)
             ->select(
                 'stitching_return_items.size',
                 'stitching_return_items.component',
@@ -222,9 +218,7 @@ class StitchingReturnController extends Controller
         $components = ['kameez', 'shalwar', 'dupatta'];
 
         $stitchingReturns = StitchingReturn::with(['items', 'loggedBy'])
-            ->where('catalogue_id',      $productionAssignment->catalogue_id)
-            ->where('design_id',         $productionAssignment->design_id)
-            ->where('stitching_unit_id', $productionAssignment->stitching_unit_id)
+            ->where('production_assignment_id', $productionAssignment->id)
             ->latest()
             ->get();
 
@@ -232,9 +226,7 @@ class StitchingReturnController extends Controller
 
         $returnedRaw = DB::table('stitching_return_items')
             ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
-            ->where('stitching_returns.catalogue_id',      $productionAssignment->catalogue_id)
-            ->where('stitching_returns.design_id',         $productionAssignment->design_id)
-            ->where('stitching_returns.stitching_unit_id', $productionAssignment->stitching_unit_id)
+            ->where('stitching_returns.production_assignment_id', $productionAssignment->id)
             ->select(
                 'stitching_return_items.size',
                 'stitching_return_items.component',
@@ -281,12 +273,10 @@ class StitchingReturnController extends Controller
         $components      = $request->input('components', []);
         $assignedPerSize = $productionAssignment->items->pluck('quantity', 'size')->toArray();
 
-        // Already returned per (component, size)
+        // Already returned per (component, size) — scoped to this specific assignment
         $alreadyReturned = DB::table('stitching_return_items')
             ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
-            ->where('stitching_returns.catalogue_id',      $productionAssignment->catalogue_id)
-            ->where('stitching_returns.design_id',         $productionAssignment->design_id)
-            ->where('stitching_returns.stitching_unit_id', $productionAssignment->stitching_unit_id)
+            ->where('stitching_returns.production_assignment_id', $productionAssignment->id)
             ->whereIn('stitching_return_items.component', $components)
             ->select(
                 'stitching_return_items.component',
@@ -332,11 +322,12 @@ class StitchingReturnController extends Controller
 
         DB::transaction(function () use ($request, $productionAssignment, $linesToSave) {
             $return = StitchingReturn::create([
-                'catalogue_id'      => $productionAssignment->catalogue_id,
-                'design_id'         => $productionAssignment->design_id,
-                'stitching_unit_id' => $productionAssignment->stitching_unit_id,
-                'return_date'       => $request->input('return_date'),
-                'logged_by'         => Auth::id(),
+                'catalogue_id'             => $productionAssignment->catalogue_id,
+                'design_id'                => $productionAssignment->design_id,
+                'stitching_unit_id'        => $productionAssignment->stitching_unit_id,
+                'production_assignment_id' => $productionAssignment->id,
+                'return_date'              => $request->input('return_date'),
+                'logged_by'                => Auth::id(),
             ]);
 
             foreach ($linesToSave as $line) {
