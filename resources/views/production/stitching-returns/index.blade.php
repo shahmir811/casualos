@@ -9,6 +9,73 @@
     </div>
 </div>
 
+{{-- ── Filter bar ──────────────────────────────────────────────────── --}}
+<div class="card p-4 mb-6">
+    <div class="flex flex-wrap items-start gap-6">
+
+        {{-- Catalogue + Design (form-based) --}}
+        <form method="GET" action="{{ route('stitching-returns.index') }}" class="flex flex-wrap items-end gap-4">
+            <input type="hidden" name="stitching_unit_id" value="{{ $selectedUnit }}">
+
+            <div>
+                <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Catalogue</p>
+                <select name="catalogue_id"
+                        onchange="document.querySelector('select[name=design_id]').value=''; this.form.submit();"
+                        class="apple-input text-sm rounded-lg border border-[#D2D2D7] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071E3]">
+                    <option value="">All catalogues</option>
+                    @foreach($allCatalogues as $cat)
+                        <option value="{{ $cat->id }}" @selected($cat->id == $selectedCatalogueId)>{{ $cat->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Design</p>
+                <select name="design_id"
+                        onchange="this.form.submit();"
+                        class="apple-input text-sm rounded-lg border border-[#D2D2D7] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071E3]"
+                        @disabled(!$selectedCatalogueId)>
+                    <option value="">All designs</option>
+                    @foreach($catalogueDesigns as $design)
+                        <option value="{{ $design->id }}" @selected($design->id == $selectedDesignId)>{{ $design->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </form>
+
+        {{-- Stitching Unit (link-based pills) --}}
+        <div>
+            <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Stitching Unit</p>
+            <div class="flex flex-wrap items-center gap-1.5">
+                @php
+                    $unitBase = array_merge(request()->query(), ['stitching_unit_id' => '']);
+                @endphp
+                <a href="{{ route('stitching-returns.index', $unitBase) }}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                          {{ $selectedUnit === '' ? 'bg-[#0071E3] text-white border-[#0071E3]' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-[#0071E3]' }}">
+                    All
+                </a>
+                @foreach($stitchingUnits as $unit)
+                @php $unitUrl = array_merge(request()->query(), ['stitching_unit_id' => $unit->id]); @endphp
+                <a href="{{ route('stitching-returns.index', $unitUrl) }}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                          {{ $selectedUnit == $unit->id ? 'bg-[#AF52DE] text-white border-[#AF52DE]' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-[#AF52DE]' }}">
+                    Unit {{ $unit->number }} — {{ $unit->name }}
+                </a>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Clear filters --}}
+        @if($selectedCatalogueId || $selectedDesignId || $selectedUnit)
+        <div class="flex items-end">
+            <a href="{{ route('stitching-returns.index') }}" class="text-xs text-[#86868B] hover:text-[#1D1D1F] whitespace-nowrap">× Clear filters</a>
+        </div>
+        @endif
+
+    </div>
+</div>
+
 {{-- ── Per-unit summary cards ─────────────────────────────────────── --}}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     @foreach($stitchingUnits as $unit)
