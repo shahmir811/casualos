@@ -19,19 +19,6 @@
 <form method="GET" action="{{ route('production-assignments.index') }}"
       class="card p-4 mb-5 flex flex-wrap items-end gap-4">
 
-    {{-- Catalogue --}}
-    <div class="flex-1 min-w-[180px]">
-        <label class="block text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Catalogue</label>
-        <select name="catalogue_id" class="apple-input" style="padding:0.5rem 1rem;" onchange="this.form.submit()">
-            <option value="">All catalogues</option>
-            @foreach($openCatalogues as $cat)
-            <option value="{{ $cat->id }}" {{ $selectedCatalogueId == $cat->id ? 'selected' : '' }}>
-                {{ $cat->name }} ●
-            </option>
-            @endforeach
-        </select>
-    </div>
-
     {{-- Destination --}}
     <div>
         <label class="block text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Destination</label>
@@ -74,7 +61,7 @@
     @endif
 
     {{-- Clear filters --}}
-    @if($selectedDestination || $selectedUnit || $selectedCatalogueId)
+    @if($selectedDestination || $selectedUnit)
     <a href="{{ route('production-assignments.index') }}"
        class="text-xs text-[#86868B] hover:text-[#FF3B30] transition-colors self-end pb-1.5">
         ✕ Clear filters

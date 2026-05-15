@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\FabricBatch;
 use App\Models\Catalogue;
+use App\Models\Design;
+use App\Models\FabricBatch;
 use App\Models\ProductionAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,25 +13,42 @@ use Illuminate\Validation\Rule;
 
 class FabricBatchController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $batches = FabricBatch::with(['catalogue', 'items'])->latest()->paginate(20);
+        $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: null;
+        $selectedDesignId    = $request->filled('design_id') ? (int) $request->input('design_id') : null;
 
-        $catalogueIds = $batches->pluck('catalogue_id')->unique()->filter()->values()->toArray();
+        $catalogueDesigns = $selectedCatalogueId
+            ? Design::where('catalogue_id', $selectedCatalogueId)
+                ->where('manufacturing_type', 'in_house')
+                ->orderBy('sort_order')
+                ->get()
+            : collect();
 
-        // Total received per catalogue (all batches, not just current page)
+        // ── Batches table ────────────────────────────────────────────────
+        $query = FabricBatch::with(['catalogue', 'items.design', 'loggedBy'])->latest();
+
+        if ($selectedCatalogueId) $query->where('catalogue_id', $selectedCatalogueId);
+        if ($selectedDesignId)    $query->whereHas('items', fn($q) => $q->where('design_id', $selectedDesignId));
+
+        $batches = $query->paginate(20)->withQueryString();
+
+        $catalogueIds = $selectedCatalogueId ? [$selectedCatalogueId] : [];
+
+        // ── Summary card totals (respect design filter) ──────────────────
         $receivedPerCatalogue = DB::table('fabric_batch_items')
             ->join('fabric_batches', 'fabric_batches.id', '=', 'fabric_batch_items.fabric_batch_id')
             ->whereIn('fabric_batches.catalogue_id', $catalogueIds)
+            ->when($selectedDesignId, fn($q) => $q->where('fabric_batch_items.design_id', $selectedDesignId))
             ->select('fabric_batches.catalogue_id', DB::raw('SUM(fabric_batch_items.quantity) as qty'))
             ->groupBy('fabric_batches.catalogue_id')
             ->pluck('qty', 'catalogue_id');
 
-        // Per-design received quantities grouped by catalogue_id → [design_id => qty]
         $receivedPerDesignByCatalogue = DB::table('fabric_batch_items')
             ->join('fabric_batches', 'fabric_batches.id', '=', 'fabric_batch_items.fabric_batch_id')
             ->join('designs', 'designs.id', '=', 'fabric_batch_items.design_id')
             ->whereIn('fabric_batches.catalogue_id', $catalogueIds)
+            ->when($selectedDesignId, fn($q) => $q->where('fabric_batch_items.design_id', $selectedDesignId))
             ->select(
                 'fabric_batches.catalogue_id',
                 'fabric_batch_items.design_id',
@@ -44,7 +62,8 @@ class FabricBatchController extends Controller
             ->groupBy('catalogue_id');
 
         return view('production.fabric-batches.index', compact(
-            'batches', 'receivedPerCatalogue', 'receivedPerDesignByCatalogue'
+            'batches', 'receivedPerCatalogue', 'receivedPerDesignByCatalogue',
+            'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId'
         ));
     }
 

@@ -15,13 +15,28 @@ use Illuminate\Support\Facades\DB;
 
 class PressController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $sends = PressSend::with(['catalogue', 'items', 'returns.items', 'loggedBy'])
-            ->latest()
-            ->paginate(20);
+        $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: null;
+        $selectedDesignId    = $request->filled('design_id') ? (int) $request->input('design_id') : null;
 
-        return view('production.press.index', compact('sends'));
+        $catalogueDesigns = $selectedCatalogueId
+            ? Design::where('catalogue_id', $selectedCatalogueId)
+                ->where('manufacturing_type', 'in_house')
+                ->orderBy('sort_order')
+                ->get()
+            : collect();
+
+        $sends = PressSend::with(['catalogue', 'items.design', 'returns.items', 'loggedBy'])
+            ->when($selectedCatalogueId, fn($q) => $q->where('catalogue_id', $selectedCatalogueId))
+            ->when($selectedDesignId,    fn($q) => $q->whereHas('items', fn($q2) => $q2->where('design_id', $selectedDesignId)))
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('production.press.index', compact(
+            'sends', 'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId'
+        ));
     }
 
     public function create()

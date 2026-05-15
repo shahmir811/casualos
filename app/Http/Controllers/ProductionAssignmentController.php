@@ -16,8 +16,7 @@ class ProductionAssignmentController extends Controller
 {
     public function index(Request $request)
     {
-        $openCatalogues      = Catalogue::where('status', 'open')->orderBy('name')->get();
-        $selectedCatalogueId = $request->get('catalogue_id', '');
+        $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: '';
         $selectedDestination = $request->get('destination', '');
         $selectedUnit        = $request->get('stitching_unit_id', '');
 
@@ -32,7 +31,7 @@ class ProductionAssignmentController extends Controller
         $stitchingUnits = StitchingUnit::orderBy('number')->get();
 
         return view('production.assignments.index', compact(
-            'assignments', 'openCatalogues', 'stitchingUnits',
+            'assignments', 'stitchingUnits',
             'selectedCatalogueId', 'selectedDestination', 'selectedUnit'
         ));
     }

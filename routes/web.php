@@ -28,6 +28,7 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductionTrackerController;
 use App\Http\Controllers\BankAccountController;
+use App\Http\Controllers\ActiveCatalogueController;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,6 +59,9 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Active Catalogue session setter (manager + admin — visible via sidebar widget)
+    Route::post('/active-catalogue', [ActiveCatalogueController::class, 'store'])->name('active-catalogue.store');
 
     /*
     |------------------------------------------------------------------

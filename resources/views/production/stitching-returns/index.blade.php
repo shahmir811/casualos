@@ -9,6 +9,59 @@
     </div>
 </div>
 
+{{-- ── Filter bar ──────────────────────────────────────────────────── --}}
+<div class="card p-4 mb-6">
+    <div class="flex flex-wrap items-end gap-x-6 gap-y-4">
+
+        {{-- Design (form-based) --}}
+        <form method="GET" action="{{ route('stitching-returns.index') }}" class="flex flex-wrap items-end gap-4">
+            <input type="hidden" name="stitching_unit_id" value="{{ $selectedUnit }}">
+
+            <div class="w-full sm:w-auto">
+                <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Design</p>
+                <select name="design_id"
+                        onchange="this.form.submit();"
+                        class="w-full sm:w-auto apple-input text-sm rounded-lg border border-[#D2D2D7] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071E3]">
+                    <option value="">All designs</option>
+                    @foreach($catalogueDesigns as $design)
+                        <option value="{{ $design->id }}" @selected($design->id == $selectedDesignId)>{{ $design->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </form>
+
+        {{-- Stitching Unit (link-based pills) --}}
+        <div class="w-full sm:w-auto">
+            <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Stitching Unit</p>
+            <div class="flex flex-wrap items-center gap-1.5">
+                @php $unitBase = array_merge(request()->query(), ['stitching_unit_id' => '']); @endphp
+                <a href="{{ route('stitching-returns.index', $unitBase) }}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                          {{ $selectedUnit === '' ? 'bg-[#0071E3] text-white border-[#0071E3]' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-[#0071E3]' }}">
+                    All
+                </a>
+                @foreach($stitchingUnits as $unit)
+                @php $unitUrl = array_merge(request()->query(), ['stitching_unit_id' => $unit->id]); @endphp
+                <a href="{{ route('stitching-returns.index', $unitUrl) }}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                          {{ $selectedUnit == $unit->id ? 'bg-[#AF52DE] text-white border-[#AF52DE]' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-[#AF52DE]' }}">
+                    Unit {{ $unit->number }} — {{ $unit->name }}
+                </a>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Clear filters --}}
+        @if($selectedDesignId || $selectedUnit)
+            <a href="{{ route('stitching-returns.index') }}"
+               class="text-xs text-[#86868B] hover:text-[#1D1D1F] whitespace-nowrap pb-2">
+                × Clear filters
+            </a>
+        @endif
+
+    </div>
+</div>
+
 {{-- ── Per-unit summary cards ─────────────────────────────────────── --}}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     @foreach($stitchingUnits as $unit)
@@ -67,7 +120,13 @@
 <div class="card overflow-hidden mb-6">
     <div class="px-5 py-4 border-b border-[#F2F2F7]">
         <h2 class="text-sm font-semibold text-[#1D1D1F]">Return Summary by Design</h2>
-        <p class="text-xs text-[#86868B] mt-0.5">Totals across all stitching units</p>
+        <p class="text-xs text-[#86868B] mt-0.5">
+            @if($selectedUnit)
+                Totals for {{ $stitchingUnits->firstWhere('id', $selectedUnit)?->name ?? 'selected unit' }} only
+            @else
+                Totals across all stitching units
+            @endif
+        </p>
     </div>
     <table class="w-full apple-table">
         <thead>

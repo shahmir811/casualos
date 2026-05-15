@@ -2,7 +2,7 @@
 @section('title', 'Naeem Pakki')
 @section('content')
 
-<div class="flex items-center justify-between mb-7">
+<div class="flex items-center justify-between mb-6">
     <div>
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Naeem Pakki</h1>
         <p class="text-[#6E6E73] text-sm mt-1">Track embroidery pieces sent to and returned from Naeem Pakki</p>
@@ -13,6 +13,34 @@
         </svg>
         New Assignment
     </a>
+</div>
+
+{{-- ── Filter bar ──────────────────────────────────────────────────── --}}
+<div class="card p-4 mb-6">
+    <div class="flex flex-wrap items-end gap-x-6 gap-y-4">
+
+        <form method="GET" action="{{ route('naeem-pakki-sends.index') }}" class="flex flex-wrap items-end gap-4">
+            <div class="w-full sm:w-auto">
+                <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Design</p>
+                <select name="design_id"
+                        onchange="this.form.submit();"
+                        class="w-full sm:w-auto apple-input text-sm rounded-lg border border-[#D2D2D7] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071E3]">
+                    <option value="">All designs</option>
+                    @foreach($catalogueDesigns as $design)
+                        <option value="{{ $design->id }}" @selected($design->id == $selectedDesignId)>{{ $design->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </form>
+
+        @if($selectedDesignId)
+            <a href="{{ route('naeem-pakki-sends.index') }}"
+               class="text-xs text-[#86868B] hover:text-[#1D1D1F] whitespace-nowrap pb-2">
+                × Clear design
+            </a>
+        @endif
+
+    </div>
 </div>
 
 <div class="card overflow-hidden">
@@ -45,8 +73,28 @@
                     </a>
                 </td>
                 <td class="text-[#6E6E73]">{{ $assignment->catalogue->name ?? '—' }}</td>
-                <td class="text-[#6E6E73] text-xs">
-                    {{ $assignment->npDesigns->pluck('design.name')->filter()->join(', ') }}
+                <td>
+                    @php
+                        $badgeColors = [
+                            'bg-blue-50 text-blue-700',
+                            'bg-violet-50 text-violet-700',
+                            'bg-emerald-50 text-emerald-700',
+                            'bg-rose-50 text-rose-700',
+                            'bg-orange-50 text-orange-700',
+                            'bg-indigo-50 text-indigo-700',
+                            'bg-teal-50 text-teal-700',
+                            'bg-pink-50 text-pink-700',
+                        ];
+                    @endphp
+                    <div class="flex flex-col gap-1">
+                        @foreach($assignment->npDesigns as $npDesign)
+                            @php $color = $badgeColors[($npDesign->design->id ?? $loop->index) % count($badgeColors)]; @endphp
+                            <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ $color }} rounded px-2 py-0.5 w-fit">
+                                {{ $npDesign->design->name ?? '—' }}
+                                <span class="opacity-60">· {{ number_format($npDesign->quantity) }}</span>
+                            </span>
+                        @endforeach
+                    </div>
                 </td>
                 <td class="text-[#6E6E73] text-xs">{{ $assignment->assignment_date->format('d M Y') }}</td>
                 <td class="text-right tabular-nums">{{ number_format($totalSent) }} pcs</td>

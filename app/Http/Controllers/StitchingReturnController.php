@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Catalogue;
+use App\Models\Design;
 use App\Models\ProductionAssignment;
 use App\Models\StitchingReturn;
 use App\Models\StitchingUnit;
@@ -11,13 +13,31 @@ use Illuminate\Support\Facades\DB;
 
 class StitchingReturnController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $assignments = ProductionAssignment::with(['catalogue', 'design', 'stitchingUnit', 'items'])
+        // ── Filters ─────────────────────────────────────────────────────
+        $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: '';
+        $selectedDesignId    = $request->get('design_id', '');
+        $selectedUnit        = $request->get('stitching_unit_id', '');
+
+        $catalogueDesigns = $selectedCatalogueId
+            ? Design::where('catalogue_id', $selectedCatalogueId)
+                ->where('manufacturing_type', 'in_house')
+                ->orderBy('sort_order')
+                ->get()
+            : collect();
+
+        // ── Assignments table ────────────────────────────────────────────
+        $query = ProductionAssignment::with(['catalogue', 'design', 'stitchingUnit', 'items'])
             ->where('destination', 'stitching_unit')
             ->whereHas('items')
-            ->latest()
-            ->paginate(20);
+            ->latest();
+
+        if ($selectedCatalogueId) $query->where('catalogue_id', $selectedCatalogueId);
+        if ($selectedDesignId)    $query->where('design_id', $selectedDesignId);
+        if ($selectedUnit)        $query->where('stitching_unit_id', $selectedUnit);
+
+        $assignments = $query->paginate(20)->withQueryString();
 
         // Bulk-load return totals per assignment
         $assignmentIds = $assignments->pluck('id')->toArray();
@@ -37,12 +57,10 @@ class StitchingReturnController extends Controller
             ->get()
             ->groupBy('production_assignment_id');
 
-        // Attach computed stats to each assignment
         $assignments->each(function ($a) use ($returnTotalsRaw) {
-            $key     = $a->id;
-            $rows    = $returnTotalsRaw[$key] ?? collect();
+            $rows                = $returnTotalsRaw[$a->id] ?? collect();
             $a->total_assigned   = $a->items->sum('quantity');
-            $a->kameez_returned  = (int) ($rows->firstWhere('component', 'kameez')?->qty ?? 0);
+            $a->kameez_returned  = (int) ($rows->firstWhere('component', 'kameez')?->qty  ?? 0);
             $a->shalwar_returned = (int) ($rows->firstWhere('component', 'shalwar')?->qty ?? 0);
             $a->dupatta_returned = (int) ($rows->firstWhere('component', 'dupatta')?->qty ?? 0);
             $a->is_complete      = $a->total_assigned > 0
@@ -51,39 +69,50 @@ class StitchingReturnController extends Controller
                 && $a->dupatta_returned >= $a->total_assigned;
         });
 
-        // Unit summary cards
+        // ── Unit summary cards ───────────────────────────────────────────
         $stitchingUnits = StitchingUnit::orderBy('number')->get();
 
-        $unitAssigned = DB::table('production_assignment_items')
+        $unitAssignedQuery = DB::table('production_assignment_items')
             ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
             ->where('production_assignments.destination', 'stitching_unit')
-            ->whereNotNull('production_assignments.stitching_unit_id')
-            ->select(
-                'production_assignments.stitching_unit_id',
-                DB::raw('SUM(production_assignment_items.quantity) as total_assigned')
-            )
+            ->whereNotNull('production_assignments.stitching_unit_id');
+
+        if ($selectedCatalogueId) $unitAssignedQuery->where('production_assignments.catalogue_id', $selectedCatalogueId);
+        if ($selectedDesignId)    $unitAssignedQuery->where('production_assignments.design_id', $selectedDesignId);
+        if ($selectedUnit)        $unitAssignedQuery->where('production_assignments.stitching_unit_id', $selectedUnit);
+
+        $unitAssigned = $unitAssignedQuery
+            ->select('production_assignments.stitching_unit_id', DB::raw('SUM(production_assignment_items.quantity) as total_assigned'))
             ->groupBy('production_assignments.stitching_unit_id')
             ->get()
             ->keyBy('stitching_unit_id');
 
-        $unitReturned = DB::table('stitching_return_items')
+        $unitReturnedQuery = DB::table('stitching_return_items')
             ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
-            ->whereNotNull('stitching_returns.stitching_unit_id')
-            ->select(
-                'stitching_returns.stitching_unit_id',
-                'stitching_return_items.component',
-                DB::raw('SUM(stitching_return_items.quantity) as qty')
-            )
+            ->whereNotNull('stitching_returns.stitching_unit_id');
+
+        if ($selectedCatalogueId) $unitReturnedQuery->where('stitching_returns.catalogue_id', $selectedCatalogueId);
+        if ($selectedDesignId)    $unitReturnedQuery->where('stitching_returns.design_id', $selectedDesignId);
+        if ($selectedUnit)        $unitReturnedQuery->where('stitching_returns.stitching_unit_id', $selectedUnit);
+
+        $unitReturned = $unitReturnedQuery
+            ->select('stitching_returns.stitching_unit_id', 'stitching_return_items.component', DB::raw('SUM(stitching_return_items.quantity) as qty'))
             ->groupBy('stitching_returns.stitching_unit_id', 'stitching_return_items.component')
             ->get()
             ->groupBy('stitching_unit_id');
 
-        // Per-design report: assigned vs returned per component
-        $designAssigned = DB::table('production_assignment_items')
+        // ── Per-design report ────────────────────────────────────────────
+        $designAssignedQuery = DB::table('production_assignment_items')
             ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
             ->join('designs', 'designs.id', '=', 'production_assignments.design_id')
             ->join('catalogues', 'catalogues.id', '=', 'production_assignments.catalogue_id')
-            ->where('production_assignments.destination', 'stitching_unit')
+            ->where('production_assignments.destination', 'stitching_unit');
+
+        if ($selectedCatalogueId) $designAssignedQuery->where('production_assignments.catalogue_id', $selectedCatalogueId);
+        if ($selectedDesignId)    $designAssignedQuery->where('production_assignments.design_id', $selectedDesignId);
+        if ($selectedUnit)        $designAssignedQuery->where('production_assignments.stitching_unit_id', $selectedUnit);
+
+        $designAssigned = $designAssignedQuery
             ->select(
                 'production_assignments.catalogue_id',
                 'production_assignments.design_id',
@@ -92,41 +121,32 @@ class StitchingReturnController extends Controller
                 'designs.sort_order',
                 DB::raw('SUM(production_assignment_items.quantity) as total_assigned')
             )
-            ->groupBy(
-                'production_assignments.catalogue_id',
-                'production_assignments.design_id',
-                'catalogues.name',
-                'designs.name',
-                'designs.sort_order'
-            )
+            ->groupBy('production_assignments.catalogue_id', 'production_assignments.design_id', 'catalogues.name', 'designs.name', 'designs.sort_order')
             ->orderBy('catalogues.name')
             ->orderBy('designs.sort_order')
             ->get();
 
-        $designReturnedRaw = DB::table('stitching_return_items')
+        $designReturnedQuery = DB::table('stitching_return_items')
             ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
-            ->whereNotNull('stitching_returns.stitching_unit_id')
-            ->select(
-                'stitching_returns.catalogue_id',
-                'stitching_returns.design_id',
-                'stitching_return_items.component',
-                DB::raw('SUM(stitching_return_items.quantity) as qty')
-            )
-            ->groupBy(
-                'stitching_returns.catalogue_id',
-                'stitching_returns.design_id',
-                'stitching_return_items.component'
-            )
+            ->whereNotNull('stitching_returns.stitching_unit_id');
+
+        if ($selectedCatalogueId) $designReturnedQuery->where('stitching_returns.catalogue_id', $selectedCatalogueId);
+        if ($selectedDesignId)    $designReturnedQuery->where('stitching_returns.design_id', $selectedDesignId);
+        if ($selectedUnit)        $designReturnedQuery->where('stitching_returns.stitching_unit_id', $selectedUnit);
+
+        $designReturnedRaw = $designReturnedQuery
+            ->select('stitching_returns.catalogue_id', 'stitching_returns.design_id', 'stitching_return_items.component', DB::raw('SUM(stitching_return_items.quantity) as qty'))
+            ->groupBy('stitching_returns.catalogue_id', 'stitching_returns.design_id', 'stitching_return_items.component')
             ->get()
             ->groupBy(fn($r) => "{$r->catalogue_id}_{$r->design_id}");
 
         $designReport = $designAssigned->map(function ($row) use ($designReturnedRaw) {
-            $key  = "{$row->catalogue_id}_{$row->design_id}";
-            $rets = $designReturnedRaw[$key] ?? collect();
+            $key     = "{$row->catalogue_id}_{$row->design_id}";
+            $rets    = $designReturnedRaw[$key] ?? collect();
             $assigned = (int) $row->total_assigned;
-            $kameez   = (int) ($rets->firstWhere('component', 'kameez')?->qty  ?? 0);
-            $shalwar  = (int) ($rets->firstWhere('component', 'shalwar')?->qty ?? 0);
-            $dupatta  = (int) ($rets->firstWhere('component', 'dupatta')?->qty ?? 0);
+            $kameez  = (int) ($rets->firstWhere('component', 'kameez')?->qty  ?? 0);
+            $shalwar = (int) ($rets->firstWhere('component', 'shalwar')?->qty ?? 0);
+            $dupatta = (int) ($rets->firstWhere('component', 'dupatta')?->qty ?? 0);
             return (object) [
                 'catalogue_name' => $row->catalogue_name,
                 'design_name'    => $row->design_name,
@@ -139,7 +159,8 @@ class StitchingReturnController extends Controller
         });
 
         return view('production.stitching-returns.index', compact(
-            'assignments', 'stitchingUnits', 'unitAssigned', 'unitReturned', 'designReport'
+            'assignments', 'stitchingUnits', 'unitAssigned', 'unitReturned', 'designReport',
+            'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId', 'selectedUnit'
         ));
     }
 
