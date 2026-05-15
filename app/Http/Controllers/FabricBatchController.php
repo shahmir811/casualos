@@ -12,11 +12,23 @@ use Illuminate\Validation\Rule;
 
 class FabricBatchController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $batches = FabricBatch::with(['catalogue', 'items'])->latest()->paginate(20);
+        $catalogues = Catalogue::orderByDesc('id')->get();
+        $latestId   = $catalogues->first()?->id;
+        $selectedCatalogueId = $request->filled('catalogue_id')
+            ? (int) $request->input('catalogue_id')
+            : $latestId;
 
-        $catalogueIds = $batches->pluck('catalogue_id')->unique()->filter()->values()->toArray();
+        $query = FabricBatch::with(['catalogue', 'items.design', 'loggedBy'])->latest();
+
+        if ($selectedCatalogueId) {
+            $query->where('catalogue_id', $selectedCatalogueId);
+        }
+
+        $batches = $query->paginate(20)->withQueryString();
+
+        $catalogueIds = $selectedCatalogueId ? [$selectedCatalogueId] : [];
 
         // Total received per catalogue (all batches, not just current page)
         $receivedPerCatalogue = DB::table('fabric_batch_items')
@@ -44,7 +56,8 @@ class FabricBatchController extends Controller
             ->groupBy('catalogue_id');
 
         return view('production.fabric-batches.index', compact(
-            'batches', 'receivedPerCatalogue', 'receivedPerDesignByCatalogue'
+            'batches', 'receivedPerCatalogue', 'receivedPerDesignByCatalogue',
+            'catalogues', 'selectedCatalogueId'
         ));
     }
 

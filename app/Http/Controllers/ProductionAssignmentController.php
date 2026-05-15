@@ -17,7 +17,8 @@ class ProductionAssignmentController extends Controller
     public function index(Request $request)
     {
         $openCatalogues      = Catalogue::where('status', 'open')->orderBy('name')->get();
-        $selectedCatalogueId = $request->get('catalogue_id', '');
+        $latestCatalogueId   = Catalogue::latest('id')->value('id');
+        $selectedCatalogueId = $request->get('catalogue_id', $latestCatalogueId ?? '');
         $selectedDestination = $request->get('destination', '');
         $selectedUnit        = $request->get('stitching_unit_id', '');
 

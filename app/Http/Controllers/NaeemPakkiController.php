@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Catalogue;
 use App\Models\NaeemPakkiReturn;
 use App\Models\NaeemPakkiReturnItem;
 use App\Models\ProductionAssignment;
@@ -11,19 +12,28 @@ use Illuminate\Support\Facades\DB;
 
 class NaeemPakkiController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $assignments = ProductionAssignment::with([
+        $catalogues          = Catalogue::orderBy('name')->get();
+        $latestCatalogueId   = Catalogue::latest('id')->value('id');
+        $selectedCatalogueId = $request->get('catalogue_id', $latestCatalogueId ?? '');
+
+        $query = ProductionAssignment::with([
             'catalogue',
             'npDesigns.design',
             'npDesigns.returnItems',
         ])
             ->where('destination', 'naeem_pakki')
             ->whereHas('npDesigns')
-            ->latest()
-            ->paginate(20);
+            ->latest();
 
-        return view('production.naeem-pakki.index', compact('assignments'));
+        if ($selectedCatalogueId) {
+            $query->where('catalogue_id', $selectedCatalogueId);
+        }
+
+        $assignments = $query->paginate(20)->withQueryString();
+
+        return view('production.naeem-pakki.index', compact('assignments', 'catalogues', 'selectedCatalogueId'));
     }
 
     public function show(ProductionAssignment $productionAssignment)
