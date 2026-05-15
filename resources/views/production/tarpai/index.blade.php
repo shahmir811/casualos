@@ -15,38 +15,101 @@
     </a>
 </div>
 
-<div class="flex items-center gap-2 mb-4">
-    <a href="{{ route('tarpai-sends.index') }}"
-       class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors
-              {{ !$house ? 'bg-[#1D1D1F] text-white border-[#1D1D1F]' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-[#1D1D1F]' }}">
-        All
-    </a>
-    <a href="{{ route('tarpai-sends.index', ['house' => 'rashid_bhai']) }}"
-       class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors
-              {{ $house === 'rashid_bhai' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-purple-400' }}">
-        Rashid Bhai
-    </a>
-    <a href="{{ route('tarpai-sends.index', ['house' => 'yousaf_bhai']) }}"
-       class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors
-              {{ $house === 'yousaf_bhai' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-indigo-400' }}">
-        Yousaf Bhai
-    </a>
-    <a href="{{ route('tarpai-sends.index', ['house' => 'in_house']) }}"
-       class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors
-              {{ $house === 'in_house' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-emerald-400' }}">
-        In-House
-    </a>
+{{-- ── Filter bar ──────────────────────────────────────────────────── --}}
+<div class="card p-4 mb-6">
+    <div class="flex flex-wrap items-end gap-x-6 gap-y-4">
+
+        {{-- Catalogue + Design (form-based) --}}
+        <form method="GET" action="{{ route('tarpai-sends.index') }}" class="flex flex-wrap items-end gap-4">
+            <input type="hidden" name="house" value="{{ $house }}">
+
+            <div class="w-full sm:w-auto">
+                <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Catalogue</p>
+                <select name="catalogue_id"
+                        onchange="document.querySelector('select[name=design_id]').value=''; this.form.submit();"
+                        class="w-full sm:w-auto apple-input text-sm rounded-lg border border-[#D2D2D7] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071E3]">
+                    <option value="">All catalogues</option>
+                    @foreach($allCatalogues as $cat)
+                        <option value="{{ $cat->id }}" @selected($cat->id == $selectedCatalogueId)>{{ $cat->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="w-full sm:w-auto">
+                <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Design</p>
+                <select name="design_id"
+                        onchange="this.form.submit();"
+                        class="w-full sm:w-auto apple-input text-sm rounded-lg border border-[#D2D2D7] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071E3]"
+                        @disabled(!$selectedCatalogueId)>
+                    <option value="">All designs</option>
+                    @foreach($catalogueDesigns as $design)
+                        <option value="{{ $design->id }}" @selected($design->id == $selectedDesignId)>{{ $design->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </form>
+
+        {{-- House (link-based pills) --}}
+        <div class="w-full sm:w-auto">
+            <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">House</p>
+            <div class="flex flex-wrap items-center gap-1.5">
+                @php
+                    $houseBase = array_merge(request()->query(), ['house' => '']);
+                @endphp
+                <a href="{{ route('tarpai-sends.index', $houseBase) }}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                          {{ !$house ? 'bg-[#1D1D1F] text-white border-[#1D1D1F]' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-[#1D1D1F]' }}">
+                    All
+                </a>
+                <a href="{{ route('tarpai-sends.index', array_merge(request()->query(), ['house' => 'rashid_bhai'])) }}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                          {{ $house === 'rashid_bhai' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-purple-400' }}">
+                    Rashid Bhai
+                </a>
+                <a href="{{ route('tarpai-sends.index', array_merge(request()->query(), ['house' => 'yousaf_bhai'])) }}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                          {{ $house === 'yousaf_bhai' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-indigo-400' }}">
+                    Yousaf Bhai
+                </a>
+                <a href="{{ route('tarpai-sends.index', array_merge(request()->query(), ['house' => 'in_house'])) }}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                          {{ $house === 'in_house' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-emerald-400' }}">
+                    In-House
+                </a>
+            </div>
+        </div>
+
+        {{-- Clear filters --}}
+        @if($selectedCatalogueId || $selectedDesignId || $house)
+            <a href="{{ route('tarpai-sends.index') }}"
+               class="text-xs text-[#86868B] hover:text-[#1D1D1F] whitespace-nowrap pb-2">
+                × Clear filters
+            </a>
+        @endif
+
+    </div>
 </div>
 
 {{-- ── Available Pieces Summary ────────────────────────────────── --}}
 @foreach($designSummary as $catGroup)
 <div class="card overflow-hidden mb-5">
     <div class="px-5 py-3 border-b border-[#F2F2F7] flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-[#1D1D1F]">
+        <h3 class="text-sm font-semibold text-[#1D1D1F] flex flex-wrap items-center gap-2">
             Returned from Tarpai — {{ $catGroup['catalogue'] }}
             @if($house)
-                <span class="ml-2 badge {{ $house === 'rashid_bhai' ? 'bg-purple-100 text-purple-700' : 'bg-indigo-100 text-indigo-700' }}">
-                    {{ $house === 'rashid_bhai' ? 'Rashid Bhai' : 'Yousaf Bhai' }}
+                @php
+                    $houseBadge = match($house) {
+                        'rashid_bhai'  => ['bg-purple-100 text-purple-700', 'Rashid Bhai'],
+                        'yousaf_bhai'  => ['bg-indigo-100 text-indigo-700', 'Yousaf Bhai'],
+                        'in_house'     => ['bg-emerald-100 text-emerald-700', 'In-House'],
+                        default        => ['bg-[#F5F5F7] text-[#86868B]', $house],
+                    };
+                @endphp
+                <span class="badge {{ $houseBadge[0] }}">{{ $houseBadge[1] }}</span>
+            @endif
+            @if($selectedDesignId && $catalogueDesigns->isNotEmpty())
+                <span class="badge bg-blue-100 text-blue-700">
+                    {{ $catalogueDesigns->firstWhere('id', $selectedDesignId)?->name ?? '' }}
                 </span>
             @endif
         </h3>

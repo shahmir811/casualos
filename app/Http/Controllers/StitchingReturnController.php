@@ -23,7 +23,10 @@ class StitchingReturnController extends Controller
         $selectedUnit        = $request->get('stitching_unit_id', '');
 
         $catalogueDesigns = $selectedCatalogueId
-            ? Design::where('catalogue_id', $selectedCatalogueId)->orderBy('sort_order')->get()
+            ? Design::where('catalogue_id', $selectedCatalogueId)
+                ->where('manufacturing_type', 'in_house')
+                ->orderBy('sort_order')
+                ->get()
             : collect();
 
         // ── Assignments table ────────────────────────────────────────────
@@ -109,6 +112,7 @@ class StitchingReturnController extends Controller
 
         if ($selectedCatalogueId) $designAssignedQuery->where('production_assignments.catalogue_id', $selectedCatalogueId);
         if ($selectedDesignId)    $designAssignedQuery->where('production_assignments.design_id', $selectedDesignId);
+        if ($selectedUnit)        $designAssignedQuery->where('production_assignments.stitching_unit_id', $selectedUnit);
 
         $designAssigned = $designAssignedQuery
             ->select(
@@ -130,6 +134,7 @@ class StitchingReturnController extends Controller
 
         if ($selectedCatalogueId) $designReturnedQuery->where('stitching_returns.catalogue_id', $selectedCatalogueId);
         if ($selectedDesignId)    $designReturnedQuery->where('stitching_returns.design_id', $selectedDesignId);
+        if ($selectedUnit)        $designReturnedQuery->where('stitching_returns.stitching_unit_id', $selectedUnit);
 
         $designReturnedRaw = $designReturnedQuery
             ->select('stitching_returns.catalogue_id', 'stitching_returns.design_id', 'stitching_return_items.component', DB::raw('SUM(stitching_return_items.quantity) as qty'))

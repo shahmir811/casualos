@@ -17,17 +17,35 @@ class TarpaiController extends Controller
 {
     public function index(Request $request)
     {
-        $house = $request->input('house');
+        $house               = $request->input('house', '');
+        $latestCatalogueId   = Catalogue::latest('id')->value('id');
+        $selectedCatalogueId = $request->get('catalogue_id', $latestCatalogueId ?? '');
+        $selectedDesignId    = $request->get('design_id', '');
 
+        $allCatalogues    = Catalogue::orderBy('name')->get();
+        $catalogueDesigns = $selectedCatalogueId
+            ? Design::where('catalogue_id', $selectedCatalogueId)
+                ->where('manufacturing_type', 'in_house')
+                ->orderBy('sort_order')
+                ->get()
+            : collect();
+
+        // ── Sends list ───────────────────────────────────────────────────
         $sends = TarpaiSend::with(['catalogue', 'items.design', 'returns.items'])
-            ->when($house, fn($q) => $q->where('tarpai_house', $house))
+            ->when($house,               fn($q) => $q->where('tarpai_house', $house))
+            ->when($selectedCatalogueId, fn($q) => $q->where('catalogue_id', $selectedCatalogueId))
+            ->when($selectedDesignId,    fn($q) => $q->whereHas('items', fn($q2) => $q2->where('design_id', $selectedDesignId)))
             ->latest()
             ->paginate(20)
             ->withQueryString();
 
-        // Summary: pieces returned FROM Tarpai per catalogue → design → size (respects house filter)
+        // ── Summary: pieces returned from Tarpai per design per size ─────
         $openCatalogues = Catalogue::where('status', 'open')
-            ->with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')->orderBy('name')])
+            ->when($selectedCatalogueId, fn($q) => $q->where('id', $selectedCatalogueId))
+            ->with(['designs' => fn($q) => $q
+                ->where('manufacturing_type', 'in_house')
+                ->when($selectedDesignId, fn($q2) => $q2->where('id', $selectedDesignId))
+                ->orderBy('name')])
             ->orderBy('name')
             ->get();
 
@@ -38,7 +56,8 @@ class TarpaiController extends Controller
             ->join('tarpai_returns', 'tarpai_returns.id', '=', 'tarpai_return_items.tarpai_return_id')
             ->join('tarpai_sends', 'tarpai_sends.id', '=', 'tarpai_returns.tarpai_send_id')
             ->whereIn('tarpai_sends.catalogue_id', $catIds)
-            ->when($house, fn($q) => $q->where('tarpai_sends.tarpai_house', $house))
+            ->when($house,            fn($q) => $q->where('tarpai_sends.tarpai_house', $house))
+            ->when($selectedDesignId, fn($q) => $q->where('tarpai_return_items.design_id', $selectedDesignId))
             ->select(
                 'tarpai_sends.catalogue_id',
                 'tarpai_return_items.design_id',
@@ -58,11 +77,13 @@ class TarpaiController extends Controller
                 }
                 return ['name' => $design->name, 'sizes' => $perSize, 'total' => array_sum($perSize)];
             });
-
             return ['catalogue' => $cat->name, 'designs' => $designs];
         });
 
-        return view('production.tarpai.index', compact('sends', 'house', 'designSummary', 'sizes'));
+        return view('production.tarpai.index', compact(
+            'sends', 'house', 'designSummary', 'sizes',
+            'allCatalogues', 'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId'
+        ));
     }
 
     public function create()

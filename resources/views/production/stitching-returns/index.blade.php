@@ -11,17 +11,17 @@
 
 {{-- ── Filter bar ──────────────────────────────────────────────────── --}}
 <div class="card p-4 mb-6">
-    <div class="flex flex-wrap items-start gap-6">
+    <div class="flex flex-wrap items-end gap-x-6 gap-y-4">
 
         {{-- Catalogue + Design (form-based) --}}
         <form method="GET" action="{{ route('stitching-returns.index') }}" class="flex flex-wrap items-end gap-4">
             <input type="hidden" name="stitching_unit_id" value="{{ $selectedUnit }}">
 
-            <div>
+            <div class="w-full sm:w-auto">
                 <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Catalogue</p>
                 <select name="catalogue_id"
                         onchange="document.querySelector('select[name=design_id]').value=''; this.form.submit();"
-                        class="apple-input text-sm rounded-lg border border-[#D2D2D7] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071E3]">
+                        class="w-full sm:w-auto apple-input text-sm rounded-lg border border-[#D2D2D7] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071E3]">
                     <option value="">All catalogues</option>
                     @foreach($allCatalogues as $cat)
                         <option value="{{ $cat->id }}" @selected($cat->id == $selectedCatalogueId)>{{ $cat->name }}</option>
@@ -29,11 +29,11 @@
                 </select>
             </div>
 
-            <div>
+            <div class="w-full sm:w-auto">
                 <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Design</p>
                 <select name="design_id"
                         onchange="this.form.submit();"
-                        class="apple-input text-sm rounded-lg border border-[#D2D2D7] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071E3]"
+                        class="w-full sm:w-auto apple-input text-sm rounded-lg border border-[#D2D2D7] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071E3]"
                         @disabled(!$selectedCatalogueId)>
                     <option value="">All designs</option>
                     @foreach($catalogueDesigns as $design)
@@ -44,12 +44,10 @@
         </form>
 
         {{-- Stitching Unit (link-based pills) --}}
-        <div>
+        <div class="w-full sm:w-auto">
             <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Stitching Unit</p>
             <div class="flex flex-wrap items-center gap-1.5">
-                @php
-                    $unitBase = array_merge(request()->query(), ['stitching_unit_id' => '']);
-                @endphp
+                @php $unitBase = array_merge(request()->query(), ['stitching_unit_id' => '']); @endphp
                 <a href="{{ route('stitching-returns.index', $unitBase) }}"
                    class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
                           {{ $selectedUnit === '' ? 'bg-[#0071E3] text-white border-[#0071E3]' : 'bg-white text-[#1D1D1F] border-[#D2D2D7] hover:border-[#0071E3]' }}">
@@ -68,9 +66,10 @@
 
         {{-- Clear filters --}}
         @if($selectedCatalogueId || $selectedDesignId || $selectedUnit)
-        <div class="flex items-end">
-            <a href="{{ route('stitching-returns.index') }}" class="text-xs text-[#86868B] hover:text-[#1D1D1F] whitespace-nowrap">× Clear filters</a>
-        </div>
+            <a href="{{ route('stitching-returns.index') }}"
+               class="text-xs text-[#86868B] hover:text-[#1D1D1F] whitespace-nowrap pb-2">
+                × Clear filters
+            </a>
         @endif
 
     </div>
@@ -134,7 +133,13 @@
 <div class="card overflow-hidden mb-6">
     <div class="px-5 py-4 border-b border-[#F2F2F7]">
         <h2 class="text-sm font-semibold text-[#1D1D1F]">Return Summary by Design</h2>
-        <p class="text-xs text-[#86868B] mt-0.5">Totals across all stitching units</p>
+        <p class="text-xs text-[#86868B] mt-0.5">
+            @if($selectedUnit)
+                Totals for {{ $stitchingUnits->firstWhere('id', $selectedUnit)?->name ?? 'selected unit' }} only
+            @else
+                Totals across all stitching units
+            @endif
+        </p>
     </div>
     <table class="w-full apple-table">
         <thead>

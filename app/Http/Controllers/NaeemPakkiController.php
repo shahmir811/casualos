@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Catalogue;
+use App\Models\Design;
 use App\Models\NaeemPakkiReturn;
 use App\Models\NaeemPakkiReturnItem;
 use App\Models\ProductionAssignment;
@@ -17,6 +18,15 @@ class NaeemPakkiController extends Controller
         $catalogues          = Catalogue::orderBy('name')->get();
         $latestCatalogueId   = Catalogue::latest('id')->value('id');
         $selectedCatalogueId = $request->get('catalogue_id', $latestCatalogueId ?? '');
+        $selectedDesignId    = $request->get('design_id', '');
+
+        $catalogueDesigns = $selectedCatalogueId
+            ? Design::where('catalogue_id', $selectedCatalogueId)
+                ->where('manufacturing_type', 'in_house')
+                ->where('needs_naeem_pakki', true)
+                ->orderBy('sort_order')
+                ->get()
+            : collect();
 
         $query = ProductionAssignment::with([
             'catalogue',
@@ -27,13 +37,14 @@ class NaeemPakkiController extends Controller
             ->whereHas('npDesigns')
             ->latest();
 
-        if ($selectedCatalogueId) {
-            $query->where('catalogue_id', $selectedCatalogueId);
-        }
+        if ($selectedCatalogueId) $query->where('catalogue_id', $selectedCatalogueId);
+        if ($selectedDesignId)    $query->whereHas('npDesigns', fn($q) => $q->where('design_id', $selectedDesignId));
 
         $assignments = $query->paginate(20)->withQueryString();
 
-        return view('production.naeem-pakki.index', compact('assignments', 'catalogues', 'selectedCatalogueId'));
+        return view('production.naeem-pakki.index', compact(
+            'assignments', 'catalogues', 'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId'
+        ));
     }
 
     public function show(ProductionAssignment $productionAssignment)
