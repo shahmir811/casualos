@@ -18,11 +18,8 @@ class TarpaiController extends Controller
     public function index(Request $request)
     {
         $house               = $request->input('house', '');
-        $latestCatalogueId   = Catalogue::latest('id')->value('id');
-        $selectedCatalogueId = $request->get('catalogue_id', $latestCatalogueId ?? '');
+        $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: '';
         $selectedDesignId    = $request->get('design_id', '');
-
-        $allCatalogues    = Catalogue::orderBy('name')->get();
         $catalogueDesigns = $selectedCatalogueId
             ? Design::where('catalogue_id', $selectedCatalogueId)
                 ->where('manufacturing_type', 'in_house')
@@ -82,7 +79,7 @@ class TarpaiController extends Controller
 
         return view('production.tarpai.index', compact(
             'sends', 'house', 'designSummary', 'sizes',
-            'allCatalogues', 'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId'
+            'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId'
         ));
     }
 

@@ -19,28 +19,15 @@
 <div class="card p-4 mb-6">
     <div class="flex flex-wrap items-end gap-x-6 gap-y-4">
 
-        {{-- Catalogue + Design (form-based) --}}
+        {{-- Design (form-based) --}}
         <form method="GET" action="{{ route('tarpai-sends.index') }}" class="flex flex-wrap items-end gap-4">
             <input type="hidden" name="house" value="{{ $house }}">
-
-            <div class="w-full sm:w-auto">
-                <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Catalogue</p>
-                <select name="catalogue_id"
-                        onchange="document.querySelector('select[name=design_id]').value=''; this.form.submit();"
-                        class="w-full sm:w-auto apple-input text-sm rounded-lg border border-[#D2D2D7] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071E3]">
-                    <option value="">All catalogues</option>
-                    @foreach($allCatalogues as $cat)
-                        <option value="{{ $cat->id }}" @selected($cat->id == $selectedCatalogueId)>{{ $cat->name }}</option>
-                    @endforeach
-                </select>
-            </div>
 
             <div class="w-full sm:w-auto">
                 <p class="text-[10px] font-semibold text-[#86868B] uppercase tracking-widest mb-1.5">Design</p>
                 <select name="design_id"
                         onchange="this.form.submit();"
-                        class="w-full sm:w-auto apple-input text-sm rounded-lg border border-[#D2D2D7] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071E3]"
-                        @disabled(!$selectedCatalogueId)>
+                        class="w-full sm:w-auto apple-input text-sm rounded-lg border border-[#D2D2D7] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0071E3]">
                     <option value="">All designs</option>
                     @foreach($catalogueDesigns as $design)
                         <option value="{{ $design->id }}" @selected($design->id == $selectedDesignId)>{{ $design->name }}</option>
@@ -80,7 +67,7 @@
         </div>
 
         {{-- Clear filters --}}
-        @if($selectedCatalogueId || $selectedDesignId || $house)
+        @if($selectedDesignId || $house)
             <a href="{{ route('tarpai-sends.index') }}"
                class="text-xs text-[#86868B] hover:text-[#1D1D1F] whitespace-nowrap pb-2">
                 × Clear filters

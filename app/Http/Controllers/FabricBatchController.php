@@ -15,10 +15,8 @@ class FabricBatchController extends Controller
 {
     public function index(Request $request)
     {
-        $catalogues          = Catalogue::orderByDesc('id')->get();
-        $latestId            = $catalogues->first()?->id;
-        $selectedCatalogueId = $request->filled('catalogue_id') ? (int) $request->input('catalogue_id') : $latestId;
-        $selectedDesignId    = $request->filled('design_id')    ? (int) $request->input('design_id')    : null;
+        $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: null;
+        $selectedDesignId    = $request->filled('design_id') ? (int) $request->input('design_id') : null;
 
         $catalogueDesigns = $selectedCatalogueId
             ? Design::where('catalogue_id', $selectedCatalogueId)
@@ -65,7 +63,7 @@ class FabricBatchController extends Controller
 
         return view('production.fabric-batches.index', compact(
             'batches', 'receivedPerCatalogue', 'receivedPerDesignByCatalogue',
-            'catalogues', 'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId'
+            'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId'
         ));
     }
 

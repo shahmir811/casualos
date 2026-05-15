@@ -16,9 +16,7 @@ class StitchingReturnController extends Controller
     public function index(Request $request)
     {
         // ── Filters ─────────────────────────────────────────────────────
-        $allCatalogues       = Catalogue::orderBy('name')->get();
-        $latestCatalogueId   = Catalogue::latest('id')->value('id');
-        $selectedCatalogueId = $request->get('catalogue_id', $latestCatalogueId ?? '');
+        $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: '';
         $selectedDesignId    = $request->get('design_id', '');
         $selectedUnit        = $request->get('stitching_unit_id', '');
 
@@ -162,7 +160,7 @@ class StitchingReturnController extends Controller
 
         return view('production.stitching-returns.index', compact(
             'assignments', 'stitchingUnits', 'unitAssigned', 'unitReturned', 'designReport',
-            'allCatalogues', 'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId', 'selectedUnit'
+            'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId', 'selectedUnit'
         ));
     }
 
