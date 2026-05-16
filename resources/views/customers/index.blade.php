@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="flex items-center justify-between mb-7">
+<div class="flex items-start justify-between gap-3 mb-7">
     <div>
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Customers</h1>
         <p class="text-[#6E6E73] text-sm mt-1">{{ $customers->total() }} total accounts</p>
@@ -49,7 +49,54 @@
     </div>
 </form>
 
-<div class="card overflow-hidden">
+{{-- Mobile card layout --}}
+<div class="md:hidden space-y-3">
+    @forelse($customers as $customer)
+    <div class="card p-4">
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+                <div class="font-semibold text-[#1D1D1F] truncate">{{ $customer->name }}</div>
+                <div class="text-sm text-[#6E6E73] mt-0.5">{{ $customer->city }}</div>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+                <button type="button"
+                    onclick="copyPortalLink('{{ route('portal.show', $customer->portal_token) }}', this)"
+                    title="Copy portal link"
+                    class="text-[#0066CC] text-xs font-medium hover:underline flex items-center gap-1 transition-colors">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    Portal Link
+                </button>
+                <a href="{{ route('customers.show', $customer) }}"
+                   class="text-[#0066CC] text-sm font-medium hover:underline">View →</a>
+            </div>
+        </div>
+        <div class="mt-3 pt-3 border-t border-[#F2F2F7] grid grid-cols-2 gap-2 text-sm">
+            <div>
+                <div class="text-[#86868B] text-xs mb-0.5">Contact</div>
+                <div class="text-[#1D1D1F]">{{ $customer->contact_number }}</div>
+                <div class="text-[#86868B] text-xs truncate">{{ $customer->email }}</div>
+            </div>
+            <div>
+                <div class="text-[#86868B] text-xs mb-0.5">Orders</div>
+                <div class="text-[#1D1D1F]">{{ $customer->orders_count ?? '—' }}</div>
+            </div>
+            @if($customer->advance_credit_balance > 0)
+            <div class="col-span-2">
+                <div class="text-[#86868B] text-xs mb-0.5">Advance Credit</div>
+                <div class="text-[#30D158] font-medium">PKR {{ number_format($customer->advance_credit_balance, 0) }}</div>
+            </div>
+            @endif
+        </div>
+    </div>
+    @empty
+    <div class="card p-8 text-center text-[#86868B]">No customers found.</div>
+    @endforelse
+</div>
+
+{{-- Desktop table layout --}}
+<div class="hidden md:block card overflow-hidden">
     <table class="w-full apple-table">
         <thead>
             <tr>
@@ -80,7 +127,6 @@
                 </td>
                 <td>
                     <div class="flex items-center gap-3">
-                        {{-- Copy portal link --}}
                         <button type="button"
                             onclick="copyPortalLink('{{ route('portal.show', $customer->portal_token) }}', this)"
                             title="Copy customer portal link"
