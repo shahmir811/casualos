@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Catalogue;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -16,20 +15,16 @@ use Illuminate\Support\Facades\DB;
  */
 class ProductionTrackerController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        // All catalogues for the selector dropdown
-        $catalogues = Catalogue::orderByDesc('created_at')->get();
-
-        $selectedId = $request->input('catalogue_id', $catalogues->first()?->id);
-        $catalogue  = $catalogues->find($selectedId);
+        $selectedId = session('active_catalogue_id');
+        $catalogue  = $selectedId ? Catalogue::find($selectedId) : Catalogue::orderByDesc('created_at')->first();
 
         if (! $catalogue) {
             return view('production.tracker.index', [
-                'catalogues'   => $catalogues,
-                'catalogue'    => null,
-                'designs'      => collect(),
-                'summary'      => null,
+                'catalogue' => null,
+                'designs'   => collect(),
+                'summary'   => null,
             ]);
         }
 
@@ -87,14 +82,42 @@ class ProductionTrackerController extends Controller
             ->pluck('qty', 'design_id');
 
         /* ----------------------------------------------------------------
-         | 4. Stitching returns per design (pieces RETURNED FROM stitching)
+         | 4. Stitching returns per design (SUIT count, not component count)
+         |
+         | stitching_return_items has one row per (return, size, component)
+         | where component ∈ {kameez, shalwar, dupatta}. A single returned
+         | suit produces up to 3 rows with the same quantity. Using SUM()
+         | would 2–3× the real suit count. MAX(quantity) per (return, size)
+         | gives the suit count for that size in that batch regardless of
+         | how many components were logged.
          * -------------------------------------------------------------- */
-        $stitchingReturned = DB::table('stitching_return_items')
-            ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
+        $stitchingReturned = DB::table(
+                DB::raw('(SELECT stitching_return_id, size, MAX(quantity) as max_qty
+                          FROM stitching_return_items
+                          GROUP BY stitching_return_id, size) as sri')
+            )
+            ->join('stitching_returns', 'stitching_returns.id', '=', 'sri.stitching_return_id')
             ->where('stitching_returns.catalogue_id', $catId)
-            ->select('stitching_returns.design_id', DB::raw('SUM(stitching_return_items.quantity) as qty'))
+            ->select('stitching_returns.design_id', DB::raw('SUM(sri.max_qty) as qty'))
             ->groupBy('stitching_returns.design_id')
             ->pluck('qty', 'design_id');
+
+        // Per-component totals for the tracker breakdown display
+        // SUM per component is correct here — each component row represents
+        // physical pieces of that garment part, so summing across sizes gives
+        // total kameez / shalwar / dupatta returned for that design.
+        $stitchingReturnedByComponent = DB::table('stitching_return_items')
+            ->join('stitching_returns', 'stitching_returns.id', '=', 'stitching_return_items.stitching_return_id')
+            ->where('stitching_returns.catalogue_id', $catId)
+            ->select(
+                'stitching_returns.design_id',
+                'stitching_return_items.component',
+                DB::raw('SUM(stitching_return_items.quantity) as qty')
+            )
+            ->groupBy('stitching_returns.design_id', 'stitching_return_items.component')
+            ->get()
+            ->groupBy('design_id')
+            ->map(fn ($rows) => $rows->pluck('qty', 'component'));
 
         /* ----------------------------------------------------------------
          | 5. Tarpai — sent & returned per design
@@ -125,14 +148,33 @@ class ProductionTrackerController extends Controller
             ->pluck('qty', 'design_id');
 
         /* ----------------------------------------------------------------
-         | 7. Packed per design (press_return_items = pieces returned from press = packed)
+         | 7. Press — sent & returned per design
+         |    Press returned = packed inventory (no separate "log as packed" step)
          * -------------------------------------------------------------- */
+        $pressSent = DB::table('press_send_items')
+            ->join('press_sends', 'press_sends.id', '=', 'press_send_items.press_send_id')
+            ->where('press_sends.catalogue_id', $catId)
+            ->select('press_send_items.design_id', DB::raw('SUM(press_send_items.quantity) as qty'))
+            ->groupBy('press_send_items.design_id')
+            ->pluck('qty', 'design_id');
+
         $packed = DB::table('press_return_items')
             ->join('press_returns', 'press_returns.id', '=', 'press_return_items.press_return_id')
             ->join('press_sends', 'press_sends.id', '=', 'press_returns.press_send_id')
             ->where('press_sends.catalogue_id', $catId)
             ->select('press_return_items.design_id', DB::raw('SUM(press_return_items.quantity) as qty'))
             ->groupBy('press_return_items.design_id')
+            ->pluck('qty', 'design_id');
+
+        /* ----------------------------------------------------------------
+         | 8. Dispatched per design
+         * -------------------------------------------------------------- */
+        $dispatched = DB::table('dispatch_batch_items')
+            ->join('dispatch_batches', 'dispatch_batches.id', '=', 'dispatch_batch_items.dispatch_batch_id')
+            ->join('orders', 'orders.id', '=', 'dispatch_batches.order_id')
+            ->where('orders.catalogue_id', $catId)
+            ->select('dispatch_batch_items.design_id', DB::raw('SUM(dispatch_batch_items.quantity) as qty'))
+            ->groupBy('dispatch_batch_items.design_id')
             ->pluck('qty', 'design_id');
 
         /* ----------------------------------------------------------------
@@ -146,7 +188,8 @@ class ProductionTrackerController extends Controller
         $designs = $allDesigns->map(function ($design) use (
             $fabricReceived, $outsourcedReceived, $assignmentDestination,
             $assigned, $npSent, $npReturned,
-            $stitchingReturned, $tarpaiSent, $tarpaiReturned, $packed, $catalogue
+            $stitchingReturned, $stitchingReturnedByComponent,
+            $tarpaiSent, $tarpaiReturned, $pressSent, $packed, $dispatched, $catalogue
         ) {
             $d           = $design->id;
             $isInHouse   = $design->manufacturing_type === 'in_house';
@@ -159,7 +202,9 @@ class ProductionTrackerController extends Controller
             $stitchedQty    = (int) ($stitchingReturned[$d] ?? 0);
             $tarpaiSentQty  = (int) ($tarpaiSent[$d] ?? 0);
             $tarpaiRetQty   = (int) ($tarpaiReturned[$d] ?? 0);
+            $pressSentQty   = (int) ($pressSent[$d] ?? 0);
             $packedQty      = (int) ($packed[$d] ?? 0);
+            $dispatchedQty  = (int) ($dispatched[$d] ?? 0);
 
             // At Naeem Pakki = sent - returned (in-house, NP destination only)
             $atNaeemPakki = max(0, $npSentQty - $npReturnedQty);
@@ -188,20 +233,36 @@ class ProductionTrackerController extends Controller
             // Expected = catalogue's qty_per_design
             $expected = (int) $catalogue->qty_per_design;
 
+            // Stitching "sent" = what entered stitching (NP returns for NP path, assigned qty for direct stitch)
+            $stitchingSentQty = ($destination === 'naeem_pakki')
+                ? $npReturnedQty
+                : ($isInHouse ? $assignedQty : 0);
+
             return (object) [
-                'id'            => $design->id,
-                'name'          => $design->name,
-                'type'          => $design->manufacturing_type,
-                'destination'   => $destination,
-                'expected'      => $expected,
-                'fabricQty'     => $fabricQty,
-                'assignedQty'   => $assignedQty,
-                'atNaeemPakki'  => $atNaeemPakki,
-                'atStitching'   => $atStitching,
-                'inFactory'     => $inFactory,
-                'atTarpai'      => $atTarpai,
-                'postTarpai'    => $postTarpai,
-                'packedQty'     => $packedQty,
+                'id'                => $design->id,
+                'name'              => $design->name,
+                'type'              => $design->manufacturing_type,
+                'destination'       => $destination,
+                'expected'          => $expected,
+                'fabricQty'         => $fabricQty,
+                'assignedQty'       => $assignedQty,
+                // Raw sent/returned per stage
+                'npSentQty'         => $npSentQty,
+                'npReturnedQty'     => $npReturnedQty,
+                'stitchingSentQty'      => $stitchingSentQty,
+                'stitchingRetQty'       => $stitchedQty,
+                'stitchingComponents'   => $stitchingReturnedByComponent[$d] ?? collect(),
+                'tarpaiSentQty'     => $tarpaiSentQty,
+                'tarpaiRetQty'      => $tarpaiRetQty,
+                'pressSentQty'      => $pressSentQty,
+                'packedQty'         => $packedQty,
+                'dispatchedQty'     => $dispatchedQty,
+                // Computed "at stage" values kept for summary stat cards
+                'atNaeemPakki'      => $atNaeemPakki,
+                'atStitching'       => $atStitching,
+                'inFactory'         => $inFactory,
+                'atTarpai'          => $atTarpai,
+                'postTarpai'        => $postTarpai,
             ];
         });
 
@@ -219,10 +280,11 @@ class ProductionTrackerController extends Controller
             'atTarpai'       => $designs->sum('atTarpai'),
             'postTarpai'     => $designs->sum('postTarpai'),
             'packed'         => $designs->sum('packedQty'),
+            'dispatched'     => $designs->sum('dispatchedQty'),
         ];
 
         return view('production.tracker.index', compact(
-            'catalogues', 'catalogue', 'designs', 'summary'
+            'catalogue', 'designs', 'summary'
         ));
     }
 }
