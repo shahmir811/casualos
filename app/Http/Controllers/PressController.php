@@ -7,6 +7,7 @@ use App\Models\Design;
 use App\Models\PressSend;
 use App\Models\PressSendItem;
 use App\Models\PressReturn;
+use App\Models\PressReturnItem;
 use App\Models\TarpaiReturnItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -175,13 +176,8 @@ class PressController extends Controller
             return back()->withErrors(['designs' => 'Please enter at least one piece quantity to log a return.']);
         }
 
-        // Load send items and existing returns to validate outstanding
-        $send->load(['items', 'returns.items']);
-        $sentByDesign     = $send->items->groupBy('design_id');
-        $returnedByDesign = $send->returns->flatMap->items->groupBy('design_id');
-
         foreach ($validated['designs'] as $designData) {
-            $designId = $designData['design_id'];
+            $designId = (int) $designData['design_id'];
             $design   = Design::find($designId);
 
             foreach ($designData['items'] as $item) {
@@ -189,8 +185,19 @@ class PressController extends Controller
                 $size = $item['size'];
                 if ($qty === 0) continue;
 
-                $sentQty     = ($sentByDesign[$designId] ?? collect())->where('size', $size)->sum('quantity');
-                $returnedQty = ($returnedByDesign[$designId] ?? collect())->where('size', $size)->sum('quantity');
+                $sentQty = (int) PressSendItem::where('press_send_id', $send->id)
+                    ->where('design_id', $designId)
+                    ->where('size', $size)
+                    ->sum('quantity');
+
+                $returnedQty = (int) PressReturnItem::whereHas(
+                    'pressReturn',
+                    fn($q) => $q->where('press_send_id', $send->id)
+                )
+                ->where('design_id', $designId)
+                ->where('size', $size)
+                ->sum('quantity');
+
                 $outstanding = max(0, $sentQty - $returnedQty);
 
                 if ($qty > $outstanding) {
@@ -227,15 +234,42 @@ class PressController extends Controller
 
     public function inventory()
     {
-        // Packed inventory = all press return items grouped by catalogue → design → size
-        $returnItems = \App\Models\PressReturnItem::with([
+        $sizes = ['xs', 's', 'm', 'l', 'xl'];
+
+        // Unified inventory: [catalogue_id][design_id][size] => total qty
+        $data           = [];
+        $catalogueNames = [];
+        $designNames    = [];
+
+        // In-house: pieces returned from press
+        $pressItems = \App\Models\PressReturnItem::with([
             'pressReturn.send.catalogue',
             'design',
         ])->get();
 
-        $grouped = $returnItems->groupBy(fn($item) => $item->pressReturn->send->catalogue_id);
+        foreach ($pressItems as $item) {
+            $catId   = $item->pressReturn->send->catalogue_id;
+            $designId = $item->design_id;
+            $catalogueNames[$catId]  = $item->pressReturn->send->catalogue->name ?? 'Unknown';
+            $designNames[$designId]  = $item->design->name ?? '—';
+            $data[$catId][$designId][$item->size] = ($data[$catId][$designId][$item->size] ?? 0) + $item->quantity;
+        }
 
-        return view('production.press.inventory', compact('grouped'));
+        // Outsourced: pieces received directly from external factory
+        $outsourcedItems = \App\Models\OutsourcedBatchItem::with([
+            'batch.catalogue',
+            'design',
+        ])->get();
+
+        foreach ($outsourcedItems as $item) {
+            $catId    = $item->batch->catalogue_id;
+            $designId = $item->design_id;
+            $catalogueNames[$catId] = $item->batch->catalogue->name ?? 'Unknown';
+            $designNames[$designId] = $item->design->name ?? '—';
+            $data[$catId][$designId][$item->size] = ($data[$catId][$designId][$item->size] ?? 0) + $item->quantity;
+        }
+
+        return view('production.press.inventory', compact('data', 'catalogueNames', 'designNames', 'sizes'));
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────

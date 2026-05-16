@@ -126,7 +126,29 @@
 
 {{-- Log return form --}}
 @if($outstanding > 0)
-<div class="card overflow-hidden">
+@php
+    // Build the Alpine initialisation data in PHP so Blade loops don't get messy inside x-data
+    $alpineVals  = [];
+    $alpineMaxes = [];
+    foreach ($sentByDesign as $dId => $sentItems) {
+        foreach ($sizes as $size) {
+            $key = $dId . '_' . $size;
+            $alpineVals[$key]  = 0;
+            $alpineMaxes[$key] = $outstandingByDesign[$dId][$size] ?? 0;
+        }
+    }
+@endphp
+<div class="card overflow-hidden"
+     x-data="{
+         vals:  {{ Js::from($alpineVals) }},
+         maxes: {{ Js::from($alpineMaxes) }},
+         isOver(key) {
+             return (this.maxes[key] ?? 0) > 0 && parseInt(this.vals[key] ?? 0) > this.maxes[key];
+         },
+         get hasOverflow() {
+             return Object.keys(this.maxes).some(k => this.isOver(k));
+         }
+     }">
     <div class="px-5 py-4 border-b border-[#F2F2F7]">
         <h3 class="text-sm font-semibold text-[#1D1D1F]">Log Press Return</h3>
         <p class="text-xs text-[#6E6E73] mt-0.5">These pieces will immediately enter packed inventory.</p>
@@ -141,35 +163,62 @@
 
             @foreach($sentByDesign as $designId => $sentItems)
             @php
-                $design    = $designsById[$designId] ?? null;
-                $dIndex    = $loop->index;
+                $design = $designsById[$designId] ?? null;
+                $dIndex = $loop->index;
             @endphp
             <div class="mb-5">
                 <p class="text-sm font-semibold text-[#1D1D1F] mb-3">{{ $design->name ?? '—' }}</p>
                 <input type="hidden" name="designs[{{ $dIndex }}][design_id]" value="{{ $designId }}">
                 <div class="grid grid-cols-5 gap-3">
                     @foreach($sizes as $sIndex => $size)
-                    @php $outstanding_size = $outstandingByDesign[$designId][$size] ?? 0; @endphp
+                    @php
+                        $outstanding_size = $outstandingByDesign[$designId][$size] ?? 0;
+                        $alpineKey        = $designId . '_' . $size;
+                    @endphp
                     <div>
-                        <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-1 text-center">{{ strtoupper($size) }}</label>
-                        <p class="text-xs text-[#86868B] text-center mb-2">
-                            Max: <span class="font-medium text-[#1D1D1F]">{{ $outstanding_size }}</span>
+                        <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-1 text-center">
+                            {{ strtoupper($size) }}
+                        </label>
+                        <p class="text-xs text-center mb-2"
+                           :class="isOver('{{ $alpineKey }}') ? 'text-red-500 font-semibold' : 'text-[#86868B]'">
+                            Max: <span class="font-medium" :class="isOver('{{ $alpineKey }}') ? 'text-red-500' : 'text-[#1D1D1F]'">{{ $outstanding_size }}</span>
                         </p>
                         <input type="hidden" name="designs[{{ $dIndex }}][items][{{ $sIndex }}][size]" value="{{ $size }}">
+                        @if($outstanding_size === 0)
+                        <input type="number"
+                               name="designs[{{ $dIndex }}][items][{{ $sIndex }}][qty]"
+                               value="0"
+                               class="apple-input text-center opacity-40 cursor-not-allowed"
+                               disabled readonly>
+                        @else
                         <input type="number"
                                name="designs[{{ $dIndex }}][items][{{ $sIndex }}][qty]"
                                min="0"
                                max="{{ $outstanding_size }}"
                                value="0"
-                               class="apple-input text-center"
-                               {{ $outstanding_size === 0 ? 'disabled' : '' }}>
+                               autocomplete="off"
+                               @input="vals['{{ $alpineKey }}'] = parseFloat($event.target.value) || 0"
+                               :class="isOver('{{ $alpineKey }}')
+                                   ? 'apple-input text-center ring-2 ring-red-400 bg-red-50 text-red-600'
+                                   : 'apple-input text-center'">
+                        @endif
                     </div>
                     @endforeach
                 </div>
             </div>
             @endforeach
 
-            <button type="submit" class="btn-primary">Log Return</button>
+            <div class="flex items-center gap-4 mt-2">
+                <button type="submit"
+                        class="btn-primary"
+                        :disabled="hasOverflow"
+                        :class="hasOverflow ? 'opacity-50 cursor-not-allowed' : ''">
+                    Log Return
+                </button>
+                <p x-show="hasOverflow" class="text-sm text-red-500">
+                    Some quantities exceed the outstanding maximum.
+                </p>
+            </div>
         </form>
     </div>
 </div>
