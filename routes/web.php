@@ -109,7 +109,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     | IN-HOUSE PRODUCTION TRACKING (manager only)
     |------------------------------------------------------------------
     */
-    Route::middleware('role:manager')->group(function () {
+    Route::middleware('role:admin|manager')->group(function () {
         // Fabric batch arrivals
         Route::resource('fabric-batches', FabricBatchController::class)->only(['index','create','store','show']);
 
