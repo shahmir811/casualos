@@ -12,9 +12,18 @@
      x-data="{
         selectedCatalogueId: '',
         catalogues: {{ Js::from($catalogues) }},
+        qtys: {},
         get designs() {
             const cat = this.catalogues.find(c => c.id == this.selectedCatalogueId);
             return cat ? cat.designs.filter(d => d.manufacturing_type === 'outsourced') : [];
+        },
+        setQty(designId, size, val) {
+            if (!this.qtys[designId]) this.qtys[designId] = {};
+            this.qtys[designId][size] = parseInt(val) || 0;
+        },
+        rowTotal(designId) {
+            const row = this.qtys[designId] || {};
+            return ['xs','s','m','l','xl'].reduce((sum, s) => sum + (row[s] || 0), 0);
         }
      }">
 
@@ -65,11 +74,12 @@
                         <thead>
                             <tr>
                                 <th class="text-left">Design</th>
-                                <th class="text-right">XS</th>
-                                <th class="text-right">S</th>
-                                <th class="text-right">M</th>
-                                <th class="text-right">L</th>
-                                <th class="text-right">XL</th>
+                                <th class="text-center">XS</th>
+                                <th class="text-center">S</th>
+                                <th class="text-center">M</th>
+                                <th class="text-center">L</th>
+                                <th class="text-center">XL</th>
+                                <th class="text-center">Total</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -80,14 +90,16 @@
                                         <span class="text-sm font-medium text-[#1D1D1F]" x-text="design.name"></span>
                                     </td>
                                     <template x-for="size in ['xs','s','m','l','xl']" :key="size">
-                                        <td class="text-right">
+                                        <td class="text-center">
                                             <input type="number"
                                                    :name="`items[${idx}][${size}]`"
                                                    min="0"
                                                    value="0"
-                                                   class="apple-input text-center w-20 ml-auto">
+                                                   @input="setQty(design.id, size, $event.target.value)"
+                                                   class="apple-input text-center w-20 mx-auto">
                                         </td>
                                     </template>
+                                    <td class="text-center font-bold text-[#0071E3]" x-text="rowTotal(design.id)"></td>
                                 </tr>
                             </template>
                         </tbody>
