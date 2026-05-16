@@ -7,16 +7,10 @@
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Press</h1>
         <p class="text-[#6E6E73] text-sm mt-1">Track pieces sent to and returned from the press unit</p>
     </div>
-    <div class="flex gap-3">
-        <a href="{{ route('packed-inventory.index') }}" class="btn-secondary">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
-            Packed Inventory
-        </a>
-        <a href="{{ route('press-sends.create') }}" class="btn-primary">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            Log Press Send
-        </a>
-    </div>
+    <a href="{{ route('press-sends.create') }}" class="btn-primary">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        Log Press Send
+    </a>
 </div>
 
 {{-- ── Filter bar ──────────────────────────────────────────────────── --}}
@@ -106,10 +100,12 @@
                 <td class="text-right">{{ number_format($totalSent) }} pcs</td>
                 <td class="text-right">{{ number_format($totalReturned) }} pcs</td>
                 <td class="text-right">
-                    @if($outstanding > 0)
-                        <span class="badge badge-warning">{{ number_format($outstanding) }} pcs</span>
+                    @if($totalReturned === 0)
+                        <span class="badge bg-[#F5F5F7] text-[#86868B]">Pending</span>
+                    @elseif($outstanding > 0)
+                        <span class="badge bg-orange-100 text-orange-700">Partial</span>
                     @else
-                        <span class="badge badge-success">Done</span>
+                        <span class="badge bg-green-100 text-green-700">Complete</span>
                     @endif
                 </td>
                 <td class="text-[#6E6E73] text-xs">{{ $send->loggedBy->name ?? '—' }}</td>

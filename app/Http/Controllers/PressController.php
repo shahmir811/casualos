@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Catalogue;
 use App\Models\Design;
+use App\Models\OutsourcedBatchItem;
 use App\Models\PressSend;
 use App\Models\PressSendItem;
 use App\Models\PressReturn;
+use App\Models\PressReturnItem;
 use App\Models\TarpaiReturnItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -87,8 +89,8 @@ class PressController extends Controller
             $designId = $designData['design_id'];
             $design   = Design::find($designId);
 
-            $tarpaiReturned  = $this->getTarpaiReturnedBySize($validated['catalogue_id'], $designId);
-            $alreadySent     = $this->getAlreadyPressSentBySize($validated['catalogue_id'], $designId);
+            $tarpaiReturned = $this->getTarpaiReturnedBySize($validated['catalogue_id'], $designId);
+            $alreadySent    = $this->getAlreadyPressSentBySize($validated['catalogue_id'], $designId);
 
             foreach ($designData['items'] as $item) {
                 $qty  = (int) ($item['qty'] ?? 0);
@@ -156,7 +158,7 @@ class PressController extends Controller
         ));
     }
 
-    public function logReturn(Request $request, PressSend $send)
+    public function logReturn(Request $request, PressSend $pressSend)
     {
         $validated = $request->validate([
             'return_date'            => 'required|date',
@@ -175,13 +177,11 @@ class PressController extends Controller
             return back()->withErrors(['designs' => 'Please enter at least one piece quantity to log a return.']);
         }
 
-        // Load send items and existing returns to validate outstanding
-        $send->load(['items', 'returns.items']);
-        $sentByDesign     = $send->items->groupBy('design_id');
-        $returnedByDesign = $send->returns->flatMap->items->groupBy('design_id');
+        $pressSend->load(['items', 'returns.items']);
+        $allReturnedItems = $pressSend->returns->flatMap(fn($r) => $r->items);
 
         foreach ($validated['designs'] as $designData) {
-            $designId = $designData['design_id'];
+            $designId = (int) $designData['design_id'];
             $design   = Design::find($designId);
 
             foreach ($designData['items'] as $item) {
@@ -189,8 +189,16 @@ class PressController extends Controller
                 $size = $item['size'];
                 if ($qty === 0) continue;
 
-                $sentQty     = ($sentByDesign[$designId] ?? collect())->where('size', $size)->sum('quantity');
-                $returnedQty = ($returnedByDesign[$designId] ?? collect())->where('size', $size)->sum('quantity');
+                $sentQty = (int) $pressSend->items
+                    ->where('design_id', $designId)
+                    ->where('size', $size)
+                    ->sum('quantity');
+
+                $returnedQty = (int) $allReturnedItems
+                    ->where('design_id', $designId)
+                    ->where('size', $size)
+                    ->sum('quantity');
+
                 $outstanding = max(0, $sentQty - $returnedQty);
 
                 if ($qty > $outstanding) {
@@ -202,9 +210,9 @@ class PressController extends Controller
             }
         }
 
-        DB::transaction(function () use ($send, $validated) {
+        DB::transaction(function () use ($pressSend, $validated) {
             $pressReturn = PressReturn::create([
-                'press_send_id' => $send->id,
+                'press_send_id' => $pressSend->id,
                 'return_date'   => $validated['return_date'],
                 'logged_by'     => Auth::id(),
             ]);
@@ -227,15 +235,42 @@ class PressController extends Controller
 
     public function inventory()
     {
-        // Packed inventory = all press return items grouped by catalogue → design → size
-        $returnItems = \App\Models\PressReturnItem::with([
+        $sizes = ['xs', 's', 'm', 'l', 'xl'];
+
+        // Unified inventory: [catalogue_id][design_id][size] => total qty
+        $data           = [];
+        $catalogueNames = [];
+        $designNames    = [];
+
+        // In-house: pieces returned from press
+        $pressItems = PressReturnItem::with([
             'pressReturn.send.catalogue',
             'design',
         ])->get();
 
-        $grouped = $returnItems->groupBy(fn($item) => $item->pressReturn->send->catalogue_id);
+        foreach ($pressItems as $item) {
+            $catId   = $item->pressReturn->send->catalogue_id;
+            $designId = $item->design_id;
+            $catalogueNames[$catId]  = $item->pressReturn->send->catalogue->name ?? 'Unknown';
+            $designNames[$designId]  = $item->design->name ?? '—';
+            $data[$catId][$designId][$item->size] = ($data[$catId][$designId][$item->size] ?? 0) + $item->quantity;
+        }
 
-        return view('production.press.inventory', compact('grouped'));
+        // Outsourced: pieces received directly from external factory
+        $outsourcedItems = OutsourcedBatchItem::with([
+            'batch.catalogue',
+            'design',
+        ])->get();
+
+        foreach ($outsourcedItems as $item) {
+            $catId    = $item->batch->catalogue_id;
+            $designId = $item->design_id;
+            $catalogueNames[$catId] = $item->batch->catalogue->name ?? 'Unknown';
+            $designNames[$designId] = $item->design->name ?? '—';
+            $data[$catId][$designId][$item->size] = ($data[$catId][$designId][$item->size] ?? 0) + $item->quantity;
+        }
+
+        return view('production.press.inventory', compact('data', 'catalogueNames', 'designNames', 'sizes'));
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────

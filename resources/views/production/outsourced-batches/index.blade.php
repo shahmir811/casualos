@@ -33,7 +33,7 @@
                 <td>{{ $batch->catalogue->name ?? '—' }}</td>
                 <td>{{ $batch->received_date->format('d M Y') }}</td>
                 <td>{{ $batch->items->count() }}</td>
-                <td>{{ number_format($batch->items->sum('total_pieces')) }} pcs</td>
+                <td>{{ number_format($batch->items->sum('quantity')) }} pcs</td>
                 <td class="text-[#6E6E73] text-xs max-w-xs truncate">{{ $batch->notes ?? '—' }}</td>
                 <td>
                     <a href="{{ route('outsourced-batches.show', $batch) }}" class="text-[#0066CC] text-sm hover:underline">View →</a>
