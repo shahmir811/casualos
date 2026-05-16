@@ -100,10 +100,12 @@
                 <td class="text-right">{{ number_format($totalSent) }} pcs</td>
                 <td class="text-right">{{ number_format($totalReturned) }} pcs</td>
                 <td class="text-right">
-                    @if($outstanding > 0)
-                        <span class="badge badge-warning">{{ number_format($outstanding) }} pcs</span>
+                    @if($totalReturned === 0)
+                        <span class="badge bg-[#F5F5F7] text-[#86868B]">Pending</span>
+                    @elseif($outstanding > 0)
+                        <span class="badge bg-orange-100 text-orange-700">Partial</span>
                     @else
-                        <span class="badge badge-success">Done</span>
+                        <span class="badge bg-green-100 text-green-700">Complete</span>
                     @endif
                 </td>
                 <td class="text-[#6E6E73] text-xs">{{ $send->loggedBy->name ?? '—' }}</td>

@@ -147,6 +147,9 @@
          },
          get hasOverflow() {
              return Object.keys(this.maxes).some(k => this.isOver(k));
+         },
+         get hasAnyQty() {
+             return Object.values(this.vals).some(v => parseInt(v) > 0);
          }
      }">
     <div class="px-5 py-4 border-b border-[#F2F2F7]">
@@ -154,7 +157,9 @@
         <p class="text-xs text-[#6E6E73] mt-0.5">These pieces will immediately enter packed inventory.</p>
     </div>
     <div class="p-5">
-        <form method="POST" action="{{ route('press.return', $pressSend) }}">
+        <form method="POST" action="{{ route('press.return', $pressSend) }}"
+              autocomplete="off"
+              x-init="$nextTick(() => $el.querySelectorAll('input[type=number]:not([disabled])').forEach(el => { el.value = 0; }))">
             @csrf
             <div class="mb-5">
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Return Date</label>
@@ -211,8 +216,8 @@
             <div class="flex items-center gap-4 mt-2">
                 <button type="submit"
                         class="btn-primary"
-                        :disabled="hasOverflow"
-                        :class="hasOverflow ? 'opacity-50 cursor-not-allowed' : ''">
+                        :disabled="!hasAnyQty || hasOverflow"
+                        :class="(!hasAnyQty || hasOverflow) ? 'opacity-50 cursor-not-allowed' : ''">
                     Log Return
                 </button>
                 <p x-show="hasOverflow" class="text-sm text-red-500">

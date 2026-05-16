@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Catalogue;
 use App\Models\Design;
+use App\Models\OutsourcedBatchItem;
 use App\Models\PressSend;
 use App\Models\PressSendItem;
 use App\Models\PressReturn;
@@ -88,8 +89,8 @@ class PressController extends Controller
             $designId = $designData['design_id'];
             $design   = Design::find($designId);
 
-            $tarpaiReturned  = $this->getTarpaiReturnedBySize($validated['catalogue_id'], $designId);
-            $alreadySent     = $this->getAlreadyPressSentBySize($validated['catalogue_id'], $designId);
+            $tarpaiReturned = $this->getTarpaiReturnedBySize($validated['catalogue_id'], $designId);
+            $alreadySent    = $this->getAlreadyPressSentBySize($validated['catalogue_id'], $designId);
 
             foreach ($designData['items'] as $item) {
                 $qty  = (int) ($item['qty'] ?? 0);
@@ -157,7 +158,7 @@ class PressController extends Controller
         ));
     }
 
-    public function logReturn(Request $request, PressSend $send)
+    public function logReturn(Request $request, PressSend $pressSend)
     {
         $validated = $request->validate([
             'return_date'            => 'required|date',
@@ -176,6 +177,9 @@ class PressController extends Controller
             return back()->withErrors(['designs' => 'Please enter at least one piece quantity to log a return.']);
         }
 
+        $pressSend->load(['items', 'returns.items']);
+        $allReturnedItems = $pressSend->returns->flatMap(fn($r) => $r->items);
+
         foreach ($validated['designs'] as $designData) {
             $designId = (int) $designData['design_id'];
             $design   = Design::find($designId);
@@ -185,18 +189,15 @@ class PressController extends Controller
                 $size = $item['size'];
                 if ($qty === 0) continue;
 
-                $sentQty = (int) PressSendItem::where('press_send_id', $send->id)
+                $sentQty = (int) $pressSend->items
                     ->where('design_id', $designId)
                     ->where('size', $size)
                     ->sum('quantity');
 
-                $returnedQty = (int) PressReturnItem::whereHas(
-                    'pressReturn',
-                    fn($q) => $q->where('press_send_id', $send->id)
-                )
-                ->where('design_id', $designId)
-                ->where('size', $size)
-                ->sum('quantity');
+                $returnedQty = (int) $allReturnedItems
+                    ->where('design_id', $designId)
+                    ->where('size', $size)
+                    ->sum('quantity');
 
                 $outstanding = max(0, $sentQty - $returnedQty);
 
@@ -209,9 +210,9 @@ class PressController extends Controller
             }
         }
 
-        DB::transaction(function () use ($send, $validated) {
+        DB::transaction(function () use ($pressSend, $validated) {
             $pressReturn = PressReturn::create([
-                'press_send_id' => $send->id,
+                'press_send_id' => $pressSend->id,
                 'return_date'   => $validated['return_date'],
                 'logged_by'     => Auth::id(),
             ]);
@@ -242,7 +243,7 @@ class PressController extends Controller
         $designNames    = [];
 
         // In-house: pieces returned from press
-        $pressItems = \App\Models\PressReturnItem::with([
+        $pressItems = PressReturnItem::with([
             'pressReturn.send.catalogue',
             'design',
         ])->get();
@@ -256,7 +257,7 @@ class PressController extends Controller
         }
 
         // Outsourced: pieces received directly from external factory
-        $outsourcedItems = \App\Models\OutsourcedBatchItem::with([
+        $outsourcedItems = OutsourcedBatchItem::with([
             'batch.catalogue',
             'design',
         ])->get();

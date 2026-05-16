@@ -2,15 +2,9 @@
 @section('title', 'Packed Inventory')
 @section('content')
 
-<div class="flex items-center justify-between mb-7">
-    <div>
-        <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Packed Inventory</h1>
-        <p class="text-[#6E6E73] text-sm mt-1">All packed pieces ready for dispatch — in-house (from press) and outsourced</p>
-    </div>
-    <a href="{{ route('press-sends.create') }}" class="btn-secondary">
-        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-        Log Press Send
-    </a>
+<div class="mb-7">
+    <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Packed Inventory</h1>
+    <p class="text-[#6E6E73] text-sm mt-1">All packed pieces ready for dispatch — in-house (from press) and outsourced</p>
 </div>
 
 @php
@@ -32,9 +26,16 @@
 
 @forelse($data as $catalogueId => $designs)
 @php
-    $catName  = $catalogueNames[$catalogueId] ?? 'Unknown';
-    $catTotal = 0;
-    foreach ($designs as $sizeQtys) { $catTotal += array_sum($sizeQtys); }
+    $catName     = $catalogueNames[$catalogueId] ?? 'Unknown';
+    $catTotal    = 0;
+    $catBySize   = [];
+    foreach ($sizes as $size) { $catBySize[$size] = 0; }
+    foreach ($designs as $sizeQtys) {
+        $catTotal += array_sum($sizeQtys);
+        foreach ($sizes as $size) {
+            $catBySize[$size] += $sizeQtys[$size] ?? 0;
+        }
+    }
 @endphp
 <div class="mb-6">
     <h2 class="text-sm font-semibold text-[#1D1D1F] mb-3 flex items-center gap-2">
@@ -63,7 +64,10 @@
                 </tr>
                 @endforeach
                 <tr class="border-t border-[#E8E8ED] bg-[#F5F5F7]">
-                    <td class="px-5 py-2 font-semibold text-xs text-[#6E6E73]" colspan="{{ count($sizes) + 1 }}">Catalogue Total</td>
+                    <td class="px-5 py-2 font-semibold text-xs text-[#6E6E73]">Catalogue Total</td>
+                    @foreach($sizes as $size)
+                    <td class="px-5 py-2 text-right font-semibold text-sm">{{ $catBySize[$size] > 0 ? number_format($catBySize[$size]) : '—' }}</td>
+                    @endforeach
                     <td class="px-5 py-2 text-right font-bold text-sm">{{ number_format($catTotal) }}</td>
                 </tr>
             </tbody>
