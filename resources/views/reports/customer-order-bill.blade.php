@@ -13,13 +13,22 @@
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Customer Order Bill</h1>
         <p class="text-[#6E6E73] text-sm mt-1">Per-customer bill, amount received, and outstanding balance</p>
     </div>
-    <a href="{{ route('reports.customer-order-bill.pdf') }}"
-       class="btn-secondary flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-        </svg>
-        Download PDF
-    </a>
+    <div class="flex items-center gap-2">
+        <a href="{{ route('reports.customer-order-bill.excel') }}"
+           class="flex items-center gap-2 px-4 py-2 rounded-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Download Excel
+        </a>
+        <a href="{{ route('reports.customer-order-bill.pdf') }}"
+           class="btn-secondary flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Download PDF
+        </a>
+    </div>
 </div>
 
 @php

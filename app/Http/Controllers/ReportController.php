@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\BankAccountBreakdownExport;
+use App\Exports\CustomerOrderBillExport;
+use App\Exports\ReceivablesByBankExport;
 use App\Models\BankAccount;
 use App\Models\Catalogue;
 use App\Models\Customer;
@@ -153,6 +156,16 @@ class ReportController extends Controller
             ->download('customer-order-bill-' . str($selectedCatalogue->name)->slug() . '.pdf');
     }
 
+    public function customerOrderBillExcel(Request $request)
+    {
+        $catalogueId       = (int) session('active_catalogue_id');
+        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $orders            = $this->loadOrderBillData($catalogueId);
+
+        return (new CustomerOrderBillExport($orders, $selectedCatalogue))
+            ->download('customer-order-bill-' . str($selectedCatalogue->name)->slug() . '.xlsx');
+    }
+
     // ── Bank Account Breakdown ────────────────────────────────────────────────
 
     public function bankAccountBreakdown(Request $request)
@@ -177,6 +190,17 @@ class ReportController extends Controller
             ->download('bank-account-breakdown-' . str($selectedCatalogue->name)->slug() . '.pdf');
     }
 
+    public function bankAccountBreakdownExcel(Request $request)
+    {
+        $catalogueId       = (int) session('active_catalogue_id');
+        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $bankAccounts      = BankAccount::orderBy('title')->get();
+        $orders            = $this->loadBankBreakdownData($catalogueId, $bankAccounts);
+
+        return (new BankAccountBreakdownExport($orders, $bankAccounts, $selectedCatalogue))
+            ->download('bank-account-breakdown-' . str($selectedCatalogue->name)->slug() . '.xlsx');
+    }
+
     // ── Receivables by Bank ───────────────────────────────────────────────────
 
     public function receivablesByBank(Request $request)
@@ -199,6 +223,17 @@ class ReportController extends Controller
         return Pdf::loadView('reports.receivables-by-bank-pdf', compact('selectedCatalogue', 'bankAccounts', 'orders'))
             ->setPaper('a4', 'landscape')
             ->download('receivables-by-bank-' . str($selectedCatalogue->name)->slug() . '.pdf');
+    }
+
+    public function receivablesByBankExcel(Request $request)
+    {
+        $catalogueId       = (int) session('active_catalogue_id');
+        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $bankAccounts      = BankAccount::orderBy('title')->get();
+        $orders            = $this->loadBankBreakdownData($catalogueId, $bankAccounts, receivableOnly: true);
+
+        return (new ReceivablesByBankExport($orders, $bankAccounts, $selectedCatalogue))
+            ->download('receivables-by-bank-' . str($selectedCatalogue->name)->slug() . '.xlsx');
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
