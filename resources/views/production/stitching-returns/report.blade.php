@@ -195,7 +195,7 @@
 {{-- Header --}}
 <div class="report-header">
     <div>
-        <div class="brand">Casual Lite — CasualOS</div>
+        <div class="brand">Casualite — CasualiteOS</div>
         <div class="report-title">Stitching Return Report</div>
         <div style="font-size:13px; color:#6E6E73; margin-top:4px;">{{ $paId }}</div>
     </div>
@@ -355,7 +355,7 @@
 
 {{-- Footer --}}
 <div class="report-footer">
-    <span>Casual Lite — CasualOS Internal Report</span>
+    <span>Casualite — CasualiteOS Internal Report</span>
     <span>{{ $paId }} · {{ $productionAssignment->catalogue->name ?? '' }} · {{ $productionAssignment->design->name ?? '' }}</span>
 </div>
 

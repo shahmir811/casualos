@@ -123,6 +123,7 @@
         }
 
         /* Table */
+        .apple-table { border-collapse: collapse; }
         .apple-table thead th {
             background: #F5F5F7;
             color: #6E6E73;
@@ -131,18 +132,17 @@
             letter-spacing: 0.06em;
             text-transform: uppercase;
             padding: 0.75rem 1.25rem;
+            border: 1px solid #D2D2D7;
         }
-        .apple-table tbody tr {
-            border-bottom: 1px solid #F2F2F7;
-            transition: background 0.1s;
-        }
+        .apple-table tbody tr { transition: background 0.1s; }
         .apple-table tbody tr:hover { background: #FAFAFA; }
         .apple-table tbody td {
             padding: 0.85rem 1.25rem;
             color: #1D1D1F;
             font-size: 0.875rem;
+            border: 1px solid #E8E8ED;
         }
-        .apple-table tbody tr:last-child { border-bottom: none; }
+        .apple-table tfoot td { border: 1px solid #D2D2D7; }
 
         /* Badge */
         .badge {

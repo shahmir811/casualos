@@ -120,7 +120,7 @@ class BackupController extends Controller
         $pdo    = DB::getPdo();
 
         $output  = [];
-        $output[] = '-- CasualOS Database Backup';
+        $output[] = '-- CasualiteOS Database Backup';
         $output[] = '-- Generated: ' . now()->toDateTimeString();
         $output[] = '-- Database:  ' . $db;
         $output[] = '';

@@ -1,6 +1,6 @@
-# CasualOS — Business Operations System
+# CasualiteOS — Business Operations System
 
-A full-stack internal business operations system built for **Casual Lite**, a fashion brand. CasualOS replaces manual spreadsheets, notebooks, and WhatsApp-based workflows with a centralised, role-based web application.
+A full-stack internal business operations system built for **Casual Lite**, a fashion brand. CasualiteOS replaces manual spreadsheets, notebooks, and WhatsApp-based workflows with a centralised, role-based web application.
 
 ---
 

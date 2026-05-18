@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Orders — Casual Lite</title>
+    <title>My Orders — Casualite</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -90,7 +90,7 @@
                 <p class="text-[#86868B] text-xs">{{ $customer->city }}</p>
             </div>
         </div>
-        <span class="text-[#0071E3] text-xs font-medium">Casual Lite</span>
+        <span class="text-[#0071E3] text-xs font-medium">Casualite</span>
     </div>
 
     <div class="max-w-lg mx-auto px-4 mt-5 space-y-4">
@@ -107,7 +107,7 @@
                     <div class="flex-1">
                         <p class="text-[#86868B] text-xs font-medium mb-0.5">Amount Due</p>
                         <p class="text-[#FF3B30] text-2xl font-bold tracking-tight">{{ formatPKR($totalOutstanding) }}</p>
-                        <p class="text-[#6E6E73] text-xs mt-1">Please contact Casual Lite to clear your balance.</p>
+                        <p class="text-[#6E6E73] text-xs mt-1">Please contact Casualite to clear your balance.</p>
                     </div>
                 </div>
             @else
@@ -127,7 +127,7 @@
 
             @if($advance > 0)
             <div class="mt-4 pt-4 border-t border-[#F2F2F7] flex items-center justify-between">
-                <p class="text-[#6E6E73] text-xs">Advance Credit with Casual Lite</p>
+                <p class="text-[#6E6E73] text-xs">Advance Credit with Casualite</p>
                 <p class="text-[#30D158] text-sm font-semibold">{{ formatPKR($advance) }}</p>
             </div>
             @endif
@@ -311,7 +311,7 @@
     </div>
 
     <p class="text-center text-[#C7C7CC] text-xs mt-8">
-        © {{ date('Y') }} Casual Lite · Powered by CasualOS
+        © {{ date('Y') }} Casualite · Powered by CasualiteOS
     </p>
 
 </body>

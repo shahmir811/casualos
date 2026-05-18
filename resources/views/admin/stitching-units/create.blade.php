@@ -64,7 +64,7 @@
                                     peer-checked:border-[#0071E3] peer-checked:bg-[#F0F7FF] peer-checked:text-[#0071E3]
                                     hover:border-[#0071E3]">
                             <span class="text-sm font-semibold">Per Piece</span>
-                            <span class="text-[10px] mt-0.5 text-current opacity-70">Wages calculated by CasualOS</span>
+                            <span class="text-[10px] mt-0.5 text-current opacity-70">Wages calculated by CasualiteOS</span>
                         </div>
                     </label>
                     <label class="relative cursor-pointer">

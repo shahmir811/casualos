@@ -89,7 +89,7 @@
 
 <p class="mt-4 text-xs text-[#86868B]">
     Inactive units will not appear in production assignment or stitching return forms.
-    Salary-based units are tracked externally — CasualOS only tracks per-piece units for wages.
+    Salary-based units are tracked externally — CasualiteOS only tracks per-piece units for wages.
 </p>
 
 @endsection
