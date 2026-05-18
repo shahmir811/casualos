@@ -38,8 +38,7 @@ class ProductionAssignmentController extends Controller
 
     public function create()
     {
-        $catalogues = Catalogue::where('status', 'open')
-            ->with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')])
+        $catalogues = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')])
             ->orderBy('name')
             ->get();
 

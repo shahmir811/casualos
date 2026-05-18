@@ -24,8 +24,6 @@
             padding-bottom: 16px;
             margin-bottom: 20px;
         }
-        .brand { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-        .brand-sub { font-size: 11px; color: #6E6E73; text-transform: uppercase; letter-spacing: 1px; }
         .doc-title { text-align: right; }
         .doc-title h1 { font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
         .doc-title .ref { font-size: 13px; color: #6E6E73; margin-top: 4px; }
@@ -161,8 +159,7 @@
 <!-- Header -->
 <div class="header">
     <div>
-        <div class="brand">Casual Lite</div>
-        <div class="brand-sub">Operations</div>
+        <img src="/images/casualite-logo.png" style="height:56px; width:auto; display:block;">
     </div>
     <div class="doc-title">
         <h1>Gate Pass</h1>
@@ -262,7 +259,7 @@
 
 <!-- Footer -->
 <div class="footer">
-    <span>Generated {{ now()->format('d M Y, H:i') }} — Casual Lite Operations</span>
+    <span>Generated {{ now()->format('d M Y, H:i') }} — Casualite Operations</span>
     <span>Gate Pass No: TP-{{ str_pad($tarpaiSend->id, 4, '0', STR_PAD_LEFT) }}</span>
 </div>
 

@@ -12,7 +12,7 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         // Create the four roles
-        $roles = ['admin', 'accountant', 'manager', 'designer'];
+        $roles = ['admin', 'accountant', 'production_manager', 'creative_head'];
         foreach ($roles as $roleName) {
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
         }
@@ -33,20 +33,20 @@ class AdminSeeder extends Seeder
         $this->command->info('Admin account ready: admin@casualite.com / Admin@1234');
         $this->command->warn('Change the admin password immediately after first login!');
 
-        // Create manager account
+        // Create production manager account
         $manager = User::firstOrCreate(
             ['email' => 'adnan@casualite.com'],
             [
                 'name'      => 'Muhammad Adnan',
                 'password'  => Hash::make('12345678'),
-                'role'      => 'manager',
+                'role'      => 'production_manager',
                 'is_active' => true,
             ]
         );
 
-        $manager->assignRole('manager');
+        $manager->assignRole('production_manager');
 
-        $this->command->info('Manager account ready: manager@casualite.com / 12345678');
+        $this->command->info('Production Manager account ready: adnan@casualite.com / 12345678');
 
         // Create accountant account
         $accountant = User::firstOrCreate(

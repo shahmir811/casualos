@@ -84,8 +84,8 @@
 @endif
 @endif
 
-{{-- MANAGER STATS --}}
-@if(in_array(Auth::user()->role, ['admin', 'manager']))
+{{-- PRODUCTION MANAGER STATS --}}
+@if(in_array(Auth::user()->role, ['admin', 'production_manager']))
 <div class="card mb-7">
     <div class="px-6 py-4 border-b border-[#F2F2F7]">
         <h2 class="text-[#1D1D1F] text-sm font-semibold">Open Catalogues</h2>
@@ -104,8 +104,8 @@
 </div>
 @endif
 
-{{-- DESIGNER VIEW --}}
-@if(Auth::user()->role === 'designer')
+{{-- CREATIVE HEAD VIEW --}}
+@if(Auth::user()->role === 'creative_head')
 <div class="card">
     <div class="px-6 py-4 border-b border-[#F2F2F7]">
         <h2 class="text-[#1D1D1F] text-sm font-semibold">All Catalogues</h2>

@@ -36,8 +36,8 @@
             <select name="role" required class="apple-input">
                 <option value="">Select a role</option>
                 <option value="accountant" {{ old('role') === 'accountant' ? 'selected' : '' }}>Accountant</option>
-                <option value="manager" {{ old('role') === 'manager' ? 'selected' : '' }}>Manager</option>
-                <option value="designer" {{ old('role') === 'designer' ? 'selected' : '' }}>Designer</option>
+                <option value="production_manager" {{ old('role') === 'production_manager' ? 'selected' : '' }}>Production Manager</option>
+                <option value="creative_head" {{ old('role') === 'creative_head' ? 'selected' : '' }}>Creative Head</option>
             </select>
             @error('role')
                 <p class="mt-1.5 text-[#FF3B30] text-xs">{{ $message }}</p>

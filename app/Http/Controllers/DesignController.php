@@ -12,7 +12,7 @@ class DesignController extends Controller
 {
     private function adminOrDesigner(): void
     {
-        if (!in_array(Auth::user()->role, ['admin', 'designer'])) {
+        if (!in_array(Auth::user()->role, ['admin', 'creative_head'])) {
             abort(403);
         }
     }

@@ -37,8 +37,8 @@ class User extends Authenticatable
     // Role helpers
     public function isAdmin(): bool      { return $this->role === 'admin'; }
     public function isAccountant(): bool { return $this->role === 'accountant'; }
-    public function isManager(): bool    { return $this->role === 'manager'; }
-    public function isDesigner(): bool   { return $this->role === 'designer'; }
+    public function isManager(): bool    { return $this->role === 'production_manager'; }
+    public function isDesigner(): bool   { return $this->role === 'creative_head'; }
     public function isActive(): bool     { return $this->is_active; }
 
     // Scope: active users only

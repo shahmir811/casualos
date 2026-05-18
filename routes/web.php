@@ -90,6 +90,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     */
     Route::middleware('role:admin|accountant')->group(function () {
         Route::get('orders/pdf', [OrderController::class, 'downloadPdf'])->name('orders.pdf');
+        Route::get('orders/{order}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
         Route::resource('orders', OrderController::class)->except(['create','store','destroy']);
         Route::post('orders/{order}/confirm',  [OrderController::class, 'confirm'])->name('orders.confirm');
         Route::post('orders/{order}/stitch',   [OrderController::class, 'markStitching'])->name('orders.stitch');
@@ -106,10 +107,10 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     /*
     |------------------------------------------------------------------
-    | IN-HOUSE PRODUCTION TRACKING (manager only)
+    | IN-HOUSE PRODUCTION TRACKING (production_manager only)
     |------------------------------------------------------------------
     */
-    Route::middleware('role:admin|manager')->group(function () {
+    Route::middleware('role:admin|production_manager')->group(function () {
         // Fabric batch arrivals
         Route::resource('fabric-batches', FabricBatchController::class)->only(['index','create','store','show']);
 

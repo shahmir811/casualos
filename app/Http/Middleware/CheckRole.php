@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
  * Usage in routes:
  *   ->middleware('role:admin')
  *   ->middleware('role:admin|accountant')
- *   ->middleware('role:manager')
+ *   ->middleware('role:production_manager')
  *
  * Checks the `role` column on the users table directly.
  * No external package needed.

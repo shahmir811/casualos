@@ -36,10 +36,14 @@
                 <td>
                     <span class="badge
                         @if($user->role === 'accountant') bg-yellow-100 text-yellow-700
-                        @elseif($user->role === 'manager') bg-blue-100 text-blue-700
+                        @elseif($user->role === 'production_manager') bg-blue-100 text-blue-700
                         @else bg-purple-100 text-purple-700
                         @endif">
-                        {{ $user->role }}
+                        {{ match($user->role) {
+                            'production_manager' => 'Production Manager',
+                            'creative_head'      => 'Creative Head',
+                            default              => ucfirst($user->role),
+                        } }}
                     </span>
                 </td>
                 <td>

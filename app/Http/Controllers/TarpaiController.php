@@ -85,8 +85,7 @@ class TarpaiController extends Controller
 
     public function create()
     {
-        $catalogues = Catalogue::where('status', 'open')
-            ->with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')->orderBy('name')])
+        $catalogues = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')->orderBy('name')])
             ->orderBy('name')
             ->get();
 
