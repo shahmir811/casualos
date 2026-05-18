@@ -48,35 +48,8 @@
 
         {{-- Logo / Brand --}}
         <div class="text-center mb-10">
-            <div class="inline-flex items-center justify-center mb-5">
-                <svg width="160" height="140" viewBox="0 0 160 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Dark background -->
-                    <rect width="160" height="140" rx="16" fill="#0A0A0A"/>
-
-                    <!-- C letter form: arc open to the right -->
-                    <path
-                        d="M 86 28
-                           A 34 34 0 1 0 86 82"
-                        stroke="white" stroke-width="2.2" fill="none"
-                        stroke-linecap="round"
-                    />
-
-                    <!-- L letter form: vertical bar then horizontal base -->
-                    <line x1="90" y1="28" x2="90" y2="90" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
-                    <line x1="90" y1="90" x2="118" y2="90" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
-
-                    <!-- CASUALITE wordmark -->
-                    <text
-                        x="80"
-                        y="122"
-                        text-anchor="middle"
-                        fill="white"
-                        font-family="'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif"
-                        font-size="10"
-                        font-weight="300"
-                        letter-spacing="5"
-                    >CASUALITE</text>
-                </svg>
+            <div class="inline-flex items-center justify-center mb-3">
+                <img src="/images/casualite-logo.png" alt="Casualite" style="height:110px; width:auto;">
             </div>
             <p class="text-[#6E6E73] text-sm mt-1">Operations System</p>
         </div>

@@ -131,6 +131,14 @@
                                 <span class="font-medium text-[#1D1D1F] text-sm">
                                     {{ $order->customer?->name ?? $order->submitted_name }}
                                 </span>
+                                <a href="{{ route('orders.invoice', $order) }}"
+                                   target="_blank"
+                                   title="Download Invoice"
+                                   class="flex-shrink-0 text-[#FF3B30] hover:text-[#D70015] transition-colors">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V7.414A2 2 0 0017.414 6L14 2.586A2 2 0 0012.586 2H4zm0 2h8v3a1 1 0 001 1h3v8H4V4zm5 5a1 1 0 00-1 1v3.586l-.293-.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l2-2a1 1 0 00-1.414-1.414l-.293.293V10a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                </a>
                             </div>
                             @if(!$selectedCatalogue)
                             <p class="text-xs text-[#86868B]">{{ $order->catalogue->name ?? '—' }}</p>

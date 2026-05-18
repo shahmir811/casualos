@@ -54,6 +54,10 @@
             Log Reduction
         </a>
         @endif
+
+        <a href="{{ route('orders.invoice', $order) }}" class="btn-secondary" target="_blank">
+            Download Invoice
+        </a>
     </div>
 </div>
 

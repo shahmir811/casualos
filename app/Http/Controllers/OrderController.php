@@ -107,6 +107,18 @@ class OrderController extends Controller
         return back()->with('success', 'Order #' . $order->order_number . ' confirmed.');
     }
 
+    public function invoice(Order $order)
+    {
+        $order->load(['customer', 'catalogue', 'items.design', 'payments.bankAccount']);
+
+        $pdf = Pdf::loadView('orders.invoice', compact('order'))
+            ->setPaper('a4', 'portrait');
+
+        $filename = 'invoice-' . $order->order_number . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
     public function downloadPdf(Request $request)
     {
         $request->validate(['catalogue_id' => 'required|exists:catalogues,id']);
