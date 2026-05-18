@@ -145,6 +145,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('dispatch',                         [DispatchController::class, 'index'])->name('dispatch.index');
         Route::get('dispatch/{order}',                 [DispatchController::class, 'show'])->name('dispatch.show');
         Route::get('dispatch/{order}/create',          [DispatchController::class, 'create'])->name('dispatch.create');
+        Route::get('dispatch/{order}/workspace',       [DispatchController::class, 'workspace'])->name('dispatch.workspace');
         Route::post('dispatch/{order}',                [DispatchController::class, 'store'])->name('dispatch.store');
 
         // Worker wages
@@ -181,12 +182,15 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('damage-reductions',     [ReportController::class, 'damageReductions'])->name('damage-reductions');
 
         // Payment reports
-        Route::get('customer-order-bill',         [ReportController::class, 'customerOrderBill'])->name('customer-order-bill');
-        Route::get('customer-order-bill/pdf',     [ReportController::class, 'customerOrderBillPdf'])->name('customer-order-bill.pdf');
-        Route::get('bank-account-breakdown',      [ReportController::class, 'bankAccountBreakdown'])->name('bank-account-breakdown');
-        Route::get('bank-account-breakdown/pdf',  [ReportController::class, 'bankAccountBreakdownPdf'])->name('bank-account-breakdown.pdf');
-        Route::get('receivables-by-bank',         [ReportController::class, 'receivablesByBank'])->name('receivables-by-bank');
-        Route::get('receivables-by-bank/pdf',     [ReportController::class, 'receivablesByBankPdf'])->name('receivables-by-bank.pdf');
+        Route::get('customer-order-bill',           [ReportController::class, 'customerOrderBill'])->name('customer-order-bill');
+        Route::get('customer-order-bill/pdf',       [ReportController::class, 'customerOrderBillPdf'])->name('customer-order-bill.pdf');
+        Route::get('customer-order-bill/excel',     [ReportController::class, 'customerOrderBillExcel'])->name('customer-order-bill.excel');
+        Route::get('bank-account-breakdown',        [ReportController::class, 'bankAccountBreakdown'])->name('bank-account-breakdown');
+        Route::get('bank-account-breakdown/pdf',    [ReportController::class, 'bankAccountBreakdownPdf'])->name('bank-account-breakdown.pdf');
+        Route::get('bank-account-breakdown/excel',  [ReportController::class, 'bankAccountBreakdownExcel'])->name('bank-account-breakdown.excel');
+        Route::get('receivables-by-bank',           [ReportController::class, 'receivablesByBank'])->name('receivables-by-bank');
+        Route::get('receivables-by-bank/pdf',       [ReportController::class, 'receivablesByBankPdf'])->name('receivables-by-bank.pdf');
+        Route::get('receivables-by-bank/excel',     [ReportController::class, 'receivablesByBankExcel'])->name('receivables-by-bank.excel');
     });
 
     /*

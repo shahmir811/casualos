@@ -72,7 +72,7 @@
                 </td>
                 <td class="text-[#6E6E73] text-xs">{{ $order->updated_at->format('d M Y') }}</td>
                 <td>
-                    <a href="{{ route('dispatch.create', $order) }}" class="btn-primary text-xs">Dispatch →</a>
+                    <a href="{{ route('dispatch.show', $order) }}" class="btn-primary text-xs">View →</a>
                 </td>
             </tr>
             @empty

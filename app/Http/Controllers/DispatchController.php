@@ -36,6 +36,57 @@ class DispatchController extends Controller
         return view('production.dispatch.show', compact('order'));
     }
 
+    public function workspace(Order $order)
+    {
+        $sizes = ['xs', 's', 'm', 'l', 'xl'];
+        $order->load(['items.design', 'customer', 'catalogue', 'dispatchBatches.items.design']);
+
+        // Per-design, per-size totals already dispatched
+        $dispatchedTotals = [];
+        foreach ($order->dispatchBatches as $batch) {
+            foreach ($batch->items as $item) {
+                $dispatchedTotals[$item->design_id][$item->size] =
+                    ($dispatchedTotals[$item->design_id][$item->size] ?? 0) + $item->quantity;
+            }
+        }
+
+        // Remaining from order and stock in packed inventory (same logic as create)
+        $remaining = [];
+        $inStock   = [];
+
+        foreach ($order->items as $item) {
+            $designId   = $item->design_id;
+            $dispatched = collect($dispatchedTotals[$designId] ?? []);
+
+            foreach ($sizes as $size) {
+                $ordered = (int) $item->{'qty_' . $size};
+                $remaining[$designId][$size] = max(0, $ordered - ($dispatched[$size] ?? 0));
+            }
+
+            if ($item->design?->manufacturing_type === 'outsourced') {
+                $stockRows = \App\Models\OutsourcedBatchItem::whereHas('batch', fn($q) => $q->where('catalogue_id', $order->catalogue_id))
+                    ->where('design_id', $designId)
+                    ->selectRaw('size, SUM(quantity) as total')
+                    ->groupBy('size')
+                    ->pluck('total', 'size')
+                    ->map(fn($v) => (int) $v);
+            } else {
+                $stockRows = \App\Models\PressReturnItem::whereHas('pressReturn.send', fn($q) => $q->where('catalogue_id', $order->catalogue_id))
+                    ->where('design_id', $designId)
+                    ->selectRaw('size, SUM(quantity) as total')
+                    ->groupBy('size')
+                    ->pluck('total', 'size')
+                    ->map(fn($v) => (int) $v);
+            }
+
+            foreach ($sizes as $size) {
+                $inStock[$designId][$size] = $stockRows[$size] ?? 0;
+            }
+        }
+
+        return view('production.dispatch.workspace', compact('order', 'sizes', 'remaining', 'inStock', 'dispatchedTotals'));
+    }
+
     public function create(Order $order)
     {
         $sizes = ['xs', 's', 'm', 'l', 'xl'];
@@ -236,7 +287,9 @@ class DispatchController extends Controller
             }
         });
 
-        return redirect()->route('dispatch.index')
-            ->with('success', 'Dispatch batch #' . (($order->dispatchBatches()->max('batch_number'))) . ' recorded for order #' . $order->order_number . '.');
+        $batchNumber = $order->dispatchBatches()->max('batch_number');
+
+        return redirect()->route('dispatch.show', $order)
+            ->with('success', "Dispatch batch #{$batchNumber} recorded successfully.");
     }
 }
