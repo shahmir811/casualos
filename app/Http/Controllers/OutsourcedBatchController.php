@@ -17,8 +17,7 @@ class OutsourcedBatchController extends Controller
 
     public function create()
     {
-        $catalogues = Catalogue::where('status', 'open')
-            ->with(['designs' => fn($q) => $q->where('manufacturing_type', 'outsourced')->orderBy('name')])
+        $catalogues = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'outsourced')->orderBy('name')])
             ->orderBy('name')
             ->get();
         return view('production.outsourced-batches.create', compact('catalogues'));
