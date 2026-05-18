@@ -97,7 +97,7 @@ Stitching units are managed in the `stitching_units` table (not hardcoded intege
 - `per_piece_rate` — **required** for `per_piece` units. This is the rate used to calculate weekly wages. Salary units have no rate in CasualOS (tracked externally).
 - `is_active` — inactive units are hidden from production assignment and stitching return forms
 
-**Wage rate is stored on the stitching unit, not on the catalogue.** When recording weekly wages, the manager selects a stitching unit and the rate auto-populates from `stitching_units.per_piece_rate`. The `wages` table stores `stitching_unit_id` (FK) and a snapshot of `wage_rate` at the time of recording.
+**Wage rate is stored on the stitching unit, not on the catalogue.** When recording weekly wages, the production manager selects a stitching unit and the rate auto-populates from `stitching_units.per_piece_rate`. The `wages` table stores `stitching_unit_id` (FK) and a snapshot of `wage_rate` at the time of recording.
 
 ### Catalogue Sold-Out
 
@@ -112,12 +112,12 @@ named `order.public` — **not** `order.show`.
 
 ### Order Statuses (4 only — exact enum values)
 
-| Status       | How it's set                                                        |
-| ------------ | ------------------------------------------------------------------- |
-| `received`   | Automatically when customer submits the form                        |
-| `confirmed`  | Accountant logs a payment or applies advance credit                 |
-| `stitching`  | **Automatically** when a fabric batch is recorded for the catalogue |
-| `dispatched` | Manager dispatches the order (only when `outstanding_balance = 0`)  |
+| Status       | How it's set                                                                    |
+| ------------ | ------------------------------------------------------------------------------- |
+| `received`   | Automatically when customer submits the form                                    |
+| `confirmed`  | Accountant logs a payment or applies advance credit                             |
+| `stitching`  | **Automatically** when a fabric batch is recorded for the catalogue             |
+| `dispatched` | Production Manager dispatches the order (only when `outstanding_balance = 0`)   |
 
 **The `stitching` status is automatic, not a manual button.** When a FabricBatch is
 created for a catalogue, all `confirmed` orders for that catalogue must auto-transition
@@ -129,16 +129,16 @@ to `stitching`.
 
 There are exactly **4 internal roles** plus customers (who have no login).
 
-| Role           | Spatie name  | What they can access                                       |
-| -------------- | ------------ | ---------------------------------------------------------- |
-| **admin**      | `admin`      | Everything — the full system                               |
-| **accountant** | `accountant` | Customers, orders, payments, ledger, reports               |
-| **manager**    | `manager`    | All production tracking, dispatch, wages, packed inventory |
-| **designer**   | `designer`   | Catalogue view + design photo upload ONLY                  |
+| Role                    | Spatie name          | What they can access                                       |
+| ----------------------- | -------------------- | ---------------------------------------------------------- |
+| **admin**               | `admin`              | Everything — the full system                               |
+| **accountant**          | `accountant`         | Customers, orders, payments, ledger, reports               |
+| **production_manager**  | `production_manager` | All production tracking, dispatch, wages, packed inventory |
+| **creative_head**       | `creative_head`      | Catalogue view + design photo upload ONLY                  |
 
-### Designer restrictions (non-negotiable)
+### Creative Head restrictions (non-negotiable)
 
-The designer role **cannot** see:
+The `creative_head` role **cannot** see:
 
 - Customer records or ledger
 - Payment history or financial data
@@ -146,16 +146,16 @@ The designer role **cannot** see:
 - Order management
 - The dashboard widgets that show orders/payments/production
 
-The designer gets access only to catalogue listing and design detail/edit for photo upload.
-Route middleware must enforce this — the designer must not land on a screen showing
+The creative head gets access only to catalogue listing and design detail/edit for photo upload.
+Route middleware must enforce this — the creative head must not land on a screen showing
 financial or order data.
 
 ### Route middleware groups currently in `routes/web.php`
 
 - `role:admin` — user management, order reductions, bank accounts, stitching units
 - `role:admin|accountant` — customers, orders, payments, reports
-- `role:manager` — all production routes, dispatch, wages
-- No role restriction (auth only) — dashboard, catalogues (accessible to all including designer)
+- `role:admin|production_manager` — all production routes, dispatch, wages
+- No role restriction (auth only) — dashboard, catalogues (accessible to all including creative_head)
 
 ---
 
@@ -245,7 +245,7 @@ if ($order->outstanding_balance > 0) {
 }
 ```
 
-If the balance is not cleared, dispatch is blocked. The manager sees this message clearly.
+If the balance is not cleared, dispatch is blocked. The production manager sees this message clearly.
 
 ### 5.3 Cargo Document Is a File Upload (Not Text)
 
@@ -351,7 +351,7 @@ These rules are enforced in `PaymentController::store()` via `required_if` valid
 Fabric Batch arrives (FabricBatch)
     ↓ Auto-transitions all confirmed orders → stitching
 Production Assignment (ProductionAssignment) — New Assignment form
-    ↓ Manager picks: Catalogue → Destination (Naeem Pakki | Stitching Unit)
+    ↓ Production Manager picks: Catalogue → Destination (Naeem Pakki | Stitching Unit)
     │
     ├─ [Naeem Pakki destination]
     │   Multi-design table: only designs with needs_naeem_pakki=true shown
@@ -388,7 +388,7 @@ Dispatch (batch-wise, full payment required, deducts packed inventory)
 - `naeem_pakki_sends` links directly to `catalogue_id` + `design_id` (NOT to `production_assignments`).
 - `naeem_pakki_returns` has **no `quantity` column** — totals are computed from `naeem_pakki_return_items`. Each return batch has a header row (`naeem_pakki_returns`) and one `naeem_pakki_return_items` row per design returned (`np_design_id` + `quantity`).
 - Per-piece rate (`per_piece_price`) is recorded on each send record. Different sends for the same design can have different rates.
-- **Production Assignments for NP:** Manager uses the New Assignment form, selects Naeem Pakki as destination, and sees a table of all NP-eligible designs. Can assign multiple designs at once, each with qty + rate. One `ProductionAssignment` record is created per design. Quantity is stored as a single `production_assignment_items` row with `size = 'np'`.
+- **Production Assignments for NP:** Production Manager uses the New Assignment form, selects Naeem Pakki as destination, and sees a table of all NP-eligible designs. Can assign multiple designs at once, each with qty + rate. One `ProductionAssignment` record is created per design. Quantity is stored as a single `production_assignment_items` row with `size = 'np'`.
 - **Available qty guard:** The available qty shown in the NP assignment table = fabric received (from `fabric_batch_items`) minus already assigned (from `production_assignment_items`). The form prevents submitting if any qty exceeds available.
 - `NaeemPakkiSend` and `NaeemPakkiReturn` models do **NOT** use `LogsActivity` trait — only `Order` and `Catalogue` do.
 
@@ -473,7 +473,7 @@ returns that cause discrepancies — it flags them for review.
 - Public order form (sold-out screen, real-time totals with discount price logic, customer email matching UI, **duplicate order alert modal**)
 - **Discount pricing** — catalogues have `quantity_benchmark`; designs have `selling_price` + optional `discount_price`; the order form applies the correct price tier live and on submission
 - **Random order numbers** — `orders.order_number` is a randomly generated unique identifier displayed everywhere instead of the database `id`
-- Orders view and management — Order Status card shown to all roles; only admin/manager can change status
+- Orders view and management — Order Status card shown to all roles; only admin/production_manager can change status
 - Payment recording — receipt upload and bank account selection are conditional on payment method (bank transfer requires both; cash and advance require neither)
 - **Bank Accounts** — `bank_accounts` table, admin-only management page, seeded with 8 accounts (Saleem, Ehsan SB, Farhan, Meezan, HBL, Adnan, Osama, Akram); `payments.bank_account_id` FK added; bank account title shown in payment history
 - Apply advance credit to orders
@@ -508,7 +508,7 @@ returns that cause discrepancies — it flags them for review.
 7. **Order reduction surplus logic** — three-case financial logic not implemented
 8. **`running_advance_balance` hardcoded to 0** in all ledger entries — must be actual customer balance
 9. **Dispatch order status** — order marked `dispatched` on every batch dispatch, should only be set when `isFullyDispatched()` returns true
-10. **Designer role dashboard restriction** — designer should not see financial/order/production data on dashboard
+10. **Creative Head role dashboard restriction** — `creative_head` should not see financial/order/production data on dashboard
 
 ### All Migrations (run `php artisan migrate` after pulling)
 
@@ -526,6 +526,7 @@ All migrations have been run. No pending migrations. For reference, the full set
 - `2026_05_11_113000` — adds `tarpai_house` enum and drops `design_id` from `tarpai_sends` (finishing the partial refactor that `2026_05_09_000002` assumed had already run)
 - `2026_05_11_120000` — drops `press_pack_records` + `press_pack_record_items`; creates `press_sends`, `press_send_items`, `press_returns`, `press_return_items`
 - `2026_05_11_200000` — adds `in_house` to `tarpai_sends.tarpai_house` enum (valid values: `rashid_bhai`, `yousaf_bhai`, `in_house`)
+- `2026_05_18_110503` — renames `users.role` enum values: `manager` → `production_manager`, `designer` → `creative_head`; updates Spatie `roles` table records accordingly
 
 ---
 
