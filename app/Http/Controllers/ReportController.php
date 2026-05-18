@@ -224,7 +224,7 @@ class ReportController extends Controller
                     ->pluck('title_given')
                     ->filter()
                     ->unique()
-                    ->implode(', ') ?: '—';
+                    ->implode(' / ') ?: '—';
                 return $order;
             });
     }
@@ -254,7 +254,7 @@ class ReportController extends Controller
                     ->pluck('title_given')
                     ->filter()
                     ->unique()
-                    ->implode(', ') ?: '—';
+                    ->implode(' / ') ?: '—';
                 return $order;
             });
     }

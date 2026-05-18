@@ -51,7 +51,7 @@
             <tr>
                 <td class="font-medium">#{{ $order->order_number }}</td>
                 <td>{{ $order->customer->name ?? '—' }}</td>
-                <td>PKR {{ number_format($order->total_amount, 0) }}</td>
+                <td>PKR {{ lacs_format($order->total_amount, 0) }}</td>
                 <td>
                     @if($totalPaid <= 0)
                         <span class="badge bg-[#F5F5F7] text-[#86868B]">Not Paid</span>

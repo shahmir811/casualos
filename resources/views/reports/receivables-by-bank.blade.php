@@ -31,7 +31,7 @@
 <div class="grid grid-cols-2 gap-4 mb-6">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Outstanding</p>
-        <p class="text-2xl font-light text-red-500">Rs. {{ number_format($grandBal, 0) }}</p>
+        <p class="text-2xl font-light text-red-500">Rs. {{ lacs_format($grandBal, 0) }}</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Customers with Balance</p>
@@ -65,14 +65,14 @@
                     <td class="text-[#86868B] text-xs">{{ $i + 1 }}</td>
                     <td class="font-medium">{{ $order->customer?->name ?? $order->submitted_name }}</td>
                     <td class="text-[#6E6E73]">{{ $order->customer?->city ?? $order->submitted_city }}</td>
-                    <td class="text-right font-semibold text-red-600">{{ number_format($order->outstanding_balance, 0) }}</td>
+                    <td class="text-right font-semibold text-red-600">{{ lacs_format($order->outstanding_balance, 0) }}</td>
                     <td class="text-[#6E6E73] text-xs">{{ $order->title_given_label }}</td>
                     @foreach($bankAccounts as $ba)
                         <td class="text-right text-sm">
-                            {{ ($order->bank_totals[$ba->id] ?? 0) > 0 ? number_format($order->bank_totals[$ba->id], 0) : '—' }}
+                            {{ ($order->bank_totals[$ba->id] ?? 0) > 0 ? lacs_format($order->bank_totals[$ba->id], 0) : '—' }}
                         </td>
                     @endforeach
-                    <td class="text-right text-sm">{{ $order->misc_total > 0 ? number_format($order->misc_total, 0) : '—' }}</td>
+                    <td class="text-right text-sm">{{ $order->misc_total > 0 ? lacs_format($order->misc_total, 0) : '—' }}</td>
                 </tr>
                 @empty
                 <tr><td colspan="{{ 6 + $bankAccounts->count() }}" class="text-center text-[#86868B] py-12">No outstanding balances for this catalogue.</td></tr>
@@ -82,14 +82,14 @@
             <tfoot>
                 <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
                     <td class="px-5 py-3 font-semibold text-sm" colspan="3">Total</td>
-                    <td class="px-5 py-3 text-right font-bold text-sm text-red-600">Rs. {{ number_format($grandBal, 0) }}</td>
+                    <td class="px-5 py-3 text-right font-bold text-sm text-red-600">Rs. {{ lacs_format($grandBal, 0) }}</td>
                     <td class="px-5 py-3"></td>
                     @foreach($bankAccounts as $ba)
                         <td class="px-5 py-3 text-right font-bold text-sm">
-                            {{ $grandTotals[$ba->id] > 0 ? 'Rs. ' . number_format($grandTotals[$ba->id], 0) : '—' }}
+                            {{ $grandTotals[$ba->id] > 0 ? 'Rs. ' . lacs_format($grandTotals[$ba->id], 0) : '—' }}
                         </td>
                     @endforeach
-                    <td class="px-5 py-3 text-right font-bold text-sm">{{ $grandMisc > 0 ? 'Rs. ' . number_format($grandMisc, 0) : '—' }}</td>
+                    <td class="px-5 py-3 text-right font-bold text-sm">{{ $grandMisc > 0 ? 'Rs. ' . lacs_format($grandMisc, 0) : '—' }}</td>
                 </tr>
             </tfoot>
             @endif

@@ -85,7 +85,7 @@
             @if($customer->advance_credit_balance > 0)
             <div class="col-span-2">
                 <div class="text-[#86868B] text-xs mb-0.5">Advance Credit</div>
-                <div class="text-[#30D158] font-medium">PKR {{ number_format($customer->advance_credit_balance, 0) }}</div>
+                <div class="text-[#30D158] font-medium">PKR {{ lacs_format($customer->advance_credit_balance, 0) }}</div>
             </div>
             @endif
         </div>
@@ -120,7 +120,7 @@
                 <td class="text-[#6E6E73]">{{ $customer->orders_count ?? '—' }}</td>
                 <td>
                     @if($customer->advance_credit_balance > 0)
-                        <span class="text-[#30D158] text-sm font-medium">PKR {{ number_format($customer->advance_credit_balance, 0) }}</span>
+                        <span class="text-[#30D158] text-sm font-medium">PKR {{ lacs_format($customer->advance_credit_balance, 0) }}</span>
                     @else
                         <span class="text-[#86868B]">—</span>
                     @endif

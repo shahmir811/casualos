@@ -43,11 +43,11 @@
 <div class="stats">
     <div class="stat-box">
         <div class="stat-label">Total Received</div>
-        <div class="stat-value green">Rs. {{ number_format($grandPaid, 0) }}</div>
+        <div class="stat-value green">Rs. {{ lacs_format($grandPaid, 0) }}</div>
     </div>
     <div class="stat-box" style="border-left:none;">
         <div class="stat-label">Outstanding</div>
-        <div class="stat-value {{ $grandBal > 0 ? 'red' : 'muted' }}">Rs. {{ number_format($grandBal, 0) }}</div>
+        <div class="stat-value {{ $grandBal > 0 ? 'red' : 'muted' }}">Rs. {{ lacs_format($grandBal, 0) }}</div>
     </div>
     <div class="stat-box" style="border-left:none;">
         <div class="stat-label">Orders</div>
@@ -77,13 +77,13 @@
             <td class="muted">{{ $order->customer?->city ?? $order->submitted_city }}</td>
             @foreach($bankAccounts as $ba)
                 <td class="right">
-                    {{ ($order->bank_totals[$ba->id] ?? 0) > 0 ? number_format($order->bank_totals[$ba->id], 0) : '—' }}
+                    {{ ($order->bank_totals[$ba->id] ?? 0) > 0 ? lacs_format($order->bank_totals[$ba->id], 0) : '—' }}
                 </td>
             @endforeach
-            <td class="right">{{ $order->misc_total > 0 ? number_format($order->misc_total, 0) : '—' }}</td>
-            <td class="right" style="font-weight:600">{{ number_format($order->total_paid, 0) }}</td>
+            <td class="right">{{ $order->misc_total > 0 ? lacs_format($order->misc_total, 0) : '—' }}</td>
+            <td class="right" style="font-weight:600">{{ lacs_format($order->total_paid, 0) }}</td>
             <td class="right {{ $order->outstanding_balance > 0 ? 'red' : 'muted' }}" style="{{ $order->outstanding_balance > 0 ? 'font-weight:600' : '' }}">
-                {{ number_format($order->outstanding_balance, 0) }}
+                {{ lacs_format($order->outstanding_balance, 0) }}
             </td>
         </tr>
         @endforeach
@@ -92,11 +92,11 @@
         <tr>
             <td colspan="3" class="left">Total</td>
             @foreach($bankAccounts as $ba)
-                <td class="right">{{ $grandTotals[$ba->id] > 0 ? 'Rs. ' . number_format($grandTotals[$ba->id], 0) : '—' }}</td>
+                <td class="right">{{ $grandTotals[$ba->id] > 0 ? 'Rs. ' . lacs_format($grandTotals[$ba->id], 0) : '—' }}</td>
             @endforeach
-            <td class="right">{{ $grandMisc > 0 ? 'Rs. ' . number_format($grandMisc, 0) : '—' }}</td>
-            <td class="right green">Rs. {{ number_format($grandPaid, 0) }}</td>
-            <td class="right {{ $grandBal > 0 ? 'red' : 'muted' }}">Rs. {{ number_format($grandBal, 0) }}</td>
+            <td class="right">{{ $grandMisc > 0 ? 'Rs. ' . lacs_format($grandMisc, 0) : '—' }}</td>
+            <td class="right green">Rs. {{ lacs_format($grandPaid, 0) }}</td>
+            <td class="right {{ $grandBal > 0 ? 'red' : 'muted' }}">Rs. {{ lacs_format($grandBal, 0) }}</td>
         </tr>
     </tfoot>
 </table>

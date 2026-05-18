@@ -91,14 +91,14 @@
                             @endphp
                             <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ $color }} rounded px-2 py-0.5 w-fit">
                                 {{ $designModel->name ?? '—' }}
-                                <span class="opacity-60">· {{ number_format($sent) }} / {{ number_format($returned) }}</span>
+                                <span class="opacity-60">· {{ lacs_format($sent) }} / {{ lacs_format($returned) }}</span>
                             </span>
                         @endforeach
                     </div>
                 </td>
                 <td>{{ $send->sent_date->format('d M Y') }}</td>
-                <td class="text-right">{{ number_format($totalSent) }} pcs</td>
-                <td class="text-right">{{ number_format($totalReturned) }} pcs</td>
+                <td class="text-right">{{ lacs_format($totalSent) }} pcs</td>
+                <td class="text-right">{{ lacs_format($totalReturned) }} pcs</td>
                 <td class="text-right">
                     @if($totalReturned === 0)
                         <span class="badge bg-[#F5F5F7] text-[#86868B]">Pending</span>

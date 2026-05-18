@@ -37,15 +37,15 @@
 <div class="grid grid-cols-3 gap-4 mb-6">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Bill</p>
-        <p class="text-2xl font-light text-[#1D1D1F]">Rs. {{ number_format($totBill, 0) }}</p>
+        <p class="text-2xl font-light text-[#1D1D1F]">Rs. {{ lacs_format($totBill, 0) }}</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Amount Received</p>
-        <p class="text-2xl font-light text-green-600">Rs. {{ number_format($totPaid, 0) }}</p>
+        <p class="text-2xl font-light text-green-600">Rs. {{ lacs_format($totPaid, 0) }}</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Outstanding</p>
-        <p class="text-2xl font-light {{ $totBalance > 0 ? 'text-red-500' : 'text-[#86868B]' }}">Rs. {{ number_format($totBalance, 0) }}</p>
+        <p class="text-2xl font-light {{ $totBalance > 0 ? 'text-red-500' : 'text-[#86868B]' }}">Rs. {{ lacs_format($totBalance, 0) }}</p>
     </div>
 </div>
 
@@ -85,12 +85,12 @@
                     <td class="text-right">{{ $order->agg_m ?: '—' }}</td>
                     <td class="text-right">{{ $order->agg_l ?: '—' }}</td>
                     <td class="text-right">{{ $order->agg_xl ?: '—' }}</td>
-                    <td class="text-right font-medium">{{ number_format($order->agg_total) }}</td>
-                    <td class="text-right text-[#6E6E73] text-xs">{{ number_format($order->agg_rate) }}</td>
-                    <td class="text-right">{{ number_format($order->total_amount, 0) }}</td>
-                    <td class="text-right text-green-700">{{ number_format($order->total_paid, 0) }}</td>
+                    <td class="text-right font-medium">{{ lacs_format($order->agg_total) }}</td>
+                    <td class="text-right text-[#6E6E73] text-xs">{{ lacs_format($order->agg_rate) }}</td>
+                    <td class="text-right">{{ lacs_format($order->total_amount, 0) }}</td>
+                    <td class="text-right text-green-700">{{ lacs_format($order->total_paid, 0) }}</td>
                     <td class="text-right {{ $order->outstanding_balance > 0 ? 'text-red-600 font-medium' : 'text-[#86868B]' }}">
-                        {{ number_format($order->outstanding_balance, 0) }}
+                        {{ lacs_format($order->outstanding_balance, 0) }}
                     </td>
                     <td class="text-[#6E6E73] text-xs">{{ $order->title_given_label }}</td>
                 </tr>
@@ -107,11 +107,11 @@
                     <td class="px-5 py-3 text-right font-bold text-sm">{{ $totM ?: '—' }}</td>
                     <td class="px-5 py-3 text-right font-bold text-sm">{{ $totL ?: '—' }}</td>
                     <td class="px-5 py-3 text-right font-bold text-sm">{{ $totXl ?: '—' }}</td>
-                    <td class="px-5 py-3 text-right font-bold text-sm">{{ number_format($totQty) }}</td>
+                    <td class="px-5 py-3 text-right font-bold text-sm">{{ lacs_format($totQty) }}</td>
                     <td class="px-5 py-3"></td>
-                    <td class="px-5 py-3 text-right font-bold text-sm">Rs. {{ number_format($totBill, 0) }}</td>
-                    <td class="px-5 py-3 text-right font-bold text-sm text-green-700">Rs. {{ number_format($totPaid, 0) }}</td>
-                    <td class="px-5 py-3 text-right font-bold text-sm {{ $totBalance > 0 ? 'text-red-600' : 'text-[#86868B]' }}">Rs. {{ number_format($totBalance, 0) }}</td>
+                    <td class="px-5 py-3 text-right font-bold text-sm">Rs. {{ lacs_format($totBill, 0) }}</td>
+                    <td class="px-5 py-3 text-right font-bold text-sm text-green-700">Rs. {{ lacs_format($totPaid, 0) }}</td>
+                    <td class="px-5 py-3 text-right font-bold text-sm {{ $totBalance > 0 ? 'text-red-600' : 'text-[#86868B]' }}">Rs. {{ lacs_format($totBalance, 0) }}</td>
                     <td class="px-5 py-3"></td>
                 </tr>
             </tfoot>

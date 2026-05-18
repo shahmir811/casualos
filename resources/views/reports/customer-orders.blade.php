@@ -20,7 +20,7 @@
         <h2 class="text-sm font-semibold text-[#1D1D1F] flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-[#0071E3]"></span>
             {{ $customer->name }}
-            <span class="text-[#86868B] font-normal">— {{ $customer->orders->count() }} orders · PKR {{ number_format($customer->orders->sum('total_amount'), 0) }}</span>
+            <span class="text-[#86868B] font-normal">— {{ $customer->orders->count() }} orders · PKR {{ lacs_format($customer->orders->sum('total_amount'), 0) }}</span>
         </h2>
         <a href="{{ route('customers.show', $customer) }}" class="text-[#0066CC] text-xs hover:underline">View Customer →</a>
     </div>
@@ -48,7 +48,7 @@
                 <tr>
                     <td><a href="{{ route('orders.show', $order) }}" class="font-medium text-[#0066CC] hover:underline">#{{ $order->order_number }}</a></td>
                     <td class="text-[#6E6E73]">{{ $order->catalogue->name ?? '—' }}</td>
-                    <td class="text-right font-medium">PKR {{ number_format($order->total_amount, 0) }}</td>
+                    <td class="text-right font-medium">PKR {{ lacs_format($order->total_amount, 0) }}</td>
                     <td><span class="badge {{ $statusColor[$order->status] ?? 'bg-[#F5F5F7] text-[#6E6E73]' }}">{{ ucfirst($order->status) }}</span></td>
                     <td class="text-[#6E6E73] text-xs">{{ $order->created_at->format('d M Y') }}</td>
                 </tr>

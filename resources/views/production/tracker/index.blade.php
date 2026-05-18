@@ -84,22 +84,22 @@
                         @endif
                     </td>
 
-                    <td class="num text-right text-[#6E6E73] font-medium">{{ number_format($row->expected) }}</td>
+                    <td class="num text-right text-[#6E6E73] font-medium">{{ lacs_format($row->expected) }}</td>
                     <td class="num text-right font-medium {{ $row->fabricQty > 0 ? 'text-[#0071E3]' : 'text-[#D2D2D7]' }}">
-                        {{ $row->fabricQty > 0 ? number_format($row->fabricQty) : '—' }}
+                        {{ $row->fabricQty > 0 ? lacs_format($row->fabricQty) : '—' }}
                     </td>
 
                     {{-- Naeem Pakki --}}
                     <td class="num text-right font-medium" style="{{ $gb }} color:{{ $row->npSentQty > 0 ? '#FF9500' : '#D2D2D7' }}">
-                        {{ $row->npSentQty > 0 ? number_format($row->npSentQty) : '—' }}
+                        {{ $row->npSentQty > 0 ? lacs_format($row->npSentQty) : '—' }}
                     </td>
                     <td class="num text-right font-medium" style="color:{{ $row->npReturnedQty > 0 ? '#FF9500' : '#D2D2D7' }}">
-                        {{ $row->npReturnedQty > 0 ? number_format($row->npReturnedQty) : '—' }}
+                        {{ $row->npReturnedQty > 0 ? lacs_format($row->npReturnedQty) : '—' }}
                     </td>
 
                     {{-- Stitching Sent --}}
                     <td class="num text-right font-medium" style="{{ $gb }} color:{{ $row->stitchingSentQty > 0 ? '#AF52DE' : '#D2D2D7' }}">
-                        {{ $row->stitchingSentQty > 0 ? number_format($row->stitchingSentQty) : '—' }}
+                        {{ $row->stitchingSentQty > 0 ? lacs_format($row->stitchingSentQty) : '—' }}
                     </td>
 
                     {{-- Stitching Returned — per-component breakdown --}}
@@ -113,7 +113,7 @@
                                 @if($row->stitchingComponents->has($key))
                                 <div class="flex items-center gap-1.5 text-xs leading-tight whitespace-nowrap">
                                     <span class="text-[#B0B0B5] font-normal" style="font-size:10px;">{{ $abbr }}</span>
-                                    <span class="font-semibold tabular-nums" style="color:#AF52DE;">{{ number_format($row->stitchingComponents[$key]) }}</span>
+                                    <span class="font-semibold tabular-nums" style="color:#AF52DE;">{{ lacs_format($row->stitchingComponents[$key]) }}</span>
                                 </div>
                                 @endif
                             @endforeach
@@ -123,23 +123,23 @@
 
                     {{-- Tarpai --}}
                     <td class="num text-right font-medium" style="{{ $gb }} color:{{ $row->tarpaiSentQty > 0 ? '#FF6B35' : '#D2D2D7' }}">
-                        {{ $row->tarpaiSentQty > 0 ? number_format($row->tarpaiSentQty) : '—' }}
+                        {{ $row->tarpaiSentQty > 0 ? lacs_format($row->tarpaiSentQty) : '—' }}
                     </td>
                     <td class="num text-right font-medium" style="color:{{ $row->tarpaiRetQty > 0 ? '#FF6B35' : '#D2D2D7' }}">
-                        {{ $row->tarpaiRetQty > 0 ? number_format($row->tarpaiRetQty) : '—' }}
+                        {{ $row->tarpaiRetQty > 0 ? lacs_format($row->tarpaiRetQty) : '—' }}
                     </td>
 
                     {{-- Press --}}
                     <td class="num text-right font-medium" style="{{ $gb }} color:{{ $row->pressSentQty > 0 ? '#1D1D1F' : '#D2D2D7' }}">
-                        {{ $row->pressSentQty > 0 ? number_format($row->pressSentQty) : '—' }}
+                        {{ $row->pressSentQty > 0 ? lacs_format($row->pressSentQty) : '—' }}
                     </td>
                     <td class="num text-right font-semibold" style="color:{{ $row->packedQty > 0 ? '#1D1D1F' : '#D2D2D7' }}">
-                        {{ $row->packedQty > 0 ? number_format($row->packedQty) : '—' }}
+                        {{ $row->packedQty > 0 ? lacs_format($row->packedQty) : '—' }}
                     </td>
 
                     {{-- Dispatched --}}
                     <td class="num text-right font-semibold" style="{{ $gb }} color:{{ $row->dispatchedQty > 0 ? '#34C759' : '#D2D2D7' }}">
-                        {{ $row->dispatchedQty > 0 ? number_format($row->dispatchedQty) : '—' }}
+                        {{ $row->dispatchedQty > 0 ? lacs_format($row->dispatchedQty) : '—' }}
                     </td>
 
                     <td class="text-center">
@@ -160,11 +160,11 @@
             <tfoot>
                 <tr style="background:#F5F5F7; border-top: 2px solid #E8E8ED;">
                     <td class="font-semibold text-[#1D1D1F]" colspan="2">Totals</td>
-                    <td class="num text-right font-semibold text-[#6E6E73]">{{ number_format($inHouseDesigns->sum('expected')) }}</td>
-                    <td class="num text-right font-semibold text-[#0071E3]">{{ number_format($inHouseDesigns->sum('fabricQty')) }}</td>
-                    <td class="num text-right font-bold" style="color:#FF9500; {{ $gb }}">{{ number_format($inHouseDesigns->sum('npSentQty')) }}</td>
-                    <td class="num text-right font-bold" style="color:#FF9500">{{ number_format($inHouseDesigns->sum('npReturnedQty')) }}</td>
-                    <td class="num text-right font-bold" style="color:#AF52DE; {{ $gb }}">{{ number_format($inHouseDesigns->sum('stitchingSentQty')) }}</td>
+                    <td class="num text-right font-semibold text-[#6E6E73]">{{ lacs_format($inHouseDesigns->sum('expected')) }}</td>
+                    <td class="num text-right font-semibold text-[#0071E3]">{{ lacs_format($inHouseDesigns->sum('fabricQty')) }}</td>
+                    <td class="num text-right font-bold" style="color:#FF9500; {{ $gb }}">{{ lacs_format($inHouseDesigns->sum('npSentQty')) }}</td>
+                    <td class="num text-right font-bold" style="color:#FF9500">{{ lacs_format($inHouseDesigns->sum('npReturnedQty')) }}</td>
+                    <td class="num text-right font-bold" style="color:#AF52DE; {{ $gb }}">{{ lacs_format($inHouseDesigns->sum('stitchingSentQty')) }}</td>
                     <td class="text-right" style="color:#AF52DE;">
                         @php
                             $tK = $inHouseDesigns->sum(fn($d) => $d->stitchingComponents->get('kameez', 0));
@@ -172,16 +172,16 @@
                             $tD = $inHouseDesigns->sum(fn($d) => $d->stitchingComponents->get('dupatta', 0));
                         @endphp
                         <div class="inline-flex flex-col items-end gap-0.5">
-                            @if($tK) <div class="flex items-center gap-1.5 text-xs whitespace-nowrap"><span class="text-[#B0B0B5]" style="font-size:10px;">K</span><span class="font-bold tabular-nums">{{ number_format($tK) }}</span></div> @endif
-                            @if($tS) <div class="flex items-center gap-1.5 text-xs whitespace-nowrap"><span class="text-[#B0B0B5]" style="font-size:10px;">S</span><span class="font-bold tabular-nums">{{ number_format($tS) }}</span></div> @endif
-                            @if($tD) <div class="flex items-center gap-1.5 text-xs whitespace-nowrap"><span class="text-[#B0B0B5]" style="font-size:10px;">D</span><span class="font-bold tabular-nums">{{ number_format($tD) }}</span></div> @endif
+                            @if($tK) <div class="flex items-center gap-1.5 text-xs whitespace-nowrap"><span class="text-[#B0B0B5]" style="font-size:10px;">K</span><span class="font-bold tabular-nums">{{ lacs_format($tK) }}</span></div> @endif
+                            @if($tS) <div class="flex items-center gap-1.5 text-xs whitespace-nowrap"><span class="text-[#B0B0B5]" style="font-size:10px;">S</span><span class="font-bold tabular-nums">{{ lacs_format($tS) }}</span></div> @endif
+                            @if($tD) <div class="flex items-center gap-1.5 text-xs whitespace-nowrap"><span class="text-[#B0B0B5]" style="font-size:10px;">D</span><span class="font-bold tabular-nums">{{ lacs_format($tD) }}</span></div> @endif
                         </div>
                     </td>
-                    <td class="num text-right font-bold" style="color:#FF6B35; {{ $gb }}">{{ number_format($inHouseDesigns->sum('tarpaiSentQty')) }}</td>
-                    <td class="num text-right font-bold" style="color:#FF6B35">{{ number_format($inHouseDesigns->sum('tarpaiRetQty')) }}</td>
-                    <td class="num text-right font-bold text-[#1D1D1F]" style="{{ $gb }}">{{ number_format($inHouseDesigns->sum('pressSentQty')) }}</td>
-                    <td class="num text-right font-bold text-[#1D1D1F]">{{ number_format($inHouseDesigns->sum('packedQty')) }}</td>
-                    <td class="num text-right font-bold" style="color:#34C759; {{ $gb }}">{{ number_format($inHouseDesigns->sum('dispatchedQty')) }}</td>
+                    <td class="num text-right font-bold" style="color:#FF6B35; {{ $gb }}">{{ lacs_format($inHouseDesigns->sum('tarpaiSentQty')) }}</td>
+                    <td class="num text-right font-bold" style="color:#FF6B35">{{ lacs_format($inHouseDesigns->sum('tarpaiRetQty')) }}</td>
+                    <td class="num text-right font-bold text-[#1D1D1F]" style="{{ $gb }}">{{ lacs_format($inHouseDesigns->sum('pressSentQty')) }}</td>
+                    <td class="num text-right font-bold text-[#1D1D1F]">{{ lacs_format($inHouseDesigns->sum('packedQty')) }}</td>
+                    <td class="num text-right font-bold" style="color:#34C759; {{ $gb }}">{{ lacs_format($inHouseDesigns->sum('dispatchedQty')) }}</td>
                     <td></td>
                 </tr>
             </tfoot>
@@ -230,24 +230,24 @@
                 @endphp
                 <tr>
                     <td><span class="font-medium text-[#1D1D1F] text-sm">{{ $row->name }}</span></td>
-                    <td class="num text-right text-[#6E6E73] font-medium">{{ number_format($row->expected) }}</td>
+                    <td class="num text-right text-[#6E6E73] font-medium">{{ lacs_format($row->expected) }}</td>
                     <td class="num text-right font-medium {{ $row->fabricQty > 0 ? 'text-[#0071E3]' : 'text-[#D2D2D7]' }}">
-                        {{ $row->fabricQty > 0 ? number_format($row->fabricQty) : '—' }}
+                        {{ $row->fabricQty > 0 ? lacs_format($row->fabricQty) : '—' }}
                     </td>
                     <td class="num text-right font-medium" style="{{ $gb }} color:{{ $row->tarpaiSentQty > 0 ? '#FF6B35' : '#D2D2D7' }}">
-                        {{ $row->tarpaiSentQty > 0 ? number_format($row->tarpaiSentQty) : '—' }}
+                        {{ $row->tarpaiSentQty > 0 ? lacs_format($row->tarpaiSentQty) : '—' }}
                     </td>
                     <td class="num text-right font-medium" style="color:{{ $row->tarpaiRetQty > 0 ? '#FF6B35' : '#D2D2D7' }}">
-                        {{ $row->tarpaiRetQty > 0 ? number_format($row->tarpaiRetQty) : '—' }}
+                        {{ $row->tarpaiRetQty > 0 ? lacs_format($row->tarpaiRetQty) : '—' }}
                     </td>
                     <td class="num text-right font-medium" style="{{ $gb }} color:{{ $row->pressSentQty > 0 ? '#1D1D1F' : '#D2D2D7' }}">
-                        {{ $row->pressSentQty > 0 ? number_format($row->pressSentQty) : '—' }}
+                        {{ $row->pressSentQty > 0 ? lacs_format($row->pressSentQty) : '—' }}
                     </td>
                     <td class="num text-right font-semibold" style="color:{{ $row->packedQty > 0 ? '#1D1D1F' : '#D2D2D7' }}">
-                        {{ $row->packedQty > 0 ? number_format($row->packedQty) : '—' }}
+                        {{ $row->packedQty > 0 ? lacs_format($row->packedQty) : '—' }}
                     </td>
                     <td class="num text-right font-semibold" style="{{ $gb }} color:{{ $row->dispatchedQty > 0 ? '#34C759' : '#D2D2D7' }}">
-                        {{ $row->dispatchedQty > 0 ? number_format($row->dispatchedQty) : '—' }}
+                        {{ $row->dispatchedQty > 0 ? lacs_format($row->dispatchedQty) : '—' }}
                     </td>
                     <td class="text-center">
                         @if($allPacked)
@@ -267,13 +267,13 @@
             <tfoot>
                 <tr style="background:#F5F5F7; border-top: 2px solid #E8E8ED;">
                     <td class="font-semibold text-[#1D1D1F]">Totals</td>
-                    <td class="num text-right font-semibold text-[#6E6E73]">{{ number_format($outsourcedDesigns->sum('expected')) }}</td>
-                    <td class="num text-right font-semibold text-[#0071E3]">{{ number_format($outsourcedDesigns->sum('fabricQty')) }}</td>
-                    <td class="num text-right font-bold" style="color:#FF6B35; {{ $gb }}">{{ number_format($outsourcedDesigns->sum('tarpaiSentQty')) }}</td>
-                    <td class="num text-right font-bold" style="color:#FF6B35">{{ number_format($outsourcedDesigns->sum('tarpaiRetQty')) }}</td>
-                    <td class="num text-right font-bold text-[#1D1D1F]" style="{{ $gb }}">{{ number_format($outsourcedDesigns->sum('pressSentQty')) }}</td>
-                    <td class="num text-right font-bold text-[#1D1D1F]">{{ number_format($outsourcedDesigns->sum('packedQty')) }}</td>
-                    <td class="num text-right font-bold" style="color:#34C759; {{ $gb }}">{{ number_format($outsourcedDesigns->sum('dispatchedQty')) }}</td>
+                    <td class="num text-right font-semibold text-[#6E6E73]">{{ lacs_format($outsourcedDesigns->sum('expected')) }}</td>
+                    <td class="num text-right font-semibold text-[#0071E3]">{{ lacs_format($outsourcedDesigns->sum('fabricQty')) }}</td>
+                    <td class="num text-right font-bold" style="color:#FF6B35; {{ $gb }}">{{ lacs_format($outsourcedDesigns->sum('tarpaiSentQty')) }}</td>
+                    <td class="num text-right font-bold" style="color:#FF6B35">{{ lacs_format($outsourcedDesigns->sum('tarpaiRetQty')) }}</td>
+                    <td class="num text-right font-bold text-[#1D1D1F]" style="{{ $gb }}">{{ lacs_format($outsourcedDesigns->sum('pressSentQty')) }}</td>
+                    <td class="num text-right font-bold text-[#1D1D1F]">{{ lacs_format($outsourcedDesigns->sum('packedQty')) }}</td>
+                    <td class="num text-right font-bold" style="color:#34C759; {{ $gb }}">{{ lacs_format($outsourcedDesigns->sum('dispatchedQty')) }}</td>
                     <td></td>
                 </tr>
             </tfoot>

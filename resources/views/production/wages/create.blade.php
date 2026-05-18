@@ -60,7 +60,7 @@
                             {{ old('stitching_unit_id') == $unit->id ? 'selected' : '' }}>
                         Unit {{ $unit->number }} — {{ $unit->name }}
                         @if($unit->per_piece_rate)
-                            (Rs. {{ number_format($unit->per_piece_rate, 0) }}/pc)
+                            (Rs. {{ lacs_format($unit->per_piece_rate, 0) }}/pc)
                         @endif
                     </option>
                     @endforeach

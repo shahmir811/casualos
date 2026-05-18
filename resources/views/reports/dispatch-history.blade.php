@@ -47,7 +47,7 @@
                 </td>
                 <td>{{ $dispatch->order->customer->name ?? '—' }}</td>
                 <td class="text-[#6E6E73]">{{ $dispatch->order->catalogue->name ?? '—' }}</td>
-                <td class="text-right font-medium">PKR {{ number_format($dispatch->order->total_amount, 0) }}</td>
+                <td class="text-right font-medium">PKR {{ lacs_format($dispatch->order->total_amount, 0) }}</td>
                 <td class="text-[#6E6E73] text-xs">{{ $dispatch->dispatch_date->format('d M Y') }}</td>
                 <td class="text-[#6E6E73] text-xs font-mono">{{ $dispatch->cargo_document ?? '—' }}</td>
                 <td class="text-[#6E6E73] text-xs">{{ $dispatch->shipping_address ?? '—' }}</td>
@@ -60,7 +60,7 @@
         <tfoot>
             <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
                 <td class="px-5 py-3 font-semibold text-sm" colspan="4">Total</td>
-                <td class="px-5 py-3 text-right font-bold text-sm">PKR {{ number_format($dispatches->sum(fn($d) => $d->order->total_amount ?? 0), 0) }}</td>
+                <td class="px-5 py-3 text-right font-bold text-sm">PKR {{ lacs_format($dispatches->sum(fn($d) => $d->order->total_amount ?? 0), 0) }}</td>
                 <td colspan="3"></td>
             </tr>
         </tfoot>

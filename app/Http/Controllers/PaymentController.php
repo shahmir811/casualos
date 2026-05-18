@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BankAccount;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\CustomerLedger;
@@ -27,13 +28,21 @@ class PaymentController extends Controller
             ? $request->file('receipt_image')->store('receipts')
             : null;
 
-        DB::transaction(function () use ($request, $receiptPath, $order) {
+        $titleGiven = match ($request->payment_type) {
+            'bank_transfer' => BankAccount::find($request->bank_account_id)?->title ?? 'Bank Transfer',
+            'cash'          => 'Cash',
+            'advance'       => 'Advance',
+            default         => null,
+        };
+
+        DB::transaction(function () use ($request, $receiptPath, $titleGiven, $order) {
             $payment = Payment::create([
                 'order_id'        => $order->id,
                 'customer_id'     => $order->customer_id,
                 'amount'          => $request->amount,
                 'payment_type'    => $request->payment_type,
                 'bank_account_id' => $request->payment_type === 'bank_transfer' ? $request->bank_account_id : null,
+                'title_given'     => $titleGiven,
                 'payment_date'    => $request->payment_date,
                 'notes'           => $request->notes ?? null,
                 'receipt_image'   => $receiptPath,
@@ -65,7 +74,7 @@ class PaymentController extends Controller
             ]);
         });
 
-        return back()->with('success', 'Payment of PKR ' . number_format($request->amount) . ' recorded.');
+        return back()->with('success', 'Payment of PKR ' . lacs_format($request->amount) . ' recorded.');
     }
 
     public function applyCredit(Request $request, Order $order)
@@ -86,6 +95,6 @@ class PaymentController extends Controller
             'created_by'              => Auth::id(),
         ]);
 
-        return back()->with('success', 'Credit of PKR ' . number_format($validated['credit_amount']) . ' applied.');
+        return back()->with('success', 'Credit of PKR ' . lacs_format($validated['credit_amount']) . ' applied.');
     }
 }

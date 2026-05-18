@@ -42,7 +42,7 @@
                 <td class="font-medium">#{{ $order->order_number }}</td>
                 <td>{{ $order->customer->name ?? '—' }}</td>
                 <td>{{ $order->catalogue->name ?? '—' }}</td>
-                <td class="text-right">PKR {{ number_format($order->total_amount, 0) }}</td>
+                <td class="text-right">PKR {{ lacs_format($order->total_amount, 0) }}</td>
                 <td>
                     <span class="badge {{ $order->status === 'stitching' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700' }}">
                         {{ ucfirst($order->status) }}

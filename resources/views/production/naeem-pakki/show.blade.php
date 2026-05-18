@@ -20,24 +20,24 @@
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Sent</p>
-        <p class="text-3xl font-light text-[#1D1D1F]">{{ number_format($totalSent) }}</p>
+        <p class="text-3xl font-light text-[#1D1D1F]">{{ lacs_format($totalSent) }}</p>
         <p class="text-[#86868B] text-xs mt-1">pieces</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Returned</p>
-        <p class="text-3xl font-light text-green-600">{{ number_format($totalReturned) }}</p>
+        <p class="text-3xl font-light text-green-600">{{ lacs_format($totalReturned) }}</p>
         <p class="text-[#86868B] text-xs mt-1">pieces</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Outstanding</p>
         <p class="text-3xl font-light {{ $totalOutstanding > 0 ? 'text-orange-500' : 'text-[#86868B]' }}">
-            {{ number_format($totalOutstanding) }}
+            {{ lacs_format($totalOutstanding) }}
         </p>
         <p class="text-[#86868B] text-xs mt-1">pieces</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Cost</p>
-        <p class="text-2xl font-light text-[#1D1D1F]">Rs. {{ number_format($totalCost, 0) }}</p>
+        <p class="text-2xl font-light text-[#1D1D1F]">Rs. {{ lacs_format($totalCost, 0) }}</p>
     </div>
 </div>
 
@@ -75,7 +75,7 @@
         <div class="card p-5">
             <h3 class="text-sm font-semibold text-[#1D1D1F] mb-1">Log Return Batch</h3>
             <p class="text-xs text-[#86868B] mb-4">
-                {{ number_format($totalOutstanding) }} pcs still outstanding. Enter 0 for designs not returning in this batch.
+                {{ lacs_format($totalOutstanding) }} pcs still outstanding. Enter 0 for designs not returning in this batch.
             </p>
 
             @if($errors->any())
@@ -111,7 +111,7 @@
                             <span class="text-xs font-semibold text-[#1D1D1F]">{{ $npDesign->design->name ?? '—' }}</span>
                             <span class="text-[10px]"
                                   :class="isOver({{ $i }}) ? 'text-red-600 font-semibold' : 'text-[#86868B]'">
-                                {{ number_format($outstanding) }} outstanding
+                                {{ lacs_format($outstanding) }} outstanding
                             </span>
                         </div>
                         <input type="number"
@@ -188,16 +188,16 @@
                     @endphp
                     <tr>
                         <td class="font-medium text-[#1D1D1F]">{{ $npDesign->design->name ?? '—' }}</td>
-                        <td class="text-right tabular-nums">{{ number_format($npDesign->quantity) }} pcs</td>
-                        <td class="text-right tabular-nums text-green-700">{{ number_format($returned) }} pcs</td>
+                        <td class="text-right tabular-nums">{{ lacs_format($npDesign->quantity) }} pcs</td>
+                        <td class="text-right tabular-nums text-green-700">{{ lacs_format($returned) }} pcs</td>
                         <td class="text-right tabular-nums {{ $outstanding > 0 ? 'text-orange-600 font-semibold' : 'text-[#86868B]' }}">
-                            {{ number_format($outstanding) }} pcs
+                            {{ lacs_format($outstanding) }} pcs
                         </td>
                         <td class="text-right tabular-nums text-[#6E6E73] text-xs">
-                            Rs. {{ number_format((float) $npDesign->per_piece_price, 0) }}/pc
+                            Rs. {{ lacs_format((float) $npDesign->per_piece_price, 0) }}/pc
                         </td>
                         <td class="text-right tabular-nums font-semibold" style="color:#FF9500">
-                            Rs. {{ number_format($npDesign->totalCost(), 0) }}
+                            Rs. {{ lacs_format($npDesign->totalCost(), 0) }}
                         </td>
                     </tr>
                     @endforeach
@@ -205,14 +205,14 @@
                 <tfoot>
                     <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
                         <td class="font-semibold text-xs uppercase tracking-wide">Total</td>
-                        <td class="text-right font-bold tabular-nums">{{ number_format($totalSent) }} pcs</td>
-                        <td class="text-right font-bold tabular-nums text-green-700">{{ number_format($totalReturned) }} pcs</td>
+                        <td class="text-right font-bold tabular-nums">{{ lacs_format($totalSent) }} pcs</td>
+                        <td class="text-right font-bold tabular-nums text-green-700">{{ lacs_format($totalReturned) }} pcs</td>
                         <td class="text-right font-bold tabular-nums {{ $totalOutstanding > 0 ? 'text-orange-600' : 'text-[#86868B]' }}">
-                            {{ number_format($totalOutstanding) }} pcs
+                            {{ lacs_format($totalOutstanding) }} pcs
                         </td>
                         <td></td>
                         <td class="text-right font-bold tabular-nums" style="color:#FF9500">
-                            Rs. {{ number_format($totalCost, 0) }}
+                            Rs. {{ lacs_format($totalCost, 0) }}
                         </td>
                     </tr>
                 </tfoot>
@@ -238,7 +238,7 @@
                         <span class="text-xs text-[#6E6E73]">{{ $batch->return_date->format('d M Y') }}</span>
                     </div>
                     <div class="text-right">
-                        <span class="text-sm font-semibold text-green-700">{{ number_format($batchTotal) }} pcs</span>
+                        <span class="text-sm font-semibold text-green-700">{{ lacs_format($batchTotal) }} pcs</span>
                         <span class="text-xs text-[#86868B] ml-1">returned</span>
                     </div>
                 </div>
@@ -248,7 +248,7 @@
                         <tr>
                             <td class="py-1 text-[#1D1D1F]">{{ $item->npDesign->design->name ?? '—' }}</td>
                             <td class="py-1 text-right tabular-nums text-green-700 font-medium">
-                                {{ number_format($item->quantity) }} pcs
+                                {{ lacs_format($item->quantity) }} pcs
                             </td>
                         </tr>
                         @endforeach

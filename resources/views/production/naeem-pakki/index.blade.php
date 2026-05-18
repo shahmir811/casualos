@@ -91,16 +91,16 @@
                             @php $color = $badgeColors[($npDesign->design->id ?? $loop->index) % count($badgeColors)]; @endphp
                             <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ $color }} rounded px-2 py-0.5 w-fit">
                                 {{ $npDesign->design->name ?? '—' }}
-                                <span class="opacity-60">· {{ number_format($npDesign->quantity) }}</span>
+                                <span class="opacity-60">· {{ lacs_format($npDesign->quantity) }}</span>
                             </span>
                         @endforeach
                     </div>
                 </td>
                 <td class="text-[#6E6E73] text-xs">{{ $assignment->assignment_date->format('d M Y') }}</td>
-                <td class="text-right tabular-nums">{{ number_format($totalSent) }} pcs</td>
-                <td class="text-right tabular-nums text-green-700">{{ number_format($totalReturned) }} pcs</td>
+                <td class="text-right tabular-nums">{{ lacs_format($totalSent) }} pcs</td>
+                <td class="text-right tabular-nums text-green-700">{{ lacs_format($totalReturned) }} pcs</td>
                 <td class="text-right tabular-nums {{ $totalOutstanding > 0 ? 'text-orange-600 font-semibold' : 'text-[#86868B]' }}">
-                    {{ number_format($totalOutstanding) }} pcs
+                    {{ lacs_format($totalOutstanding) }} pcs
                 </td>
                 <td>
                     @if($done)

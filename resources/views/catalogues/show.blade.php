@@ -49,22 +49,22 @@
 <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-7">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Qty Per Design</p>
-        <p class="text-[#1D1D1F] text-2xl font-light">{{ number_format($catalogue->qty_per_design) }}</p>
+        <p class="text-[#1D1D1F] text-2xl font-light">{{ lacs_format($catalogue->qty_per_design) }}</p>
         <p class="text-[#86868B] text-xs mt-0.5">per design</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Qty Ordered</p>
-        <p class="text-[#1D1D1F] text-2xl font-light">{{ number_format($totalQtyOrdered) }}</p>
+        <p class="text-[#1D1D1F] text-2xl font-light">{{ lacs_format($totalQtyOrdered) }}</p>
         <p class="text-[#86868B] text-xs mt-0.5">suits across all orders</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Pieces Ordered</p>
-        <p class="text-[#1D1D1F] text-2xl font-light">{{ number_format($totalOrdered) }}</p>
+        <p class="text-[#1D1D1F] text-2xl font-light">{{ lacs_format($totalOrdered) }}</p>
         <p class="text-[#86868B] text-xs mt-0.5">across all designs</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Available</p>
-        <p class="text-2xl font-light {{ $available === 0 ? 'text-[#FF3B30]' : 'text-[#30D158]' }}">{{ number_format($available) }}</p>
+        <p class="text-2xl font-light {{ $available === 0 ? 'text-[#FF3B30]' : 'text-[#30D158]' }}">{{ lacs_format($available) }}</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Orders</p>
@@ -146,12 +146,12 @@
                     <div class="space-y-0.5">
                         <div class="flex items-center gap-2">
                             <span class="text-[#6E6E73] text-xs font-medium uppercase tracking-wide" style="min-width:52px;">Selling</span>
-                            <span class="text-[#1D1D1F] text-sm font-semibold">PKR {{ number_format($design->selling_price, 0) }}</span>
+                            <span class="text-[#1D1D1F] text-sm font-semibold">PKR {{ lacs_format($design->selling_price, 0) }}</span>
                         </div>
                         @if($design->discount_price)
                         <div class="flex items-center gap-2">
                             <span class="text-[#6E6E73] text-xs font-medium uppercase tracking-wide" style="min-width:52px;">Discount</span>
-                            <span class="text-[#34C759] text-sm font-semibold">PKR {{ number_format($design->discount_price, 0) }}</span>
+                            <span class="text-[#34C759] text-sm font-semibold">PKR {{ lacs_format($design->discount_price, 0) }}</span>
                         </div>
                         @endif
                     </div>
