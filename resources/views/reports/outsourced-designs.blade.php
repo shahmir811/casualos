@@ -26,7 +26,7 @@
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Pieces</p>
-        <p class="text-3xl font-light text-[#1D1D1F]">{{ number_format($batches->sum(fn($b) => $b->items->sum('total_pieces'))) }}</p>
+        <p class="text-3xl font-light text-[#1D1D1F]">{{ lacs_format($batches->sum(fn($b) => $b->items->sum('total_pieces'))) }}</p>
     </div>
 </div>
 @endif
@@ -52,7 +52,7 @@
                     <td class="text-[#6E6E73]" rowspan="{{ $batch->items->count() }}">{{ $batch->catalogue->name ?? '—' }}</td>
                     @endif
                     <td>{{ $item->design->name ?? '—' }}</td>
-                    <td class="text-right font-medium">{{ number_format($item->total_pieces) }}</td>
+                    <td class="text-right font-medium">{{ lacs_format($item->total_pieces) }}</td>
                     @if($loop->first)
                     <td class="text-[#6E6E73] text-xs" rowspan="{{ $batch->items->count() }}">{{ $batch->received_date->format('d M Y') }}</td>
                     <td class="text-[#6E6E73] text-xs max-w-xs truncate" rowspan="{{ $batch->items->count() }}">{{ $batch->notes ?? '—' }}</td>

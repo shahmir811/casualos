@@ -11,7 +11,7 @@ class Payment extends Model
     use LogsActivity;
 
     protected $fillable = [
-        'customer_id', 'order_id', 'payment_type', 'bank_account_id', 'amount', 'payment_date', 'notes', 'receipt_image', 'logged_by',
+        'customer_id', 'order_id', 'payment_type', 'bank_account_id', 'title_given', 'amount', 'payment_date', 'notes', 'receipt_image', 'logged_by',
     ];
 
     protected $casts = [

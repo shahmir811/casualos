@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
-            // CasualOS: 4 fixed roles — admin, accountant, manager, designer
+            // CasualiteOS: 4 fixed roles — admin, accountant, manager, designer
             $table->enum('role', ['admin', 'accountant', 'manager', 'designer']);
             // Disabled users cannot log in; records are never deleted
             $table->boolean('is_active')->default(true);

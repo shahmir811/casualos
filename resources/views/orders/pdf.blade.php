@@ -160,38 +160,38 @@
         <td>{{ $xl ?: '' }}</td>
         <td>{{ $qtyPerDesign ?: '' }}</td>
         <td>{{ $totalQty ?: '' }}</td>
-        <td class="td-right">{{ $rate > 0 ? number_format($rate) : '' }}</td>
-        <td class="td-right">{{ number_format($order->total_amount, 0) }}</td>
-        <td class="td-right">{{ $order->total_paid > 0 ? number_format($order->total_paid, 0) : '' }}</td>
-        <td class="td-right">{{ $order->outstanding_balance > 0 ? number_format($order->outstanding_balance, 0) : '' }}</td>
+        <td class="td-right">{{ $rate > 0 ? lacs_format($rate) : '' }}</td>
+        <td class="td-right">{{ lacs_format($order->total_amount, 0) }}</td>
+        <td class="td-right">{{ $order->total_paid > 0 ? lacs_format($order->total_paid, 0) : '' }}</td>
+        <td class="td-right">{{ $order->outstanding_balance > 0 ? lacs_format($order->outstanding_balance, 0) : '' }}</td>
         <td class="td-left">{{ $titleGiven }}</td>
         @foreach($bankAccounts as $bank)
         @php $bankAmt = $bankPmts[$bank->id] ?? 0; @endphp
-        <td class="td-right">{{ $bankAmt > 0 ? number_format($bankAmt, 0) : '' }}</td>
+        <td class="td-right">{{ $bankAmt > 0 ? lacs_format($bankAmt, 0) : '' }}</td>
         @endforeach
-        <td class="td-right">{{ $miscAmt > 0 ? number_format($miscAmt, 0) : '' }}</td>
+        <td class="td-right">{{ $miscAmt > 0 ? lacs_format($miscAmt, 0) : '' }}</td>
     </tr>
     @endforeach
 
     {{-- Totals row --}}
     <tr class="totals">
         <td colspan="3" class="td-left">TOTAL ({{ $orders->count() }} orders)</td>
-        <td>{{ $totals['xs'] > 0 ? number_format($totals['xs']) : '' }}</td>
-        <td>{{ $totals['s'] > 0 ? number_format($totals['s']) : '' }}</td>
-        <td>{{ $totals['m'] > 0 ? number_format($totals['m']) : '' }}</td>
-        <td>{{ $totals['l'] > 0 ? number_format($totals['l']) : '' }}</td>
-        <td>{{ $totals['xl'] > 0 ? number_format($totals['xl']) : '' }}</td>
-        <td>{{ $totals['qty_per_design'] > 0 ? number_format($totals['qty_per_design']) : '' }}</td>
-        <td>{{ $totals['total_qty'] > 0 ? number_format($totals['total_qty']) : '' }}</td>
+        <td>{{ $totals['xs'] > 0 ? lacs_format($totals['xs']) : '' }}</td>
+        <td>{{ $totals['s'] > 0 ? lacs_format($totals['s']) : '' }}</td>
+        <td>{{ $totals['m'] > 0 ? lacs_format($totals['m']) : '' }}</td>
+        <td>{{ $totals['l'] > 0 ? lacs_format($totals['l']) : '' }}</td>
+        <td>{{ $totals['xl'] > 0 ? lacs_format($totals['xl']) : '' }}</td>
+        <td>{{ $totals['qty_per_design'] > 0 ? lacs_format($totals['qty_per_design']) : '' }}</td>
+        <td>{{ $totals['total_qty'] > 0 ? lacs_format($totals['total_qty']) : '' }}</td>
         <td></td>
-        <td class="td-right">{{ number_format($totals['total_bill'], 0) }}</td>
-        <td class="td-right">{{ number_format($totals['received'], 0) }}</td>
-        <td class="td-right">{{ number_format($totals['receivable'], 0) }}</td>
+        <td class="td-right">{{ lacs_format($totals['total_bill'], 0) }}</td>
+        <td class="td-right">{{ lacs_format($totals['received'], 0) }}</td>
+        <td class="td-right">{{ lacs_format($totals['receivable'], 0) }}</td>
         <td></td>
         @foreach($bankAccounts as $bank)
-        <td class="td-right">{{ $totals['bank_' . $bank->id] > 0 ? number_format($totals['bank_' . $bank->id], 0) : '' }}</td>
+        <td class="td-right">{{ $totals['bank_' . $bank->id] > 0 ? lacs_format($totals['bank_' . $bank->id], 0) : '' }}</td>
         @endforeach
-        <td class="td-right">{{ $totals['misc'] > 0 ? number_format($totals['misc'], 0) : '' }}</td>
+        <td class="td-right">{{ $totals['misc'] > 0 ? lacs_format($totals['misc'], 0) : '' }}</td>
     </tr>
 
     </tbody>

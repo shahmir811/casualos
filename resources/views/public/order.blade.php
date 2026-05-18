@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $catalogue->name }} — Casual Lite Booking Form</title>
+    <title>{{ $catalogue->name }} — Casualite Booking Form</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -217,7 +217,7 @@
                 <div>
                     <p class="text-sm font-semibold text-[#1D1D1F] mb-0.5">Need help?</p>
                     <p class="text-xs text-[#6E6E73] leading-relaxed">
-                        Contact the Casual Lite team directly if you believe this is an error or would like to be notified about the next collection.
+                        Contact the Casualite team directly if you believe this is an error or would like to be notified about the next collection.
                     </p>
                 </div>
             </div>
@@ -273,7 +273,7 @@
             </h2>
             <p style="font-size:0.875rem;color:#6E6E73;line-height:1.65;margin-bottom:1.6rem;">
                 Your email address is not registered in our system.
-                Please contact the <strong style="color:#1D1D1F;">Casual Lite admin</strong>
+                Please contact the <strong style="color:#1D1D1F;">Casualite admin</strong>
                 to create your account before placing an order.
             </p>
 
@@ -315,7 +315,7 @@
             <p style="font-size:0.875rem;color:#6E6E73;line-height:1.65;margin-bottom:1.6rem;">
                 You have already placed an order for this catalogue.
                 Only one order per catalogue is allowed.
-                Please contact the <strong style="color:#1D1D1F;">Casual Lite admin</strong>
+                Please contact the <strong style="color:#1D1D1F;">Casualite admin</strong>
                 if you need to make changes.
             </p>
 
@@ -349,7 +349,7 @@
         <div class="section-card px-6 py-5 mt-4 mb-4">
             <h1 class="text-2xl font-bold tracking-tight text-[#1D1D1F] mb-0.5">{{ $catalogue->name }}</h1>
             <p class="text-[#6E6E73] text-sm">
-                Casual Lite Booking Form &nbsp;·&nbsp; No. of Designs {{ $numDesigns }}
+                Casualite Booking Form &nbsp;·&nbsp; No. of Designs {{ $numDesigns }}
             </p>
         </div>
 
@@ -374,7 +374,7 @@
                         @endif
                     </div>
                     <p style="font-size:0.7rem;color:#1D1D1F;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $design->name }}</p>
-                    <p style="font-size:0.65rem;color:#86868B;">PKR {{ number_format($design->selling_price, 0) }}</p>
+                    <p style="font-size:0.65rem;color:#86868B;">PKR {{ lacs_format($design->selling_price, 0) }}</p>
                 </div>
                 @endforeach
             </div>
@@ -527,7 +527,7 @@
 </div>
 
 <footer class="text-center py-5">
-    <p class="text-[#C7C7CC] text-xs">© {{ date('Y') }} Casual Lite · Powered by CasualOS</p>
+    <p class="text-[#C7C7CC] text-xs">© {{ date('Y') }} Casualite · Powered by CasualiteOS</p>
 </footer>
 
 <script>

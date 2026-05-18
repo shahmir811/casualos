@@ -123,6 +123,7 @@
         }
 
         /* Table */
+        .apple-table { border-collapse: collapse; }
         .apple-table thead th {
             background: #F5F5F7;
             color: #6E6E73;
@@ -131,18 +132,17 @@
             letter-spacing: 0.06em;
             text-transform: uppercase;
             padding: 0.75rem 1.25rem;
+            border: 1px solid #D2D2D7;
         }
-        .apple-table tbody tr {
-            border-bottom: 1px solid #F2F2F7;
-            transition: background 0.1s;
-        }
+        .apple-table tbody tr { transition: background 0.1s; }
         .apple-table tbody tr:hover { background: #FAFAFA; }
         .apple-table tbody td {
             padding: 0.85rem 1.25rem;
             color: #1D1D1F;
             font-size: 0.875rem;
+            border: 1px solid #E8E8ED;
         }
-        .apple-table tbody tr:last-child { border-bottom: none; }
+        .apple-table tfoot td { border: 1px solid #D2D2D7; }
 
         /* Badge */
         .badge {
@@ -217,6 +217,20 @@
                 Dashboard
             </a>
 
+            {{-- Global Active Catalogue Picker --}}
+            <div class="px-2 pt-2 pb-1">
+                <form method="POST" action="{{ route('active-catalogue.store') }}">
+                    @csrf
+                    <select name="catalogue_id"
+                            onchange="this.form.submit()"
+                            class="w-full text-xs rounded-lg border border-[#D2D2D7] bg-[#F5F5F7] px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#0071E3] text-[#1D1D1F] font-medium cursor-pointer">
+                        @foreach($sidebarCatalogues as $cat)
+                            <option value="{{ $cat->id }}" @selected($cat->id == $activeCatalogueId)>{{ $cat->name }}</option>
+                        @endforeach
+                    </select>
+                </form>
+            </div>
+
             {{-- Catalogue --}}
             <p class="px-3 pt-3 pb-0.5 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">Catalogue</p>
 
@@ -252,20 +266,6 @@
             {{-- Production --}}
             @if(in_array($r, ['admin','production_manager']))
             <p class="px-3 pt-3 pb-1 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">Production</p>
-
-            {{-- Active Catalogue picker --}}
-            <div class="px-2 pb-2">
-                <form method="POST" action="{{ route('active-catalogue.store') }}">
-                    @csrf
-                    <select name="catalogue_id"
-                            onchange="this.form.submit()"
-                            class="w-full text-xs rounded-lg border border-[#D2D2D7] bg-[#F5F5F7] px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#0071E3] text-[#1D1D1F] font-medium cursor-pointer">
-                        @foreach($sidebarCatalogues as $cat)
-                            <option value="{{ $cat->id }}" @selected($cat->id == $activeCatalogueId)>{{ $cat->name }}</option>
-                        @endforeach
-                    </select>
-                </form>
-            </div>
 
             <a href="{{ route('fabric-batches.index') }}"
                class="nav-item {{ request()->routeIs('fabric-batches.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">

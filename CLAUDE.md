@@ -1,6 +1,6 @@
-# CasualOS — Claude Project Context
+# CasualiteOS — Claude Project Context
 
-This file gives Claude the full context needed to work on CasualOS correctly.
+This file gives Claude the full context needed to work on CasualiteOS correctly.
 **Read this entire file before writing any code.** Every section contains rules that have
 been derived from the signed client proposal (`Casual_Lite_Website_Proposal_v9.docx`).
 Deviating from these rules means deviating from the signed contract.
@@ -9,7 +9,7 @@ Deviating from these rules means deviating from the signed contract.
 
 ## 1. What This Project Is
 
-**CasualOS** is the complete business operations system for **Casual Lite**, a fashion
+**CasualiteOS** is the complete business operations system for **Casual Lite**, a fashion
 brand based in Pakistan. It replaces manual notebooks, WhatsApp tracking, and Google
 Forms with a single web application.
 
@@ -94,7 +94,7 @@ Stitching units are managed in the `stitching_units` table (not hardcoded intege
 - `number` — display number (1, 2, 3 …), auto-assigned, immutable
 - `name` — human name (e.g. "Subhan", "Mumtaz")
 - `payment_type` — `salary` or `per_piece`
-- `per_piece_rate` — **required** for `per_piece` units. This is the rate used to calculate weekly wages. Salary units have no rate in CasualOS (tracked externally).
+- `per_piece_rate` — **required** for `per_piece` units. This is the rate used to calculate weekly wages. Salary units have no rate in CasualiteOS (tracked externally).
 - `is_active` — inactive units are hidden from production assignment and stitching return forms
 
 **Wage rate is stored on the stitching unit, not on the catalogue.** When recording weekly wages, the production manager selects a stitching unit and the rate auto-populates from `stitching_units.per_piece_rate`. The `wages` table stores `stitching_unit_id` (FK) and a snapshot of `wage_rate` at the time of recording.

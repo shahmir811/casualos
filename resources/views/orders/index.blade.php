@@ -157,12 +157,12 @@
 
                         {{-- Total pieces --}}
                         <td class="text-center font-semibold text-[#1D1D1F] tabular-nums">
-                            {{ number_format($totalPieces) }}
+                            {{ lacs_format($totalPieces) }}
                         </td>
 
                         {{-- Total Bill --}}
                         <td class="text-right font-medium text-[#1D1D1F] tabular-nums">
-                            PKR {{ number_format($order->total_amount, 0) }}
+                            PKR {{ lacs_format($order->total_amount, 0) }}
                         </td>
 
                         {{-- Status --}}
@@ -192,13 +192,13 @@
                         <td colspan="3" class="font-semibold text-[#1D1D1F] text-sm">
                             Totals — {{ count($orderList) }} orders
                         </td>
-                        <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ number_format($summary['xs']) }}</td>
-                        <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ number_format($summary['s']) }}</td>
-                        <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ number_format($summary['m']) }}</td>
-                        <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ number_format($summary['l']) }}</td>
-                        <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ number_format($summary['xl']) }}</td>
-                        <td class="text-center font-bold text-[#1D1D1F] tabular-nums">{{ number_format($summary['total_pieces']) }}</td>
-                        <td class="text-right font-bold text-[#1D1D1F] tabular-nums">PKR {{ number_format($summary['total_bill'], 0) }}</td>
+                        <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ lacs_format($summary['xs']) }}</td>
+                        <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ lacs_format($summary['s']) }}</td>
+                        <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ lacs_format($summary['m']) }}</td>
+                        <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ lacs_format($summary['l']) }}</td>
+                        <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ lacs_format($summary['xl']) }}</td>
+                        <td class="text-center font-bold text-[#1D1D1F] tabular-nums">{{ lacs_format($summary['total_pieces']) }}</td>
+                        <td class="text-right font-bold text-[#1D1D1F] tabular-nums">PKR {{ lacs_format($summary['total_bill'], 0) }}</td>
                         <td colspan="2"></td>
                     </tr>
                     @endif
@@ -230,12 +230,12 @@
                 @foreach(['XS' => $summary['xs'], 'S' => $summary['s'], 'M' => $summary['m'], 'L' => $summary['l'], 'XL' => $summary['xl']] as $size => $qty)
                 <div class="flex items-center justify-between">
                     <span class="text-xs text-[#6E6E73]">Total {{ $size }}</span>
-                    <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($qty) }}</span>
+                    <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ lacs_format($qty) }}</span>
                 </div>
                 @endforeach
                 <div class="pt-2 mt-1 border-t border-[#F2F2F7] flex items-center justify-between">
                     <span class="text-xs font-bold text-[#1D1D1F]">Total</span>
-                    <span class="text-sm font-bold text-[#1D1D1F] tabular-nums">{{ number_format($totalOrdered) }}</span>
+                    <span class="text-sm font-bold text-[#1D1D1F] tabular-nums">{{ lacs_format($totalOrdered) }}</span>
                 </div>
             </div>
         </div>
@@ -246,16 +246,16 @@
             <div class="space-y-2.5">
                 <div class="flex items-center justify-between">
                     <span class="text-xs text-[#6E6E73]">Per Design Qty</span>
-                    <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($qtyPerDesign) }}</span>
+                    <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ lacs_format($qtyPerDesign) }}</span>
                 </div>
                 <div class="flex items-center justify-between">
                     <span class="text-xs text-[#6E6E73]">Ordered per design</span>
-                    <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($totalOrdered) }}</span>
+                    <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ lacs_format($totalOrdered) }}</span>
                 </div>
                 <div class="pt-2 mt-1 border-t border-[#F2F2F7] flex items-center justify-between">
                     <span class="text-xs font-bold text-[#1D1D1F]">Left</span>
                     <span class="text-sm font-bold tabular-nums {{ $remaining < 0 ? 'text-[#FF3B30]' : 'text-[#34C759]' }}">
-                        {{ $remaining >= 0 ? '+' : '' }}{{ number_format($remaining) }}
+                        {{ $remaining >= 0 ? '+' : '' }}{{ lacs_format($remaining) }}
                     </span>
                 </div>
             </div>
@@ -277,7 +277,7 @@
         <div class="card p-4">
             <p class="text-[10px] font-bold text-[#86868B] uppercase tracking-widest mb-1">Total Revenue</p>
             <p class="text-lg font-semibold text-[#1D1D1F] tabular-nums leading-tight">
-                PKR {{ number_format($summary['total_bill'], 0) }}
+                PKR {{ lacs_format($summary['total_bill'], 0) }}
             </p>
             <p class="text-xs text-[#86868B] mt-0.5">{{ count($orderList) }} orders</p>
         </div>

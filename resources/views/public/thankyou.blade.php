@@ -46,7 +46,7 @@
                 </div>
                 <div class="flex justify-between">
                     <span class="text-[#6E6E73]">Total Amount</span>
-                    <span class="text-[#1D1D1F] font-semibold">PKR {{ number_format($order->total_amount, 0) }}</span>
+                    <span class="text-[#1D1D1F] font-semibold">PKR {{ lacs_format($order->total_amount, 0) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-[#6E6E73]">Status</span>

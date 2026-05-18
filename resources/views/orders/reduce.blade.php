@@ -12,7 +12,7 @@
 
 <div class="max-w-2xl">
     <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F] mb-1">Order Reduction</h1>
-    <p class="text-[#6E6E73] text-sm mb-6">Order #{{ $order->order_number }} · {{ $order->customer->name ?? '—' }} · PKR {{ number_format($order->total_amount, 0) }}</p>
+    <p class="text-[#6E6E73] text-sm mb-6">Order #{{ $order->order_number }} · {{ $order->customer->name ?? '—' }} · PKR {{ lacs_format($order->total_amount, 0) }}</p>
 
     @if($errors->any())
     <div class="mb-5 px-4 py-3 bg-[#FFF0EF] border border-[#FFCDD0] text-[#FF3B30] text-sm rounded-xl">

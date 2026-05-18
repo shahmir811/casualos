@@ -195,7 +195,7 @@
 {{-- Header --}}
 <div class="report-header">
     <div>
-        <div class="brand">Casual Lite — CasualOS</div>
+        <div class="brand">Casualite — CasualiteOS</div>
         <div class="report-title">Stitching Return Report</div>
         <div style="font-size:13px; color:#6E6E73; margin-top:4px;">{{ $paId }}</div>
     </div>
@@ -235,7 +235,7 @@
     </div>
     <div class="info-item">
         <label>Total Assigned</label>
-        <span>{{ number_format($totalAssigned) }} pieces</span>
+        <span>{{ lacs_format($totalAssigned) }} pieces</span>
     </div>
 </div>
 
@@ -327,7 +327,7 @@
             <span class="comp-label">{{ $comp }}</span>
             @endforeach
         </div>
-        <span class="batch-total">{{ number_format($batchTotal) }} pcs total</span>
+        <span class="batch-total">{{ lacs_format($batchTotal) }} pcs total</span>
     </div>
 
     @foreach($batchComponents as $comp)
@@ -355,7 +355,7 @@
 
 {{-- Footer --}}
 <div class="report-footer">
-    <span>Casual Lite — CasualOS Internal Report</span>
+    <span>Casualite — CasualiteOS Internal Report</span>
     <span>{{ $paId }} · {{ $productionAssignment->catalogue->name ?? '' }} · {{ $productionAssignment->design->name ?? '' }}</span>
 </div>
 

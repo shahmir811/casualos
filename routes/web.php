@@ -179,6 +179,14 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('dispatch-history',      [ReportController::class, 'dispatchHistory'])->name('dispatch-history');
         Route::get('activity-log',          [ReportController::class, 'activityLog'])->name('activity-log');
         Route::get('damage-reductions',     [ReportController::class, 'damageReductions'])->name('damage-reductions');
+
+        // Payment reports
+        Route::get('customer-order-bill',         [ReportController::class, 'customerOrderBill'])->name('customer-order-bill');
+        Route::get('customer-order-bill/pdf',     [ReportController::class, 'customerOrderBillPdf'])->name('customer-order-bill.pdf');
+        Route::get('bank-account-breakdown',      [ReportController::class, 'bankAccountBreakdown'])->name('bank-account-breakdown');
+        Route::get('bank-account-breakdown/pdf',  [ReportController::class, 'bankAccountBreakdownPdf'])->name('bank-account-breakdown.pdf');
+        Route::get('receivables-by-bank',         [ReportController::class, 'receivablesByBank'])->name('receivables-by-bank');
+        Route::get('receivables-by-bank/pdf',     [ReportController::class, 'receivablesByBankPdf'])->name('receivables-by-bank.pdf');
     });
 
     /*

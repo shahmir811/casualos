@@ -52,7 +52,7 @@
                 </td>
                 <td class="text-[#6E6E73] text-sm">
                     @if($unit->isPerPiece() && $unit->per_piece_rate)
-                        Rs. {{ number_format($unit->per_piece_rate, 0) }}/pc
+                        Rs. {{ lacs_format($unit->per_piece_rate, 0) }}/pc
                     @else
                         <span class="text-[#D2D2D7]">—</span>
                     @endif
@@ -89,7 +89,7 @@
 
 <p class="mt-4 text-xs text-[#86868B]">
     Inactive units will not appear in production assignment or stitching return forms.
-    Salary-based units are tracked externally — CasualOS only tracks per-piece units for wages.
+    Salary-based units are tracked externally — CasualiteOS only tracks per-piece units for wages.
 </p>
 
 @endsection

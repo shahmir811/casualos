@@ -303,16 +303,16 @@
             @php $qty = $item->{'qty_' . $col}; @endphp
             <td class="{{ $qty ? 'qty-val' : 'qty-zero' }}">{{ $qty ?: '—' }}</td>
             @endforeach
-            <td class="qty-val">{{ number_format($rowQty) }}</td>
-            <td class="price-cell">PKR {{ number_format($item->unit_price, 0) }}</td>
-            <td class="amount-cell">PKR {{ number_format($item->total_amount, 0) }}</td>
+            <td class="qty-val">{{ lacs_format($rowQty) }}</td>
+            <td class="price-cell">PKR {{ lacs_format($item->unit_price, 0) }}</td>
+            <td class="amount-cell">PKR {{ lacs_format($item->total_amount, 0) }}</td>
         </tr>
         @endforeach
         <tr class="totals-row">
             <td style="text-align:left;" colspan="{{ 1 + count($sizes) }}">Total</td>
-            <td style="text-align:center;">{{ number_format($totalPieces) }}</td>
+            <td style="text-align:center;">{{ lacs_format($totalPieces) }}</td>
             <td style="text-align:right;"></td>
-            <td style="text-align:right;">PKR {{ number_format($order->total_amount, 0) }}</td>
+            <td style="text-align:right;">PKR {{ lacs_format($order->total_amount, 0) }}</td>
         </tr>
     </tbody>
 </table>
@@ -322,21 +322,21 @@
     <table class="summary-inner">
         <tr>
             <td class="label">Subtotal</td>
-            <td class="value">PKR {{ number_format($order->total_amount, 0) }}</td>
+            <td class="value">PKR {{ lacs_format($order->total_amount, 0) }}</td>
         </tr>
         <tr>
             <td class="label">Amount Paid</td>
-            <td class="value paid">PKR {{ number_format($order->total_paid, 0) }}</td>
+            <td class="value paid">PKR {{ lacs_format($order->total_paid, 0) }}</td>
         </tr>
         <tr class="grand-total">
             <td class="label">Grand Total</td>
-            <td class="value">PKR {{ number_format($order->total_amount, 0) }}</td>
+            <td class="value">PKR {{ lacs_format($order->total_amount, 0) }}</td>
         </tr>
         <tr>
             <td class="label" style="padding-top:2pt;">Outstanding Balance</td>
             <td class="value {{ $order->outstanding_balance > 0 ? 'due' : 'paid' }}" style="padding-top:2pt;">
                 @if($order->outstanding_balance > 0)
-                    PKR {{ number_format($order->outstanding_balance, 0) }}
+                    PKR {{ lacs_format($order->outstanding_balance, 0) }}
                 @else
                     PAID IN FULL
                 @endif
@@ -369,7 +369,7 @@
                 @endif
             </td>
             <td style="color:#6E6E73;">{{ $payment->notes ?? '—' }}</td>
-            <td style="text-align:right; color:#059669; font-weight:bold;">PKR {{ number_format($payment->amount, 0) }}</td>
+            <td style="text-align:right; color:#059669; font-weight:bold;">PKR {{ lacs_format($payment->amount, 0) }}</td>
         </tr>
         @endforeach
     </tbody>

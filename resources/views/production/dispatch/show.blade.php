@@ -16,7 +16,7 @@
             <div><p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Customer</p><p class="font-medium text-[#1D1D1F]">{{ $order->customer->name ?? '—' }}</p></div>
             <div><p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">City</p><p class="text-[#1D1D1F]">{{ $order->customer->city ?? '—' }}</p></div>
             <div><p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Catalogue</p><p class="text-[#1D1D1F]">{{ $order->catalogue->name ?? '—' }}</p></div>
-            <div><p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Order Amount</p><p class="font-semibold text-[#1D1D1F]">PKR {{ number_format($order->total_amount, 0) }}</p></div>
+            <div><p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Order Amount</p><p class="font-semibold text-[#1D1D1F]">PKR {{ lacs_format($order->total_amount, 0) }}</p></div>
             <div>
                 <p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Status</p>
                 <span class="badge bg-orange-100 text-orange-700">{{ $order->status }}</span>
@@ -45,7 +45,7 @@
                         <td class="text-right">{{ $item->qty_m }}</td>
                         <td class="text-right">{{ $item->qty_l }}</td>
                         <td class="text-right">{{ $item->qty_xl }}</td>
-                        <td class="text-right">PKR {{ number_format($item->subtotal, 0) }}</td>
+                        <td class="text-right">PKR {{ lacs_format($item->subtotal, 0) }}</td>
                     </tr>
                     @endforeach
                 </tbody>

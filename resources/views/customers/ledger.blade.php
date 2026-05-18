@@ -12,7 +12,7 @@
     <div class="stat-card text-right min-w-[180px]">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Outstanding Balance</p>
         <p class="text-2xl font-light {{ $balance > 0 ? 'text-[#FF3B30]' : 'text-[#30D158]' }}">
-            PKR {{ number_format(abs($balance), 0) }}
+            PKR {{ lacs_format(abs($balance), 0) }}
             <span class="text-sm">{{ $balance > 0 ? 'DR' : ($balance < 0 ? 'CR' : '') }}</span>
         </p>
     </div>
@@ -49,7 +49,7 @@
                 <td class="text-[#6E6E73] text-sm">{{ $entry->notes }}</td>
                 <td class="text-[#86868B] text-xs">{{ $entry->reference_id ? '#' . $entry->reference_id : '—' }}</td>
                 <td class="text-right font-mono text-sm {{ $entry->amount > 0 ? 'text-[#1D1D1F]' : 'text-[#30D158]' }}">
-                    {{ $entry->amount > 0 ? '+' : '' }}PKR {{ number_format(abs($entry->amount), 0) }}
+                    {{ $entry->amount > 0 ? '+' : '' }}PKR {{ lacs_format(abs($entry->amount), 0) }}
                 </td>
             </tr>
             @empty

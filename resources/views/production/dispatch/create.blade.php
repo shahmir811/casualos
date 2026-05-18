@@ -48,7 +48,7 @@
     <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F] mb-1">Record Dispatch</h1>
     <p class="text-[#6E6E73] text-sm mb-6">
         Order #{{ $order->order_number }} &middot; {{ $order->customer->name }}
-        &middot; PKR {{ number_format($order->total_amount, 0) }}
+        &middot; PKR {{ lacs_format($order->total_amount, 0) }}
     </p>
 
     @if($errors->any())

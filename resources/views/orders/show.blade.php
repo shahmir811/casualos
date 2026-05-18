@@ -79,16 +79,16 @@
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Amount</p>
-        <p class="text-[#1D1D1F] text-2xl font-light">PKR {{ number_format($order->total_amount, 0) }}</p>
+        <p class="text-[#1D1D1F] text-2xl font-light">PKR {{ lacs_format($order->total_amount, 0) }}</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Amount Paid</p>
-        <p class="text-[#30D158] text-2xl font-light">PKR {{ number_format($order->total_paid, 0) }}</p>
+        <p class="text-[#30D158] text-2xl font-light">PKR {{ lacs_format($order->total_paid, 0) }}</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Outstanding</p>
         <p class="{{ $order->outstanding_balance > 0 ? 'text-[#FF3B30]' : 'text-[#30D158]' }} text-2xl font-light">
-            PKR {{ number_format($order->outstanding_balance, 0) }}
+            PKR {{ lacs_format($order->outstanding_balance, 0) }}
         </p>
     </div>
 </div>
@@ -108,7 +108,7 @@
 <div class="card mb-5">
     <div class="px-6 py-4 border-b border-[#F2F2F7] flex items-center justify-between">
         <h2 class="text-[#1D1D1F] text-sm font-semibold">Order Summary</h2>
-        <span class="text-xs text-[#6E6E73]">{{ $numDesigns }} designs · {{ number_format($totalPieces) }} pieces total</span>
+        <span class="text-xs text-[#6E6E73]">{{ $numDesigns }} designs · {{ lacs_format($totalPieces) }} pieces total</span>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full apple-table whitespace-nowrap">
@@ -136,9 +136,9 @@
                     <td class="text-center tabular-nums px-3 {{ $qm  ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $qm  ?: '—' }}</td>
                     <td class="text-center tabular-nums px-3 {{ $ql  ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $ql  ?: '—' }}</td>
                     <td class="text-center tabular-nums px-3 {{ $qxl ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $qxl ?: '—' }}</td>
-                    <td class="text-center font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($qtyPerDesign) }}</td>
-                    <td class="text-center font-semibold text-[#0071E3] tabular-nums">{{ number_format($totalPieces) }}</td>
-                    <td class="text-right font-semibold text-[#1D1D1F] tabular-nums">PKR {{ number_format($order->total_amount, 0) }}</td>
+                    <td class="text-center font-semibold text-[#1D1D1F] tabular-nums">{{ lacs_format($qtyPerDesign) }}</td>
+                    <td class="text-center font-semibold text-[#0071E3] tabular-nums">{{ lacs_format($totalPieces) }}</td>
+                    <td class="text-right font-semibold text-[#1D1D1F] tabular-nums">PKR {{ lacs_format($order->total_amount, 0) }}</td>
                 </tr>
             </tbody>
         </table>
@@ -289,7 +289,7 @@
                     @endif
                 </td>
                 <td class="text-[#6E6E73] text-sm">{{ $payment->notes ?? '—' }}</td>
-                <td class="text-right text-[#30D158] font-mono font-medium">PKR {{ number_format($payment->amount, 0) }}</td>
+                <td class="text-right text-[#30D158] font-mono font-medium">PKR {{ lacs_format($payment->amount, 0) }}</td>
                 <td class="text-right">
                     @if($payment->receipt_image)
                     <a href="{{ Storage::url($payment->receipt_image) }}" target="_blank"

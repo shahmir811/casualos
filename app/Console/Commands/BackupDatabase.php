@@ -22,7 +22,7 @@ class BackupDatabase extends Command
 
     public function handle(BackupController $backupCtrl): int
     {
-        $this->info('CasualOS — Database Backup');
+        $this->info('CasualiteOS — Database Backup');
         $this->line('──────────────────────────');
 
         // ── Create backup ──────────────────────────────────────────────
