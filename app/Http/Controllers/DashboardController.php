@@ -30,12 +30,12 @@ class DashboardController extends Controller
                                             ->get();
         }
 
-        if (in_array($role, ['admin', 'manager'])) {
+        if (in_array($role, ['admin', 'production_manager'])) {
             $data['activeCatalogues']  = Catalogue::where('status', 'open')->with('designs')->get();
             $data['fabricBatches']     = FabricBatch::latest()->take(5)->get();
         }
 
-        if ($role === 'designer') {
+        if ($role === 'creative_head') {
             $data['catalogues']        = Catalogue::latest()->take(10)->get();
         }
 

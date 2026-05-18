@@ -100,7 +100,7 @@
 {{-- Designs Section --}}
 <div class="flex items-center justify-between mb-4">
     <h2 class="text-[#1D1D1F] text-sm font-semibold">Designs ({{ $catalogue->designs->count() }})</h2>
-    @if(in_array(Auth::user()->role, ['admin', 'designer']))
+    @if(in_array(Auth::user()->role, ['admin', 'creative_head']))
     <a href="{{ route('catalogues.designs.create', $catalogue) }}" class="btn-primary">
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
@@ -113,7 +113,7 @@
 @if($catalogue->designs->isEmpty())
 <div class="card p-12 text-center mb-7">
     <p class="text-[#6E6E73] text-sm">No designs yet.</p>
-    @if(in_array(Auth::user()->role, ['admin', 'designer']))
+    @if(in_array(Auth::user()->role, ['admin', 'creative_head']))
     <a href="{{ route('catalogues.designs.create', $catalogue) }}" class="btn-primary mt-4 inline-flex">
         Add First Design
     </a>
@@ -167,7 +167,7 @@
                 </div>
             </div>
 
-            @if(in_array(Auth::user()->role, ['admin', 'designer']))
+            @if(in_array(Auth::user()->role, ['admin', 'creative_head']))
             <div class="flex items-center gap-3 mt-3 pt-3 border-t border-[#F2F2F7]">
                 <a href="{{ route('designs.edit', $design) }}" class="text-[#0066CC] text-xs hover:underline">Edit</a>
                 @if(Auth::user()->role === 'admin')

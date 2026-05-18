@@ -40,7 +40,7 @@
         </form>
         @endif
 
-        @if($order->status === 'confirmed' && in_array(Auth::user()->role, ['admin', 'manager']))
+        @if($order->status === 'confirmed' && in_array(Auth::user()->role, ['admin', 'production_manager']))
         <form method="POST" action="{{ route('orders.stitch', $order) }}">
             @csrf
             <button type="submit" class="btn-primary" style="background:#FF9500;">

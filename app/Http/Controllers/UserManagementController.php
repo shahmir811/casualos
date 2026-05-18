@@ -11,7 +11,7 @@ use Illuminate\Validation\Rules;
  * UserManagementController — Admin only.
  *
  * Rules (per proposal):
- * - Admin creates accounts for accountant, manager, designer
+ * - Admin creates accounts for accountant, production_manager, creative_head
  * - Accounts can be enabled/disabled (never deleted)
  * - Only admin can reset passwords (no self-service)
  * - Disabled users cannot log in; their records stay intact
@@ -38,7 +38,7 @@ class UserManagementController extends Controller
         $validated = $request->validate([
             'name'     => ['required', 'string', 'max:255'],
             'email'    => ['required', 'email', 'unique:users,email'],
-            'role'     => ['required', 'in:accountant,manager,designer'],
+            'role'     => ['required', 'in:accountant,production_manager,creative_head'],
             'password' => ['required', 'confirmed', Rules\Password::min(8)],
         ]);
 

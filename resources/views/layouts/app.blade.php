@@ -250,7 +250,7 @@
             @endif
 
             {{-- Production --}}
-            @if(in_array($r, ['admin','manager']))
+            @if(in_array($r, ['admin','production_manager']))
             <p class="px-3 pt-3 pb-1 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">Production</p>
 
             {{-- Active Catalogue picker --}}

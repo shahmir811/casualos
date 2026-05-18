@@ -130,7 +130,7 @@ class OrderController extends Controller
 
     public function markStitching(Order $order)
     {
-        if (!in_array(Auth::user()->role, ['admin', 'manager'])) {
+        if (!in_array(Auth::user()->role, ['admin', 'production_manager'])) {
             abort(403);
         }
 
