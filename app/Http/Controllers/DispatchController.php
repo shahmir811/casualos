@@ -218,7 +218,7 @@ class DispatchController extends Controller
         DB::transaction(function () use ($order, $validated, $request) {
             $cargoPath = null;
             if ($request->hasFile('cargo_document')) {
-                $cargoPath = $request->file('cargo_document')->store('cargo-documents', 'public');
+                $cargoPath = $request->file('cargo_document')->store('cargo-documents', 's3');
             }
 
             $nextBatchNumber = ($order->dispatchBatches()->max('batch_number') ?? 0) + 1;
