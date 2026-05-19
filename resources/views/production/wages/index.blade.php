@@ -25,15 +25,20 @@
             (Saturday → Friday) per catalogue per stitching unit and create or update
             <strong>unconfirmed</strong> wage records. Confirmed (paid) records are never changed.
         </p>
-        <form method="POST" action="{{ route('wages.recalculate') }}" class="flex items-end gap-3">
+        <form id="form-recalculate" method="POST" action="{{ route('wages.recalculate') }}" class="flex items-end gap-3">
             @csrf
             <div>
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Any date in the week</label>
                 <input type="date" name="week_date" value="{{ today()->toDateString() }}"
                        class="apple-input" required>
             </div>
-            <button type="submit" class="btn-secondary"
-                    onclick="return confirm('Recalculate wages for this week? Unconfirmed records will be overwritten.')">
+            <button type="button" class="btn-secondary"
+                    @click="$store.confirm.show({
+                        title: 'Recalculate Wages',
+                        message: 'Unconfirmed wage records for this week will be overwritten. Confirmed (paid) records will not be changed.',
+                        formId: 'form-recalculate',
+                        confirmText: 'Yes, Recalculate'
+                    })">
                 Calculate
             </button>
         </form>

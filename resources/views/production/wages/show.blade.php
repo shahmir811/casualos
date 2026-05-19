@@ -24,13 +24,16 @@
     </div>
 
     @if(!$wage->is_confirmed)
-    <form method="POST" action="{{ route('wages.confirm', $wage) }}">
-        @csrf
-        <button type="submit" class="btn-primary"
-                onclick="return confirm('Confirm payment of Rs. {{ lacs_format($wage->total_wages, 0) }}?')">
-            Confirm Payment
-        </button>
-    </form>
+    <form id="form-confirm-wage" method="POST" action="{{ route('wages.confirm', $wage) }}">@csrf</form>
+    <button type="button" class="btn-primary"
+            @click="$store.confirm.show({
+                title: 'Confirm Payment',
+                message: `Mark Rs. {{ lacs_format($wage->total_wages, 0) }} as paid to {{ $wage->stitchingUnit?->name }}? This cannot be undone.`,
+                formId: 'form-confirm-wage',
+                confirmText: 'Yes, Confirm Payment'
+            })">
+        Confirm Payment
+    </button>
     @else
     <div class="text-right">
         <span class="badge bg-green-100 text-green-700 text-sm px-3 py-1">Confirmed &amp; Paid</span>
