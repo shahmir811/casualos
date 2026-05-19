@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <style>
         @page {
-            margin: 8mm;
+            margin: 14mm 18mm;
         }
         * {
             box-sizing: border-box;
@@ -15,9 +15,10 @@
             font-family: DejaVu Sans, sans-serif;
             font-size: 7pt;
             color: #1D1D1F;
+            padding: 0 6mm;
         }
         .header {
-            margin-bottom: 8pt;
+            margin-bottom: 0;
         }
         .header h1 {
             font-size: 13pt;
@@ -27,6 +28,18 @@
         .header p {
             font-size: 8pt;
             color: #6E6E73;
+        }
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8pt;
+            padding-bottom: 6pt;
+            border-bottom: 1.5pt solid #1D1D1F;
+        }
+        .header-table td {
+            border: none !important;
+            padding: 0 !important;
+            background: transparent !important;
         }
         table {
             width: 100%;
@@ -62,10 +75,19 @@
 </head>
 <body>
 
-<div class="header">
-    <h1>{{ $catalogue->name }} — Customer Payments Report</h1>
-    <p>Generated: {{ now()->format('d M Y, H:i') }} &nbsp;|&nbsp; {{ $orders->count() }} orders</p>
-</div>
+<table class="header-table">
+    <tr>
+        <td style="vertical-align:middle; width:25%;">
+            <img src="{{ public_path('images/casualite-logo.png') }}" style="height:40pt; width:auto; display:block;">
+        </td>
+        <td style="vertical-align:middle; text-align:right;">
+            <div class="header">
+                <h1>{{ $catalogue->name }} — Customer Payments Report</h1>
+                <p>Generated: {{ now()->format('d M Y, H:i') }} &nbsp;|&nbsp; {{ $orders->count() }} orders</p>
+            </div>
+        </td>
+    </tr>
+</table>
 
 <table>
     <thead>

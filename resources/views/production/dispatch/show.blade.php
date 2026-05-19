@@ -80,9 +80,11 @@
             </div>
         </div>
 
+        @if($order->status !== 'dispatched')
         <a href="{{ route('dispatch.create', $order) }}" class="btn-primary w-full justify-center">
             {{ $order->dispatchBatches->count() ? 'Dispatch Again' : 'Record Dispatch' }}
         </a>
+        @endif
     </div>
 
     {{-- Right column: progress + batch history --}}

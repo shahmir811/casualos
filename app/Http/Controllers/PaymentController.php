@@ -51,15 +51,20 @@ class PaymentController extends Controller
 
             // Update order financials
             $newTotalPaid = $order->total_paid + $request->amount;
-            $order->update([
-                'total_paid'          => $newTotalPaid,
-                'outstanding_balance' => max(0, $order->total_amount - $newTotalPaid),
-            ]);
+            $newOutstanding = max(0, $order->total_amount - $newTotalPaid);
+            $statusUpdate = ['total_paid' => $newTotalPaid, 'outstanding_balance' => $newOutstanding];
+
+            // Auto-confirm on first payment
+            if ($order->status === 'received') {
+                $statusUpdate['status'] = 'confirmed';
+            }
 
             // Unflag if fully paid
-            if ($order->outstanding_balance <= 0) {
-                $order->update(['is_flagged' => false]);
+            if ($newOutstanding <= 0) {
+                $statusUpdate['is_flagged'] = false;
             }
+
+            $order->update($statusUpdate);
 
             // Ledger entry
             CustomerLedger::create([
@@ -94,6 +99,11 @@ class PaymentController extends Controller
             'notes'                   => 'Credit: ' . ($validated['notes'] ?? 'Manual credit adjustment'),
             'created_by'              => Auth::id(),
         ]);
+
+        // Auto-confirm on first credit application
+        if ($order->status === 'received') {
+            $order->update(['status' => 'confirmed']);
+        }
 
         return back()->with('success', 'Credit of PKR ' . lacs_format($validated['credit_amount']) . ' applied.');
     }

@@ -89,7 +89,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     |------------------------------------------------------------------
     */
     Route::middleware('role:admin|accountant')->group(function () {
-        Route::get('orders/pdf', [OrderController::class, 'downloadPdf'])->name('orders.pdf');
+        Route::get('orders/pdf',   [OrderController::class, 'downloadPdf'])->name('orders.pdf');
+        Route::get('orders/excel', [OrderController::class, 'downloadExcel'])->name('orders.excel');
         Route::get('orders/{order}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
         Route::resource('orders', OrderController::class)->except(['create','store','destroy']);
         Route::post('orders/{order}/confirm',  [OrderController::class, 'confirm'])->name('orders.confirm');
