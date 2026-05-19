@@ -48,10 +48,11 @@
         <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-wide mb-1">Status</label>
         <select name="status" class="apple-input" style="min-width:160px;">
             <option value="">All Statuses</option>
-            <option value="received"   {{ request('status') === 'received'   ? 'selected' : '' }}>Received</option>
-            <option value="confirmed"  {{ request('status') === 'confirmed'  ? 'selected' : '' }}>Confirmed</option>
-            <option value="stitching"  {{ request('status') === 'stitching'  ? 'selected' : '' }}>Stitching</option>
-            <option value="dispatched" {{ request('status') === 'dispatched' ? 'selected' : '' }}>Dispatched</option>
+            <option value="received"             {{ request('status') === 'received'             ? 'selected' : '' }}>Received</option>
+            <option value="confirmed"            {{ request('status') === 'confirmed'            ? 'selected' : '' }}>Confirmed</option>
+            <option value="stitching"            {{ request('status') === 'stitching'            ? 'selected' : '' }}>Stitching</option>
+            <option value="partially_dispatched" {{ request('status') === 'partially_dispatched' ? 'selected' : '' }}>Partially Dispatched</option>
+            <option value="dispatched"           {{ request('status') === 'dispatched'           ? 'selected' : '' }}>Dispatched</option>
         </select>
     </div>
     <div>
@@ -93,10 +94,18 @@
                     <tbody>
                     @php
                         $statusBadge = [
-                            'received'   => 'badge bg-blue-50 text-blue-600',
-                            'confirmed'  => 'badge bg-yellow-50 text-yellow-700',
-                            'stitching'  => 'badge bg-orange-50 text-orange-700',
-                            'dispatched' => 'badge bg-green-50 text-green-700',
+                            'received'             => 'badge bg-blue-50 text-blue-600',
+                            'confirmed'            => 'badge bg-yellow-50 text-yellow-700',
+                            'stitching'            => 'badge bg-orange-50 text-orange-700',
+                            'partially_dispatched' => 'badge bg-purple-50 text-purple-700',
+                            'dispatched'           => 'badge bg-green-50 text-green-700',
+                        ];
+                        $statusLabel = [
+                            'received'             => 'Received',
+                            'confirmed'            => 'Confirmed',
+                            'stitching'            => 'Stitching',
+                            'partially_dispatched' => 'Partially Dispatched',
+                            'dispatched'           => 'Dispatched',
                         ];
                         $orderList = ($orders instanceof \Illuminate\Pagination\LengthAwarePaginator)
                             ? $orders->items()
@@ -168,7 +177,7 @@
                         {{-- Status --}}
                         <td class="text-center">
                             <span class="{{ $statusBadge[$order->status] ?? 'badge bg-[#F5F5F7] text-[#6E6E73]' }}">
-                                {{ ucfirst($order->status) }}
+                                {{ $statusLabel[$order->status] ?? ucfirst($order->status) }}
                             </span>
                         </td>
 

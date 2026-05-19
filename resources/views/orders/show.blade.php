@@ -6,10 +6,18 @@
 
 @php
     $statusBadge = [
-        'received'   => 'badge bg-blue-100 text-blue-700',
-        'confirmed'  => 'badge bg-yellow-100 text-yellow-700',
-        'stitching'  => 'badge bg-orange-100 text-orange-700',
-        'dispatched' => 'badge bg-green-100 text-green-700',
+        'received'             => 'badge bg-blue-100 text-blue-700',
+        'confirmed'            => 'badge bg-yellow-100 text-yellow-700',
+        'stitching'            => 'badge bg-orange-100 text-orange-700',
+        'partially_dispatched' => 'badge bg-purple-100 text-purple-700',
+        'dispatched'           => 'badge bg-green-100 text-green-700',
+    ];
+    $statusLabel = [
+        'received'             => 'Received',
+        'confirmed'            => 'Confirmed',
+        'stitching'            => 'Stitching',
+        'partially_dispatched' => 'Partially Dispatched',
+        'dispatched'           => 'Dispatched',
     ];
 @endphp
 
@@ -19,7 +27,7 @@
         <div class="flex flex-wrap items-center gap-2.5 mt-3">
             <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Order #{{ $order->order_number }}</h1>
             <span class="{{ $statusBadge[$order->status] ?? 'badge bg-[#F5F5F7] text-[#6E6E73]' }}">
-                {{ $order->status }}
+                {{ $statusLabel[$order->status] ?? ucfirst($order->status) }}
             </span>
             @if($order->is_flagged)
             <span class="badge bg-[#FFF0EF] text-[#FF3B30]">⚑ Flagged</span>
@@ -67,14 +75,15 @@
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Order Status</p>
         @php
             $statusColors = [
-                'received'   => 'text-blue-600',
-                'confirmed'  => 'text-yellow-600',
-                'stitching'  => 'text-orange-500',
-                'dispatched' => 'text-[#30D158]',
+                'received'             => 'text-blue-600',
+                'confirmed'            => 'text-yellow-600',
+                'stitching'            => 'text-orange-500',
+                'partially_dispatched' => 'text-purple-600',
+                'dispatched'           => 'text-[#30D158]',
             ];
         @endphp
-        <p class="{{ $statusColors[$order->status] ?? 'text-[#1D1D1F]' }} text-2xl font-light capitalize">
-            {{ $order->status }}
+        <p class="{{ $statusColors[$order->status] ?? 'text-[#1D1D1F]' }} text-2xl font-light">
+            {{ $statusLabel[$order->status] ?? ucfirst($order->status) }}
         </p>
     </div>
     <div class="stat-card">

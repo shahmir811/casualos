@@ -44,8 +44,24 @@
                 <td>{{ $order->catalogue->name ?? '—' }}</td>
                 <td class="text-right">PKR {{ lacs_format($order->total_amount, 0) }}</td>
                 <td>
-                    <span class="badge {{ $order->status === 'stitching' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700' }}">
-                        {{ ucfirst($order->status) }}
+                    @php
+                        $prodStatusBadge = [
+                            'received'             => 'bg-blue-100 text-blue-700',
+                            'confirmed'            => 'bg-yellow-100 text-yellow-700',
+                            'stitching'            => 'bg-orange-100 text-orange-700',
+                            'partially_dispatched' => 'bg-purple-100 text-purple-700',
+                            'dispatched'           => 'bg-green-100 text-green-700',
+                        ];
+                        $prodStatusLabel = [
+                            'received'             => 'Received',
+                            'confirmed'            => 'Confirmed',
+                            'stitching'            => 'Stitching',
+                            'partially_dispatched' => 'Partially Dispatched',
+                            'dispatched'           => 'Dispatched',
+                        ];
+                    @endphp
+                    <span class="badge {{ $prodStatusBadge[$order->status] ?? 'bg-[#F5F5F7] text-[#6E6E73]' }}">
+                        {{ $prodStatusLabel[$order->status] ?? ucfirst($order->status) }}
                     </span>
                 </td>
                 <td class="text-[#6E6E73] text-xs">{{ $order->updated_at->format('d M Y') }}</td>

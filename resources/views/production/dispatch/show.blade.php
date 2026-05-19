@@ -58,7 +58,25 @@
             </div>
             <div>
                 <p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Status</p>
-                <span class="badge bg-orange-100 text-orange-700">{{ $order->status }}</span>
+                @php
+                    $dispatchStatusBadge = [
+                        'received'             => 'badge bg-blue-100 text-blue-700',
+                        'confirmed'            => 'badge bg-yellow-100 text-yellow-700',
+                        'stitching'            => 'badge bg-orange-100 text-orange-700',
+                        'partially_dispatched' => 'badge bg-purple-100 text-purple-700',
+                        'dispatched'           => 'badge bg-green-100 text-green-700',
+                    ];
+                    $dispatchStatusLabel = [
+                        'received'             => 'Received',
+                        'confirmed'            => 'Confirmed',
+                        'stitching'            => 'Stitching',
+                        'partially_dispatched' => 'Partially Dispatched',
+                        'dispatched'           => 'Dispatched',
+                    ];
+                @endphp
+                <span class="{{ $dispatchStatusBadge[$order->status] ?? 'badge bg-[#F5F5F7] text-[#6E6E73]' }}">
+                    {{ $dispatchStatusLabel[$order->status] ?? ucfirst($order->status) }}
+                </span>
             </div>
         </div>
 

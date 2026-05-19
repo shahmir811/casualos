@@ -53,16 +53,18 @@
     $advance          = $customer->advance_credit_balance ?? 0;
 
     $statusLabels = [
-        'received'   => 'Order Received',
-        'confirmed'  => 'Order Confirmed',
-        'stitching'  => 'Being Stitched',
-        'dispatched' => 'Dispatched',
+        'received'             => 'Order Received',
+        'confirmed'            => 'Order Confirmed',
+        'stitching'            => 'Being Stitched',
+        'partially_dispatched' => 'Partially Dispatched',
+        'dispatched'           => 'Dispatched',
     ];
     $badgeMap = [
-        'received'   => 'bg-blue-100 text-blue-700',
-        'confirmed'  => 'bg-yellow-100 text-yellow-700',
-        'stitching'  => 'bg-orange-100 text-orange-700',
-        'dispatched' => 'bg-green-100 text-green-700',
+        'received'             => 'bg-blue-100 text-blue-700',
+        'confirmed'            => 'bg-yellow-100 text-yellow-700',
+        'stitching'            => 'bg-orange-100 text-orange-700',
+        'partially_dispatched' => 'bg-purple-100 text-purple-700',
+        'dispatched'           => 'bg-green-100 text-green-700',
     ];
     $activityLabels = [
         'order_charged'      => 'Order Placed',

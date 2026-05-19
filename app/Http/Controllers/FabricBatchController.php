@@ -108,7 +108,7 @@ class FabricBatchController extends Controller
             ]);
         }
 
-        // Auto-transition all confirmed orders for this catalogue → stitching
+        // Auto-transition confirmed orders → stitching; skip partially_dispatched (already in dispatch flow)
         \App\Models\Order::where('catalogue_id', $validated['catalogue_id'])   // Order not imported — using FQCN intentionally
             ->where('status', 'confirmed')
             ->update(['status' => 'stitching']);

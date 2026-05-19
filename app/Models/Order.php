@@ -49,10 +49,11 @@ class Order extends Model
     }
 
     // Status helpers
-    public function isReceived(): bool   { return $this->status === 'received'; }
-    public function isConfirmed(): bool  { return $this->status === 'confirmed'; }
-    public function isStitching(): bool  { return $this->status === 'stitching'; }
-    public function isDispatched(): bool { return $this->status === 'dispatched'; }
+    public function isReceived(): bool            { return $this->status === 'received'; }
+    public function isConfirmed(): bool           { return $this->status === 'confirmed'; }
+    public function isStitching(): bool           { return $this->status === 'stitching'; }
+    public function isDispatched(): bool          { return $this->status === 'dispatched'; }
+    public function isPartiallyDispatched(): bool { return $this->status === 'partially_dispatched'; }
     public function isFlagged(): bool    { return $this->is_flagged; }
 
     public function canBeDispatched(): bool
