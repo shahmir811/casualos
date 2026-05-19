@@ -39,17 +39,25 @@
                 @foreach($customer->orders as $order)
                 @php
                     $statusColor = [
-                        'received'   => 'bg-blue-100 text-blue-700',
-                        'confirmed'  => 'bg-yellow-100 text-yellow-700',
-                        'stitching'  => 'bg-orange-100 text-orange-700',
-                        'dispatched' => 'bg-green-100 text-green-700',
+                        'received'             => 'bg-blue-100 text-blue-700',
+                        'confirmed'            => 'bg-yellow-100 text-yellow-700',
+                        'stitching'            => 'bg-orange-100 text-orange-700',
+                        'partially_dispatched' => 'bg-purple-100 text-purple-700',
+                        'dispatched'           => 'bg-green-100 text-green-700',
+                    ];
+                    $statusLabel = [
+                        'received'             => 'Received',
+                        'confirmed'            => 'Confirmed',
+                        'stitching'            => 'Stitching',
+                        'partially_dispatched' => 'Partially Dispatched',
+                        'dispatched'           => 'Dispatched',
                     ];
                 @endphp
                 <tr>
                     <td><a href="{{ route('orders.show', $order) }}" class="font-medium text-[#0066CC] hover:underline">#{{ $order->order_number }}</a></td>
                     <td class="text-[#6E6E73]">{{ $order->catalogue->name ?? '—' }}</td>
                     <td class="text-right font-medium">PKR {{ lacs_format($order->total_amount, 0) }}</td>
-                    <td><span class="badge {{ $statusColor[$order->status] ?? 'bg-[#F5F5F7] text-[#6E6E73]' }}">{{ ucfirst($order->status) }}</span></td>
+                    <td><span class="badge {{ $statusColor[$order->status] ?? 'bg-[#F5F5F7] text-[#6E6E73]' }}">{{ $statusLabel[$order->status] ?? ucfirst($order->status) }}</span></td>
                     <td class="text-[#6E6E73] text-xs">{{ $order->created_at->format('d M Y') }}</td>
                 </tr>
                 @endforeach

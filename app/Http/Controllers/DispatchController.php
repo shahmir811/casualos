@@ -19,8 +19,7 @@ class DispatchController extends Controller
         $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: null;
         $search = trim($request->input('search', ''));
 
-        $orders = Order::where('status', 'stitching')
-            ->with(['customer', 'catalogue', 'items', 'dispatchBatches.items'])
+        $orders = Order::with(['customer', 'catalogue', 'items', 'dispatchBatches.items'])
             ->when($selectedCatalogueId, fn($q) => $q->where('catalogue_id', $selectedCatalogueId))
             ->when($search, fn($q) => $q->whereHas('customer', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
             ->latest()
@@ -279,11 +278,13 @@ class DispatchController extends Controller
                 }
             }
 
-            // Only mark dispatched when all ordered quantities have been sent
+            // Update order status based on dispatch completeness
             $order->refresh();
             $order->load('items');
             if ($order->isFullyDispatched()) {
                 $order->update(['status' => 'dispatched']);
+            } else {
+                $order->update(['status' => 'partially_dispatched']);
             }
         });
 
