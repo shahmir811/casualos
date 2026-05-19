@@ -115,7 +115,7 @@ named `order.public` — **not** `order.show`.
 | Status                 | How it's set                                                                              |
 | ---------------------- | ----------------------------------------------------------------------------------------- |
 | `received`             | Automatically when customer submits the form                                              |
-| `confirmed`            | Accountant logs a payment or applies advance credit                                       |
+| `confirmed`            | **Auto** when first payment is recorded or advance credit is applied — also settable manually via the Confirm button on the order page (for zero-payment confirmations) |
 | `stitching`            | **Automatically** when a fabric batch is recorded for the catalogue                       |
 | `partially_dispatched` | Automatically when at least one dispatch batch is recorded but order is not fully shipped |
 | `dispatched`           | Automatically when ALL ordered quantities are dispatched (`isFullyDispatched()` = true)   |
@@ -512,6 +512,7 @@ returns that cause discrepancies — it flags them for review.
 - Packed inventory tracker (sourced from `press_return_items`)
 - Outsourced batch arrivals
 - Dispatch management (create batches)
+- **Auto-confirm on payment** — `PaymentController::store()` and `PaymentController::applyCredit()` both auto-transition order status from `received` → `confirmed` when the first payment or credit is applied. Manual Confirm button on the order page remains for zero-payment confirmations.
 - **`partially_dispatched` order status** — added 2026-05-19; migration `2026_05_19_000001`; `DispatchController::store()` sets `partially_dispatched` on partial dispatch and `dispatched` only when `isFullyDispatched()` returns true; "Dispatch Again" button hidden on dispatch show page when status is `dispatched`; status badge (purple) added to all views: orders index, orders show, dispatch show, customer portal, customer-orders report, production-status report
 - **Orders page catalogue filter** — removed standalone catalogue dropdown; page now reads `session('active_catalogue_id')` directly (same pattern as all production/report controllers); catalogue is always driven by the sidebar selector
 - **Worker wages** — rate is now sourced from `stitching_units.per_piece_rate` (not catalogue); wage form has a unit selector that auto-populates the rate; `wages.stitching_unit_id` FK added
