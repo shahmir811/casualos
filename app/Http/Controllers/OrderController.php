@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\PaymentSheetExport;
 use App\Models\Order;
 use App\Models\Catalogue;
 use App\Models\BankAccount;
@@ -18,8 +19,8 @@ class OrderController extends Controller
         $query = Order::with(['customer', 'catalogue', 'items'])
             ->latest('submitted_at');
 
-        // Filter by catalogue
-        $selectedCatalogueId = $request->input('catalogue_id');
+        // Always filter by the sidebar-selected catalogue
+        $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: null;
         if ($selectedCatalogueId) {
             $query->where('catalogue_id', $selectedCatalogueId);
         }
@@ -37,7 +38,7 @@ class OrderController extends Controller
             });
         }
 
-        // When filtering by catalogue, load all (no pagination) — mirrors the PDF sheet
+        // When a catalogue is selected, load all (no pagination) — mirrors the PDF sheet
         $orders = $selectedCatalogueId
             ? $query->get()
             : $query->paginate(50);
@@ -121,9 +122,8 @@ class OrderController extends Controller
 
     public function downloadPdf(Request $request)
     {
-        $request->validate(['catalogue_id' => 'required|exists:catalogues,id']);
-
-        $catalogue = Catalogue::findOrFail($request->catalogue_id);
+        $catalogueId = (int) session('active_catalogue_id');
+        $catalogue   = Catalogue::findOrFail($catalogueId);
 
         $orders = Order::with(['customer', 'items', 'payments.bankAccount'])
             ->where('catalogue_id', $catalogue->id)
@@ -135,9 +135,26 @@ class OrderController extends Controller
         $pdf = Pdf::loadView('orders.pdf', compact('orders', 'catalogue', 'bankAccounts'))
             ->setPaper('a3', 'landscape');
 
-        $filename = strtolower(str_replace([' ', '/'], '-', $catalogue->name)) . '-payments.pdf';
+        $filename = str($catalogue->name)->slug() . '-payments.pdf';
 
         return $pdf->download($filename);
+    }
+
+    public function downloadExcel(Request $request)
+    {
+        $catalogueId = (int) session('active_catalogue_id');
+        $catalogue   = Catalogue::findOrFail($catalogueId);
+
+        $orders = Order::with(['customer', 'items', 'payments.bankAccount'])
+            ->where('catalogue_id', $catalogue->id)
+            ->orderBy('submitted_at')
+            ->get();
+
+        $bankAccounts = BankAccount::orderBy('id')->get();
+
+        $filename = str($catalogue->name)->slug() . '-payments.xlsx';
+
+        return (new PaymentSheetExport($orders, $catalogue, $bankAccounts))->download($filename);
     }
 
     public function markStitching(Order $order)

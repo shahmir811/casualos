@@ -18,32 +18,29 @@
         </p>
     </div>
     @if($selectedCatalogue)
-    <a href="{{ route('orders.pdf', ['catalogue_id' => $selectedCatalogueId]) }}"
-       class="btn-secondary flex-shrink-0 flex items-center gap-1.5 text-sm"
-       target="_blank">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-        </svg>
-        Download Payment Sheet
-    </a>
+    <div class="flex items-center gap-2 flex-shrink-0">
+        <a href="{{ route('orders.excel') }}"
+           class="btn-secondary flex items-center gap-1.5 text-sm"
+           target="_blank">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Excel
+        </a>
+        <a href="{{ route('orders.pdf') }}"
+           class="btn-secondary flex items-center gap-1.5 text-sm"
+           target="_blank">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Download Payment Sheet
+        </a>
+    </div>
     @endif
 </div>
 
 {{-- ===== FILTERS ===== --}}
 <form method="GET" class="flex flex-wrap items-end gap-3 mb-6">
-    <div>
-        <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-wide mb-1">Catalogue</label>
-        <select name="catalogue_id" class="apple-input" style="min-width:200px;"
-                onchange="this.form.submit()">
-            <option value="">All Catalogues</option>
-            @foreach($catalogues as $cat)
-                <option value="{{ $cat->id }}"
-                    {{ $selectedCatalogueId == $cat->id ? 'selected' : '' }}>
-                    {{ $cat->name }}
-                </option>
-            @endforeach
-        </select>
-    </div>
     <div>
         <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-wide mb-1">Status</label>
         <select name="status" class="apple-input" style="min-width:160px;">
@@ -62,7 +59,7 @@
                class="apple-input" style="min-width:220px;">
     </div>
     <button type="submit" class="btn-primary self-end">Apply</button>
-    @if(request()->hasAny(['catalogue_id', 'status', 'search']))
+    @if(request()->hasAny(['status', 'search']))
         <a href="{{ route('orders.index') }}" class="text-[#0066CC] text-sm hover:underline self-end pb-2">Clear</a>
     @endif
 </form>
