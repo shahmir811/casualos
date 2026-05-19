@@ -64,12 +64,78 @@
     @endif
 </form>
 
-{{-- ===== MAIN CONTENT: table + summary panel ===== --}}
-<div class="flex gap-5 items-start">
+{{-- ===== SUMMARY STRIP (shown only when a catalogue is selected) ===== --}}
+@if($selectedCatalogue)
+@php
+    $qtyPerDesign = $selectedCatalogue->qty_per_design;
+    $totalOrdered = $summary['total_pieces'];
+    $remaining    = $qtyPerDesign - $totalOrdered;
+    $pct          = $qtyPerDesign > 0 ? min(100, round($totalOrdered / $qtyPerDesign * 100)) : 0;
+@endphp
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
 
-    {{-- ===== ORDER TABLE ===== --}}
-    <div class="flex-1 min-w-0">
-        <div class="card overflow-hidden">
+    {{-- Size totals --}}
+    <div class="card p-4">
+        <p class="text-[10px] font-bold text-[#86868B] uppercase tracking-widest mb-3">Size Totals</p>
+        <div class="grid grid-cols-3 gap-x-3 gap-y-2">
+            @foreach(['XS' => $summary['xs'], 'S' => $summary['s'], 'M' => $summary['m'], 'L' => $summary['l'], 'XL' => $summary['xl']] as $size => $qty)
+            <div>
+                <p class="text-[10px] text-[#86868B]">{{ $size }}</p>
+                <p class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ lacs_format($qty) }}</p>
+            </div>
+            @endforeach
+            <div>
+                <p class="text-[10px] font-bold text-[#1D1D1F]">Total</p>
+                <p class="text-sm font-bold text-[#1D1D1F] tabular-nums">{{ lacs_format($totalOrdered) }}</p>
+            </div>
+        </div>
+    </div>
+
+    {{-- Production --}}
+    <div class="card p-4">
+        <p class="text-[10px] font-bold text-[#86868B] uppercase tracking-widest mb-3">Production</p>
+        <div class="space-y-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs text-[#6E6E73]">Per Design Qty</span>
+                <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ lacs_format($qtyPerDesign) }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-xs text-[#6E6E73]">Ordered per design</span>
+                <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ lacs_format($totalOrdered) }}</span>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-[#F2F2F7]">
+                <span class="text-xs font-bold text-[#1D1D1F]">Left</span>
+                <span class="text-sm font-bold tabular-nums {{ $remaining < 0 ? 'text-[#FF3B30]' : 'text-[#34C759]' }}">
+                    {{ $remaining >= 0 ? '+' : '' }}{{ lacs_format($remaining) }}
+                </span>
+            </div>
+        </div>
+        <div class="mt-3">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-[10px] text-[#86868B]">Ordered</span>
+                <span class="text-[10px] font-semibold {{ $pct >= 100 ? 'text-[#FF3B30]' : 'text-[#0071E3]' }}">{{ $pct }}%</span>
+            </div>
+            <div class="h-1.5 rounded-full bg-[#F2F2F7] overflow-hidden">
+                <div class="h-full rounded-full {{ $pct >= 100 ? 'bg-[#FF3B30]' : 'bg-[#0071E3]' }}" style="width:{{ $pct }}%"></div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Revenue --}}
+    <div class="card p-4">
+        <p class="text-[10px] font-bold text-[#86868B] uppercase tracking-widest mb-1">Total Revenue</p>
+        <p class="text-2xl font-semibold text-[#1D1D1F] tabular-nums leading-tight mt-2">
+            PKR {{ lacs_format($summary['total_bill'], 0) }}
+        </p>
+        <p class="text-xs text-[#86868B] mt-1">{{ ($orders instanceof \Illuminate\Pagination\LengthAwarePaginator ? $orders->total() : $orders->count()) }} orders</p>
+    </div>
+
+</div>
+@endif
+
+{{-- ===== ORDER TABLE ===== --}}
+<div>
+    <div class="card overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full apple-table whitespace-nowrap">
                     <thead>
@@ -217,80 +283,6 @@
         @if($orders instanceof \Illuminate\Pagination\LengthAwarePaginator)
         <div class="mt-4">{{ $orders->appends(request()->query())->links() }}</div>
         @endif
-    </div>
-
-    {{-- ===== SUMMARY PANEL (shown only when a catalogue is selected) ===== --}}
-    @if($selectedCatalogue)
-    @php
-        $qtyPerDesign         = $selectedCatalogue->qty_per_design;
-        $totalOrdered         = $summary['total_pieces'];   // suits ordered (per-design unit)
-        $remaining            = $qtyPerDesign - $totalOrdered;
-        $pct                  = $qtyPerDesign > 0 ? min(100, round($totalOrdered / $qtyPerDesign * 100)) : 0;
-    @endphp
-    <div class="flex-shrink-0 w-52 space-y-3">
-
-        {{-- Size totals --}}
-        <div class="card p-4">
-            <p class="text-[10px] font-bold text-[#86868B] uppercase tracking-widest mb-3">Size Totals</p>
-            <div class="space-y-2.5">
-                @foreach(['XS' => $summary['xs'], 'S' => $summary['s'], 'M' => $summary['m'], 'L' => $summary['l'], 'XL' => $summary['xl']] as $size => $qty)
-                <div class="flex items-center justify-between">
-                    <span class="text-xs text-[#6E6E73]">Total {{ $size }}</span>
-                    <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ lacs_format($qty) }}</span>
-                </div>
-                @endforeach
-                <div class="pt-2 mt-1 border-t border-[#F2F2F7] flex items-center justify-between">
-                    <span class="text-xs font-bold text-[#1D1D1F]">Total</span>
-                    <span class="text-sm font-bold text-[#1D1D1F] tabular-nums">{{ lacs_format($totalOrdered) }}</span>
-                </div>
-            </div>
-        </div>
-
-        {{-- Production vs ordered --}}
-        <div class="card p-4">
-            <p class="text-[10px] font-bold text-[#86868B] uppercase tracking-widest mb-3">Production</p>
-            <div class="space-y-2.5">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs text-[#6E6E73]">Per Design Qty</span>
-                    <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ lacs_format($qtyPerDesign) }}</span>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-xs text-[#6E6E73]">Ordered per design</span>
-                    <span class="text-sm font-semibold text-[#1D1D1F] tabular-nums">{{ lacs_format($totalOrdered) }}</span>
-                </div>
-                <div class="pt-2 mt-1 border-t border-[#F2F2F7] flex items-center justify-between">
-                    <span class="text-xs font-bold text-[#1D1D1F]">Left</span>
-                    <span class="text-sm font-bold tabular-nums {{ $remaining < 0 ? 'text-[#FF3B30]' : 'text-[#34C759]' }}">
-                        {{ $remaining >= 0 ? '+' : '' }}{{ lacs_format($remaining) }}
-                    </span>
-                </div>
-            </div>
-
-            {{-- Fill progress bar --}}
-            <div class="mt-3">
-                <div class="flex justify-between items-center mb-1">
-                    <span class="text-[10px] text-[#86868B]">Ordered</span>
-                    <span class="text-[10px] font-semibold {{ $pct >= 100 ? 'text-[#FF3B30]' : 'text-[#0071E3]' }}">{{ $pct }}%</span>
-                </div>
-                <div class="h-1.5 rounded-full bg-[#F2F2F7] overflow-hidden">
-                    <div class="h-full rounded-full transition-all {{ $pct >= 100 ? 'bg-[#FF3B30]' : 'bg-[#0071E3]' }}"
-                         style="width:{{ $pct }}%"></div>
-                </div>
-            </div>
-        </div>
-
-        {{-- Revenue --}}
-        <div class="card p-4">
-            <p class="text-[10px] font-bold text-[#86868B] uppercase tracking-widest mb-1">Total Revenue</p>
-            <p class="text-lg font-semibold text-[#1D1D1F] tabular-nums leading-tight">
-                PKR {{ lacs_format($summary['total_bill'], 0) }}
-            </p>
-            <p class="text-xs text-[#86868B] mt-0.5">{{ count($orderList) }} orders</p>
-        </div>
-
-    </div>
-    @endif
-
 </div>
 
 @endsection
