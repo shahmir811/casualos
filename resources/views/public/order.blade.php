@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $catalogue->name }} — Casualite Booking Form</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    {{-- Open Graph tags for WhatsApp / social link previews --}}
+    <meta property="og:type"        content="website">
+    <meta property="og:url"         content="{{ url()->current() }}">
+    <meta property="og:title"       content="{{ $catalogue->name }} — Casualite Booking Form">
+    <meta property="og:description" content="Place your order for the {{ $catalogue->name }} catalogue.">
+    @if ($catalogue->cover_photo)
+    <meta property="og:image"       content="{{ Storage::url($catalogue->cover_photo) }}">
+    <meta property="og:image:width"  content="1200">
+    <meta property="og:image:height" content="630">
+    @endif
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
