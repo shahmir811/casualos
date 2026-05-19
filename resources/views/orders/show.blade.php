@@ -40,12 +40,16 @@
 
     <div class="flex flex-wrap items-center gap-2.5">
         @if($order->status === 'received')
-        <form method="POST" action="{{ route('orders.confirm', $order) }}">
-            @csrf
-            <button type="submit" onclick="return confirm('Confirm this order?')" class="btn-primary">
-                Confirm Order
-            </button>
-        </form>
+        <form id="form-confirm-order" method="POST" action="{{ route('orders.confirm', $order) }}">@csrf</form>
+        <button type="button" class="btn-primary"
+                @click="$store.confirm.show({
+                    title: 'Confirm Order',
+                    message: 'Confirm order {{ $order->order_number }} for {{ $order->customer->name }}? Status will change to Confirmed.',
+                    formId: 'form-confirm-order',
+                    confirmText: 'Confirm Order'
+                })">
+            Confirm Order
+        </button>
         @endif
 
         @if($order->status === 'confirmed' && in_array(Auth::user()->role, ['admin', 'production_manager']))

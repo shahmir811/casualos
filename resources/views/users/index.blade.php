@@ -56,13 +56,18 @@
                 <td>
                     <div class="flex items-center gap-4">
                         @if($user->is_active)
-                        <form method="POST" action="{{ route('users.disable', $user) }}">
-                            @csrf
-                            <button type="submit" onclick="return confirm('Disable {{ $user->name }}\'s account?')"
-                                class="text-[#FF3B30] text-xs font-medium hover:underline">
-                                Disable
-                            </button>
-                        </form>
+                        <form id="form-disable-{{ $user->id }}" method="POST" action="{{ route('users.disable', $user) }}">@csrf</form>
+                        <button type="button"
+                                class="text-[#FF3B30] text-xs font-medium hover:underline"
+                                @click="$store.confirm.show({
+                                    title: 'Disable Account',
+                                    message: `Disable {{ $user->name }}'s account? They will not be able to log in until re-enabled.`,
+                                    formId: 'form-disable-{{ $user->id }}',
+                                    confirmText: 'Disable',
+                                    danger: true
+                                })">
+                            Disable
+                        </button>
                         @else
                         <form method="POST" action="{{ route('users.enable', $user) }}">
                             @csrf

@@ -26,13 +26,17 @@
         </a>
 
         @if($catalogue->status === 'open')
-        <form method="POST" action="{{ route('catalogues.close', $catalogue) }}">
-            @csrf
-            <button type="submit" onclick="return confirm('Close this catalogue? It will no longer accept orders.')"
-                class="btn-secondary" style="color:#FF9500; border-color:#FFCDD0;">
-                Close Catalogue
-            </button>
-        </form>
+        <form id="form-close-catalogue" method="POST" action="{{ route('catalogues.close', $catalogue) }}">@csrf</form>
+        <button type="button" class="btn-secondary" style="color:#FF9500; border-color:#FFCDD0;"
+                @click="$store.confirm.show({
+                    title: 'Close Catalogue',
+                    message: '{{ $catalogue->name }} will no longer accept new orders. You can reopen it at any time.',
+                    formId: 'form-close-catalogue',
+                    confirmText: 'Close Catalogue',
+                    danger: true
+                })">
+            Close Catalogue
+        </button>
         @else
         <form method="POST" action="{{ route('catalogues.reopen', $catalogue) }}">
             @csrf
@@ -171,13 +175,19 @@
             <div class="flex items-center gap-3 mt-3 pt-3 border-t border-[#F2F2F7]">
                 <a href="{{ route('designs.edit', $design) }}" class="text-[#0066CC] text-xs hover:underline">Edit</a>
                 @if(Auth::user()->role === 'admin')
-                <form method="POST" action="{{ route('designs.destroy', $design) }}" class="inline">
+                <form id="form-delete-design-{{ $design->id }}" method="POST" action="{{ route('designs.destroy', $design) }}">
                     @csrf @method('DELETE')
-                    <button type="submit" onclick="return confirm('Delete this design?')"
-                        class="text-[#FF3B30] text-xs hover:underline">
-                        Delete
-                    </button>
                 </form>
+                <button type="button" class="text-[#FF3B30] text-xs hover:underline"
+                        @click="$store.confirm.show({
+                            title: 'Delete Design',
+                            message: `Permanently delete {{ $design->name }}? This cannot be undone.`,
+                            formId: 'form-delete-design-{{ $design->id }}',
+                            confirmText: 'Delete',
+                            danger: true
+                        })">
+                    Delete
+                </button>
                 @endif
             </div>
             @endif

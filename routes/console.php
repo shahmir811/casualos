@@ -26,3 +26,10 @@ Schedule::command('backup:database --prune=30')
     ->everySixHours()
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/backup.log'));
+
+// Auto-calculate weekly wages every Friday at 23:45
+// Sums kameez returned per catalogue per stitching unit for the Saturday→Friday window.
+Schedule::command('wages:calculate-weekly')
+    ->weeklyOn(5, '23:45')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/wages.log'));

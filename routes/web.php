@@ -150,10 +150,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('dispatch/{order}',                [DispatchController::class, 'store'])->name('dispatch.store');
 
         // Worker wages
-        Route::get('wages',          [WagesController::class, 'index'])->name('wages.index');
-        Route::get('wages/create',   [WagesController::class, 'create'])->name('wages.create');
-        Route::post('wages',         [WagesController::class, 'store'])->name('wages.store');
-        Route::post('wages/{wage}/confirm', [WagesController::class, 'confirm'])->name('wages.confirm');
+        Route::get('wages',                    [WagesController::class, 'index'])->name('wages.index');
+        Route::get('wages/{wage}',             [WagesController::class, 'show'])->name('wages.show');
+        Route::post('wages/recalculate',       [WagesController::class, 'recalculate'])->name('wages.recalculate');
+        Route::post('wages/{wage}/confirm',    [WagesController::class, 'confirm'])->name('wages.confirm');
     });
 
     // Packed Inventory (manager + admin)

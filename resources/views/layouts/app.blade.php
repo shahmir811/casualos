@@ -6,6 +6,38 @@
     <title>@yield('title', 'Dashboard') — Casualite</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
+    {{-- Confirmation modal store — must be registered before Alpine initialises --}}
+    <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('confirm', {
+            open: false,
+            title: '',
+            message: '',
+            confirmText: 'Confirm',
+            danger: false,
+            _form: null,
+
+            show({ title, message, formId, confirmText = 'Confirm', danger = false }) {
+                this.title       = title;
+                this.message     = message;
+                this.confirmText = confirmText;
+                this.danger      = danger;
+                this._form       = document.getElementById(formId);
+                this.open        = true;
+            },
+
+            proceed() {
+                this.open = false;
+                if (this._form) this._form.submit();
+            },
+
+            cancel() {
+                this.open  = false;
+                this._form = null;
+            }
+        });
+    });
+    </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @stack('styles')
     <style>
@@ -142,7 +174,14 @@
             font-size: 0.875rem;
             border: 1px solid #E8E8ED;
         }
-        .apple-table tfoot td { border: 1px solid #D2D2D7; }
+        .apple-table tfoot td {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1D1D1F;
+            background: #F5F5F7;
+            border: 1px solid #D2D2D7;
+        }
 
         /* Badge */
         .badge {
@@ -498,6 +537,73 @@
             @yield('content')
         </main>
 
+    </div>
+</div>
+
+{{-- ===================== GLOBAL CONFIRMATION MODAL ===================== --}}
+<div x-data
+     x-show="$store.confirm.open"
+     x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center p-4"
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0">
+
+    {{-- Backdrop --}}
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"
+         @click="$store.confirm.cancel()"></div>
+
+    {{-- Card --}}
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 z-10"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95"
+         @click.stop>
+
+        {{-- Icon --}}
+        <div class="mb-4">
+            <template x-if="$store.confirm.danger">
+                <div class="w-11 h-11 rounded-full bg-[#FFF0EF] flex items-center justify-center">
+                    <svg class="w-5 h-5 text-[#FF3B30]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+            </template>
+            <template x-if="!$store.confirm.danger">
+                <div class="w-11 h-11 rounded-full bg-[#EBF4FF] flex items-center justify-center">
+                    <svg class="w-5 h-5 text-[#0071E3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+            </template>
+        </div>
+
+        {{-- Text --}}
+        <h3 x-text="$store.confirm.title"
+            class="text-base font-semibold text-[#1D1D1F] mb-1.5"></h3>
+        <p x-text="$store.confirm.message"
+           class="text-sm text-[#6E6E73] leading-relaxed mb-6"></p>
+
+        {{-- Actions --}}
+        <div class="flex gap-3">
+            <button type="button"
+                    @click="$store.confirm.cancel()"
+                    class="btn-secondary flex-1 justify-center">
+                Cancel
+            </button>
+            <button type="button"
+                    @click="$store.confirm.proceed()"
+                    :class="$store.confirm.danger ? 'btn-danger' : 'btn-primary'"
+                    class="flex-1 justify-center"
+                    x-text="$store.confirm.confirmText">
+            </button>
+        </div>
     </div>
 </div>
 

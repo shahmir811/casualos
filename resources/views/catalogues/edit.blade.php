@@ -103,13 +103,19 @@
             </a>
 
             @if(!$catalogue->orders()->exists())
-            <form method="POST" action="{{ route('catalogues.destroy', $catalogue) }}" class="ml-auto">
+            <form id="form-delete-catalogue" method="POST" action="{{ route('catalogues.destroy', $catalogue) }}" class="ml-auto">
                 @csrf @method('DELETE')
-                <button type="submit" onclick="return confirm('Permanently delete this catalogue and all its designs?')"
-                    class="btn-danger">
-                    Delete Catalogue
-                </button>
             </form>
+            <button type="button" class="btn-danger ml-auto"
+                    @click="$store.confirm.show({
+                        title: 'Delete Catalogue',
+                        message: 'Permanently delete {{ $catalogue->name }} and all its designs? This cannot be undone.',
+                        formId: 'form-delete-catalogue',
+                        confirmText: 'Delete Permanently',
+                        danger: true
+                    })">
+                Delete Catalogue
+            </button>
             @endif
         </div>
     </form>

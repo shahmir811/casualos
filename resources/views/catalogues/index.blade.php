@@ -78,13 +78,18 @@
                 Edit
             </a>
             @if($catalogue->status === 'open')
-            <form method="POST" action="{{ route('catalogues.close', $catalogue) }}" class="inline">
-                @csrf
-                <button type="submit" onclick="return confirm('Close this catalogue? No new orders will be accepted.')"
-                    class="text-[#FF9500] text-xs font-medium hover:text-[#FF6D00] transition-colors">
-                    Close
-                </button>
-            </form>
+            <form id="form-close-cat-{{ $catalogue->id }}" method="POST" action="{{ route('catalogues.close', $catalogue) }}">@csrf</form>
+            <button type="button"
+                    class="text-[#FF9500] text-xs font-medium hover:text-[#FF6D00] transition-colors"
+                    @click="$store.confirm.show({
+                        title: 'Close Catalogue',
+                        message: `Close {{ $catalogue->name }}? No new orders will be accepted until it is reopened.`,
+                        formId: 'form-close-cat-{{ $catalogue->id }}',
+                        confirmText: 'Close Catalogue',
+                        danger: true
+                    })">
+                Close
+            </button>
             @else
             <form method="POST" action="{{ route('catalogues.reopen', $catalogue) }}" class="inline">
                 @csrf
