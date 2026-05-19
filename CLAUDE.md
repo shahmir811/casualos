@@ -110,18 +110,25 @@ When sold out, the order link shows a sold-out screen. No form is rendered. Any 
 attempt is also rejected by the controller guard. The route for the order form GET is
 named `order.public` — **not** `order.show`.
 
-### Order Statuses (4 only — exact enum values)
+### Order Statuses (5 — exact enum values)
 
-| Status       | How it's set                                                                    |
-| ------------ | ------------------------------------------------------------------------------- |
-| `received`   | Automatically when customer submits the form                                    |
-| `confirmed`  | Accountant logs a payment or applies advance credit                             |
-| `stitching`  | **Automatically** when a fabric batch is recorded for the catalogue             |
-| `dispatched` | Production Manager dispatches the order (only when `outstanding_balance = 0`)   |
+| Status                 | How it's set                                                                              |
+| ---------------------- | ----------------------------------------------------------------------------------------- |
+| `received`             | Automatically when customer submits the form                                              |
+| `confirmed`            | Accountant logs a payment or applies advance credit                                       |
+| `stitching`            | **Automatically** when a fabric batch is recorded for the catalogue                       |
+| `partially_dispatched` | Automatically when at least one dispatch batch is recorded but order is not fully shipped |
+| `dispatched`           | Automatically when ALL ordered quantities are dispatched (`isFullyDispatched()` = true)   |
 
 **The `stitching` status is automatic, not a manual button.** When a FabricBatch is
 created for a catalogue, all `confirmed` orders for that catalogue must auto-transition
 to `stitching`.
+
+**`partially_dispatched` vs `dispatched`:** Every dispatch batch sets the status to
+`partially_dispatched` first. Only when `$order->isFullyDispatched()` returns `true`
+does the status advance to `dispatched`. The "Dispatch Again" button on the dispatch
+show page is hidden when status is `dispatched`. Customer portal labels this status
+as "Partially Dispatched".
 
 ---
 
@@ -164,7 +171,7 @@ financial or order data.
 ### `orders.status`
 
 ```
-received | confirmed | stitching | dispatched
+received | confirmed | stitching | partially_dispatched | dispatched
 ```
 
 ### `customer_ledger.transaction_type`
@@ -315,10 +322,21 @@ only as an admin override.
 
 ### 5.9 Batch-Wise Dispatch — Order Status Logic
 
-Each dispatch is a **batch**, not necessarily the whole order. The order status only
-changes to `dispatched` when ALL ordered quantities have been dispatched across all
-batches. Use `$order->isFullyDispatched()` (already implemented in Order model) to
-determine this. Never mark an order `dispatched` unless that method returns `true`.
+Each dispatch is a **batch**, not necessarily the whole order. After saving each batch:
+
+```php
+if ($order->isFullyDispatched()) {
+    $order->update(['status' => 'dispatched']);
+} else {
+    $order->update(['status' => 'partially_dispatched']);
+}
+```
+
+- `partially_dispatched` — at least one batch recorded, but quantities remain outstanding
+- `dispatched` — all ordered quantities shipped; `isFullyDispatched()` returns `true`
+
+Never mark an order `dispatched` unless `isFullyDispatched()` returns `true`. The
+"Dispatch Again" button on the dispatch show page must be hidden when status is `dispatched`.
 
 ### 5.10 Portal Access — Email Verification
 
@@ -494,6 +512,8 @@ returns that cause discrepancies — it flags them for review.
 - Packed inventory tracker (sourced from `press_return_items`)
 - Outsourced batch arrivals
 - Dispatch management (create batches)
+- **`partially_dispatched` order status** — added 2026-05-19; migration `2026_05_19_000001`; `DispatchController::store()` sets `partially_dispatched` on partial dispatch and `dispatched` only when `isFullyDispatched()` returns true; "Dispatch Again" button hidden on dispatch show page when status is `dispatched`; status badge (purple) added to all views: orders index, orders show, dispatch show, customer portal, customer-orders report, production-status report
+- **Orders page catalogue filter** — removed standalone catalogue dropdown; page now reads `session('active_catalogue_id')` directly (same pattern as all production/report controllers); catalogue is always driven by the sidebar selector
 - **Worker wages** — rate is now sourced from `stitching_units.per_piece_rate` (not catalogue); wage form has a unit selector that auto-populates the rate; `wages.stitching_unit_id` FK added
 - All 12 reports — payroll history report shows stitching unit per wage record
 - User management (create, enable, disable, password reset — admin only)
@@ -507,7 +527,7 @@ returns that cause discrepancies — it flags them for review.
 6. **Order status auto-transition to stitching** — ✅ Fixed: `FabricBatchController::store()` auto-transitions confirmed orders on fabric batch creation
 7. **Order reduction surplus logic** — three-case financial logic not implemented
 8. **`running_advance_balance` hardcoded to 0** in all ledger entries — must be actual customer balance
-9. **Dispatch order status** — order marked `dispatched` on every batch dispatch, should only be set when `isFullyDispatched()` returns true
+9. **Dispatch order status** — ✅ Fixed (2026-05-19): `partially_dispatched` status added; `DispatchController::store()` now sets `partially_dispatched` on partial dispatch and `dispatched` only when `isFullyDispatched()` returns true
 10. **Creative Head role dashboard restriction** — `creative_head` should not see financial/order/production data on dashboard
 
 ### All Migrations (run `php artisan migrate` after pulling)
@@ -527,6 +547,7 @@ All migrations have been run. No pending migrations. For reference, the full set
 - `2026_05_11_120000` — drops `press_pack_records` + `press_pack_record_items`; creates `press_sends`, `press_send_items`, `press_returns`, `press_return_items`
 - `2026_05_11_200000` — adds `in_house` to `tarpai_sends.tarpai_house` enum (valid values: `rashid_bhai`, `yousaf_bhai`, `in_house`)
 - `2026_05_18_110503` — renames `users.role` enum values: `manager` → `production_manager`, `designer` → `creative_head`; updates Spatie `roles` table records accordingly
+- `2026_05_19_000001` — adds `partially_dispatched` to `orders.status` enum (value sits between `stitching` and `dispatched`); applied to production via raw SQL on 2026-05-19
 
 ---
 
