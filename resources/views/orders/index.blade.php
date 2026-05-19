@@ -160,7 +160,7 @@
                             'received'             => 'badge bg-blue-50 text-blue-600',
                             'confirmed'            => 'badge bg-yellow-50 text-yellow-700',
                             'stitching'            => 'badge bg-orange-50 text-orange-700',
-                            'partially_dispatched' => 'badge bg-purple-50 text-purple-700',
+                            'partially_dispatched' => 'badge bg-purple-100 text-purple-700',
                             'dispatched'           => 'badge bg-green-50 text-green-700',
                         ];
                         $statusLabel = [

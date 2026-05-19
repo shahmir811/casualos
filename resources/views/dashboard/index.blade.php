@@ -59,10 +59,11 @@
                 @foreach($data['recentOrders'] as $order)
                 @php
                     $statusBadge = [
-                        'received'   => 'badge bg-blue-100 text-blue-700',
-                        'confirmed'  => 'badge bg-yellow-100 text-yellow-700',
-                        'stitching'  => 'badge bg-orange-100 text-orange-700',
-                        'dispatched' => 'badge bg-green-100 text-green-700',
+                        'received'             => 'badge bg-blue-100 text-blue-700',
+                        'confirmed'            => 'badge bg-yellow-100 text-yellow-700',
+                        'stitching'            => 'badge bg-orange-100 text-orange-700',
+                        'partially_dispatched' => 'badge bg-purple-100 text-purple-700',
+                        'dispatched'           => 'badge bg-green-100 text-green-700',
                     ];
                 @endphp
                 <tr>
