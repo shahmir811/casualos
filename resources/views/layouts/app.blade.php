@@ -142,7 +142,14 @@
             font-size: 0.875rem;
             border: 1px solid #E8E8ED;
         }
-        .apple-table tfoot td { border: 1px solid #D2D2D7; }
+        .apple-table tfoot td {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1D1D1F;
+            background: #F5F5F7;
+            border: 1px solid #D2D2D7;
+        }
 
         /* Badge */
         .badge {
