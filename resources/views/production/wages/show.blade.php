@@ -37,7 +37,10 @@
     @else
     <div class="text-right">
         <span class="badge bg-green-100 text-green-700 text-sm px-3 py-1">Confirmed &amp; Paid</span>
-        <p class="text-xs text-[#86868B] mt-1">{{ $wage->confirmed_at?->format('d M Y') }}</p>
+        <p class="text-xs text-[#86868B] mt-1">{{ $wage->confirmed_at?->format('d M Y, g:i A') }}</p>
+        <p class="text-xs text-[#86868B] mt-0.5">
+            by <span class="font-medium text-[#1D1D1F]">{{ $wage->confirmedBy?->name ?? '—' }}</span>
+        </p>
     </div>
     @endif
 </div>

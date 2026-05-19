@@ -184,13 +184,36 @@
               x-data="{
                 paymentType: '{{ old('payment_type', 'cash') }}',
                 preview: null,
+                dragging: false,
+                fileName: null,
+                lightbox: false,
                 get isBankTransfer() { return this.paymentType === 'bank_transfer'; },
                 handleFile(e) {
                     const file = e.target.files[0];
-                    if (!file) { this.preview = null; return; }
+                    if (!file) { this.preview = null; this.fileName = null; return; }
+                    this.fileName = file.name;
                     const reader = new FileReader();
                     reader.onload = ev => this.preview = ev.target.result;
                     reader.readAsDataURL(file);
+                },
+                handleDrop(e) {
+                    this.dragging = false;
+                    const file = e.dataTransfer.files[0];
+                    if (!file) return;
+                    const input = $el.querySelector('input[name=receipt_image]');
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    input.files = dt.files;
+                    this.fileName = file.name;
+                    const reader = new FileReader();
+                    reader.onload = ev => this.preview = ev.target.result;
+                    reader.readAsDataURL(file);
+                },
+                clearFile() {
+                    this.preview = null;
+                    this.fileName = null;
+                    const input = $el.querySelector('input[name=receipt_image]');
+                    input.value = '';
                 }
               }"
               class="space-y-4">
@@ -248,31 +271,76 @@
 
                     {{-- Drop zone --}}
                     <label class="flex-1 flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl py-7 px-4 cursor-pointer transition-colors bg-[#F5F5F7]"
-                           :class="preview ? 'border-[#30D158] bg-[#F0FFF4]' : 'border-[#D2D2D7] hover:border-[#0071E3]'">
+                           :class="dragging ? 'border-[#0071E3] bg-[#EBF5FF] scale-[1.01]' : (preview ? 'border-[#30D158] bg-[#F0FFF4]' : 'border-[#D2D2D7] hover:border-[#0071E3]')"
+                           @dragover.prevent="dragging = true"
+                           @dragleave.prevent="dragging = false"
+                           @drop.prevent="handleDrop($event)">
                         <input type="file" name="receipt_image" accept="image/jpeg,image/jpg,image/png,image/webp"
                                class="sr-only" :required="isBankTransfer" @change="handleFile($event)">
 
-                        <template x-if="!preview">
+                        <template x-if="!preview && !dragging">
                             <div class="text-center pointer-events-none">
                                 <svg class="w-9 h-9 text-[#C7C7CC] mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                                         d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                 </svg>
-                                <p class="text-sm font-medium text-[#1D1D1F]">Click to upload receipt</p>
+                                <p class="text-sm font-medium text-[#1D1D1F]">Click or drag to upload receipt</p>
                                 <p class="text-xs text-[#86868B] mt-0.5">Screenshot, bank slip, or photo</p>
                             </div>
                         </template>
 
-                        <template x-if="preview">
-                            <p class="text-sm font-medium text-[#30D158] pointer-events-none">✓ Receipt selected — click to change</p>
+                        <template x-if="dragging">
+                            <div class="text-center pointer-events-none">
+                                <svg class="w-9 h-9 text-[#0071E3] mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                                <p class="text-sm font-semibold text-[#0071E3]">Drop to attach receipt</p>
+                            </div>
+                        </template>
+
+                        <template x-if="preview && !dragging">
+                            <div class="text-center pointer-events-none">
+                                <p class="text-sm font-medium text-[#30D158]">✓ Receipt selected</p>
+                                <p class="text-xs text-[#86868B] mt-0.5 truncate max-w-[200px]" x-text="fileName"></p>
+                                <p class="text-xs text-[#86868B] mt-1">Click or drag to change</p>
+                            </div>
                         </template>
                     </label>
 
-                    {{-- Live preview --}}
-                    <div x-show="preview" x-cloak
-                         class="w-36 h-36 flex-shrink-0 rounded-xl overflow-hidden border border-[#E8E8ED] shadow-sm bg-[#F5F5F7]">
-                        <img :src="preview" class="w-full h-full object-cover">
+                    {{-- Live preview thumbnail --}}
+                    <div x-show="preview" x-cloak class="relative w-36 h-36 flex-shrink-0">
+                        {{-- Thumbnail — click opens lightbox --}}
+                        <div @click="lightbox = true"
+                             class="w-36 h-36 rounded-xl overflow-hidden border border-[#E8E8ED] shadow-sm bg-[#F5F5F7] cursor-zoom-in">
+                            <img :src="preview" class="w-full h-full object-cover">
+                        </div>
+                        {{-- Remove button --}}
+                        <button type="button" @click.stop="clearFile()"
+                                class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#FF3B30] text-white flex items-center justify-center shadow-md hover:bg-[#D70015] transition-colors"
+                                title="Remove receipt">
+                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
                     </div>
+                </div>
+            </div>
+
+            {{-- Lightbox --}}
+            <div x-show="lightbox" x-cloak
+                 @click="lightbox = false"
+                 @keydown.escape.window="lightbox = false"
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+                 style="display:none;">
+                <div @click.stop class="relative max-w-3xl w-full">
+                    <img :src="preview" class="w-full rounded-xl shadow-2xl object-contain max-h-[80vh]">
+                    <button type="button" @click="lightbox = false"
+                            class="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white text-[#1D1D1F] flex items-center justify-center shadow-lg hover:bg-[#F5F5F7] transition-colors">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
 
