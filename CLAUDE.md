@@ -97,7 +97,7 @@ Stitching units are managed in the `stitching_units` table (not hardcoded intege
 - `per_piece_rate` — **required** for `per_piece` units. This is the rate used to calculate weekly wages. Salary units have no rate in CasualiteOS (tracked externally).
 - `is_active` — inactive units are hidden from production assignment and stitching return forms
 
-**Wage rate is stored on the stitching unit, not on the catalogue.** When recording weekly wages, the production manager selects a stitching unit and the rate auto-populates from `stitching_units.per_piece_rate`. The `wages` table stores `stitching_unit_id` (FK) and a snapshot of `wage_rate` at the time of recording.
+**Wages are auto-calculated — there is no manual wage entry form.** Every Friday at 23:45 the scheduler runs `wages:calculate-weekly`, which sums kameez returned (component = `kameez` in `stitching_return_items`) per catalogue per per-piece unit for the Saturday→Friday window, snapshots `per_piece_rate` from the unit, and creates or overwrites **unconfirmed** `Wage` records. Confirmed (paid) records are never overwritten. The `wages` table unique constraint is `(catalogue_id, stitching_unit_id, week_start)` — one record per catalogue per unit per week. A "Recalculate" panel on the wages index allows manual re-runs for backdated returns. The wages show page displays a per-design kameez breakdown table and shows who confirmed payment (`confirmed_by` → user name + `confirmed_at` timestamp).
 
 ### Catalogue Sold-Out
 
@@ -515,7 +515,7 @@ returns that cause discrepancies — it flags them for review.
 - **Auto-confirm on payment** — `PaymentController::store()` and `PaymentController::applyCredit()` both auto-transition order status from `received` → `confirmed` when the first payment or credit is applied. Manual Confirm button on the order page remains for zero-payment confirmations.
 - **`partially_dispatched` order status** — added 2026-05-19; migration `2026_05_19_000001`; `DispatchController::store()` sets `partially_dispatched` on partial dispatch and `dispatched` only when `isFullyDispatched()` returns true; "Dispatch Again" button hidden on dispatch show page when status is `dispatched`; status badge (purple) added to all views: orders index, orders show, dispatch show, customer portal, customer-orders report, production-status report
 - **Orders page catalogue filter** — removed standalone catalogue dropdown; page now reads `session('active_catalogue_id')` directly (same pattern as all production/report controllers); catalogue is always driven by the sidebar selector
-- **Worker wages** — rate is now sourced from `stitching_units.per_piece_rate` (not catalogue); wage form has a unit selector that auto-populates the rate; `wages.stitching_unit_id` FK added
+- **Worker wages — fully automated** (2026-05-19): `wages:calculate-weekly` Artisan command sums kameez returned per catalogue per per-piece stitching unit for the Saturday→Friday window; scheduled every Friday at 23:45 via `routes/console.php`; wages index has week/unit/status filters and a Recalculate panel for backdated returns; wages show page has per-design kameez breakdown table and displays confirmed-by name + timestamp; manual wage entry form has been removed entirely; unique constraint is `(catalogue_id, stitching_unit_id, week_start)`
 - All 12 reports — payroll history report shows stitching unit per wage record
 - User management (create, enable, disable, password reset — admin only)
 
@@ -549,6 +549,7 @@ All migrations have been run. No pending migrations. For reference, the full set
 - `2026_05_11_200000` — adds `in_house` to `tarpai_sends.tarpai_house` enum (valid values: `rashid_bhai`, `yousaf_bhai`, `in_house`)
 - `2026_05_18_110503` — renames `users.role` enum values: `manager` → `production_manager`, `designer` → `creative_head`; updates Spatie `roles` table records accordingly
 - `2026_05_19_000001` — adds `partially_dispatched` to `orders.status` enum (value sits between `stitching` and `dispatched`); applied to production via raw SQL on 2026-05-19
+- `2026_05_19_100000` — fixes `wages` unique constraint from `(catalogue_id, week_start)` to `(catalogue_id, stitching_unit_id, week_start)`
 
 ---
 
@@ -590,6 +591,29 @@ This includes: order submission, payment recording, order reduction, dispatch.
 
 Order and Catalogue models use `LogsActivity`. Changes to flagged fields are
 automatically logged. Do not add manual activity log calls for these models.
+
+### Confirmation dialogs — always use the global Alpine modal
+
+Never use `onclick="return confirm(...)"`. The layout has a global Alpine.js store-based confirmation modal. Use it like this:
+
+```html
+{{-- Hidden form --}}
+<form id="form-unique-id" method="POST" action="...">@csrf</form>
+
+{{-- Trigger button --}}
+<button type="button"
+        @click="$store.confirm.show({
+            title: 'Action Title',
+            message: 'Descriptive message about what will happen.',
+            formId: 'form-unique-id',
+            confirmText: 'Confirm',
+            danger: true   {{-- red variant for destructive actions, omit for blue --}}
+        })">
+    Action Label
+</button>
+```
+
+The modal submits the form on confirm, does nothing on cancel. `danger: true` shows a red warning icon and red confirm button. Omitting `danger` (or `false`) shows a blue icon and blue button.
 
 ### Never delete records
 
