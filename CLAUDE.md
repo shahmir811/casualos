@@ -374,11 +374,13 @@ passwords manually. Do not add one.
 
 When `payment_type = 'bank_transfer'`:
 - `bank_account_id` is **required** — must reference an active `bank_accounts` record
-- `receipt_image` is **required** — the payment slip must be uploaded (JPG, PNG, WebP, max 5 MB)
+- `receipt_image` is **required** — the payment slip must be uploaded (**PDF, JPG, PNG or WebP, max 5 MB**)
 
 For `cash` and `advance` payments: no bank account and no receipt image required.
 
 These rules are enforced in `PaymentController::store()` via `required_if` validation and in `orders/show.blade.php` via Alpine.js conditional rendering.
+
+The receipt upload UI uses the same pattern as the refund document upload in `reduce.blade.php`: hidden file input accessed via `x-ref`, `processFile()` detects PDF vs image by extension, image shows a thumbnail + lightbox, PDF shows a red PDF icon. In the Payments History table, `pathinfo($payment->receipt_image, PATHINFO_EXTENSION)` determines whether to render a PDF icon link or an image thumbnail.
 
 ### 5.13 Order Cancellation
 
@@ -393,6 +395,39 @@ if ($newTotal == 0 && $order->status !== 'dispatched') {
 - A `cancelled` order does not appear in production flows (not targeted by stitching auto-transition, not available as a reassignment target).
 - The `orders.status` enum includes `cancelled` (migration `2026_05_20_000001`).
 - There is no standalone "Cancel Order" button — full reduction to zero is the only path.
+
+### 5.15 Order Hard-Delete
+
+An order may be **permanently deleted** (not cancelled) only when **both** conditions hold:
+- `status = 'received'` (no production workflow has started)
+- `total_paid = 0` (no payment has ever been recorded)
+
+**Who:** admin and accountant roles only. Route: `orders.destroy` (`DELETE /orders/{order}`).
+
+**What gets deleted in a single DB transaction:**
+1. The `customer_ledger` row with `transaction_type = 'order_charged'` linked to this order — deleted via raw `DB::table()` to bypass `CustomerLedger`'s boot-level deletion guard.
+2. The `orders` row — `order_items` cascade automatically via FK.
+
+**What is preserved:** activity log entries (`activity_log` table) — these are never touched.
+
+**UI:** "Delete Order" button on `orders/show.blade.php`, visible only when the two conditions above are met. Uses the global Alpine `$store.confirm.show()` with `danger: true`.
+
+### 5.16 Payment Deletion
+
+A payment record may be **permanently deleted** by admin or accountant at any time, regardless of order status (including `dispatched` and `partially_dispatched`). The primary use case is correcting accidentally duplicated payments.
+
+**Route:** `orders.payments.destroy` (`DELETE /orders/{order}/payments/{payment}`).
+
+**What happens in a single DB transaction:**
+1. Delete the `customer_ledger` row where `reference_type = 'App\Models\Payment'` AND `reference_id = $payment->id` — via raw `DB::table()` to bypass the boot-level deletion guard.
+2. Delete the `payments` row.
+3. Recalculate `order.total_paid` from a fresh DB sum of remaining payments.
+4. Recalculate `order.outstanding_balance = total_amount − new_total_paid`.
+5. If `new_total_paid == 0` AND `order.status === 'confirmed'` → revert status to `received`.
+
+**Advance credit (`applyCredit()`) is a separate flow** — it does not create a `payments` row, so it never appears in the Payments list and cannot be deleted via this route. No `advance_credit_balance` adjustment is needed on payment deletion.
+
+**UI:** "Delete" link in each row of the Payments History table on `orders/show.blade.php`, visible to admin and accountant only. Uses `$store.confirm.show()` with `danger: true`.
 
 ### 5.14 Piece Reassignment
 
@@ -529,8 +564,10 @@ returns that cause discrepancies — it flags them for review.
 | `orders.reduce`          | `GET /orders/{order}/reduce`                    | Log Reduction form (admin only)      |
 | `orders.reduce.store`    | `POST /orders/{order}/reduce`                   | Save reduction (admin only)          |
 | `orders.reductions.show` | `GET /orders/{order}/reductions/{reduction}`    | Reduction detail page (admin only)   |
-| `orders.reassign.create` | `GET /orders/{order}/reassign-pieces`           | Reassign Pieces form (admin only)    |
-| `orders.reassign.store`  | `POST /orders/{order}/reassign-pieces`          | Save reassignment (admin only)       |
+| `orders.reassign.create`    | `GET /orders/{order}/reassign-pieces`              | Reassign Pieces form (admin only)         |
+| `orders.reassign.store`     | `POST /orders/{order}/reassign-pieces`             | Save reassignment (admin only)            |
+| `orders.destroy`            | `DELETE /orders/{order}`                           | Hard-delete order (admin + accountant)    |
+| `orders.payments.destroy`   | `DELETE /orders/{order}/payments/{payment}`        | Delete a payment (admin + accountant)     |
 
 **Never use `order.show` — it does not exist. The correct route name is `order.public`.**
 
@@ -585,6 +622,9 @@ returns that cause discrepancies — it flags them for review.
 - **Worker wages — fully automated** (2026-05-19): `wages:calculate-weekly` Artisan command sums kameez returned per catalogue per per-piece stitching unit for the Saturday→Friday window; scheduled every Friday at 23:45 via `routes/console.php`; wages index has week/unit/status filters and a Recalculate panel for backdated returns; wages show page has per-design kameez breakdown table and displays confirmed-by name + timestamp; manual wage entry form has been removed entirely; unique constraint is `(catalogue_id, stitching_unit_id, week_start)`
 - All 12 reports — payroll history report shows stitching unit per wage record
 - User management (create, enable, disable, password reset — admin only)
+- **Order hard-delete** (2026-05-22): `OrderController::destroy()` — permanently removes a `received` + `total_paid=0` order; deletes the `order_charged` ledger entry via raw `DB::table()` (bypasses model boot guard), then deletes the order (items cascade); activity log preserved; admin + accountant only; Alpine danger-modal confirmation
+- **Payment deletion** (2026-05-22): `PaymentController::destroy()` — deletes any payment regardless of order status; removes the linked `payment_received` ledger entry via raw `DB::table()`; recalculates `total_paid` and `outstanding_balance`; reverts order status `confirmed` → `received` if `total_paid` drops to 0; admin + accountant only; Alpine danger-modal confirmation
+- **PDF receipts for bank transfer payments** (2026-05-22): `PaymentController::store()` now accepts PDF in addition to JPG/PNG/WebP (validation: `mimes:pdf,jpeg,jpg,png,webp`); upload UI rebuilt to match the refund document upload pattern — hidden file input + `processFile()` Alpine method; PDF shows icon, image shows thumbnail + lightbox; Payments History table renders PDF icon or image thumbnail based on file extension
 
 ### Known Bugs / Incomplete Features (must fix)
 
@@ -692,10 +732,29 @@ Never use `onclick="return confirm(...)"`. The layout has a global Alpine.js sto
 
 The modal submits the form on confirm, does nothing on cancel. `danger: true` shows a red warning icon and red confirm button. Omitting `danger` (or `false`) shows a blue icon and blue button.
 
-### Never delete records
+### Deleting records — narrow exceptions only
 
-No `destroy()` routes exist by design. User accounts are disabled, not deleted.
-Orders are reduced, not deleted. The audit trail must always be intact.
+The general rule is **never delete** — user accounts are disabled, orders are reduced, the audit trail must stay intact.
+
+**Two explicit exceptions exist:**
+
+1. **Orders** — `OrderController::destroy()` hard-deletes a `received` + `total_paid=0` order (see rule 5.15). These have no financial footprint to preserve.
+2. **Payments** — `PaymentController::destroy()` hard-deletes any payment (see rule 5.16). Used to correct duplicate entries.
+
+Do not add further `destroy()` routes without an explicit business justification.
+
+### Bypassing the CustomerLedger boot-level deletion guard
+
+`CustomerLedger` has `static::deleting(fn() => false)` in its `boot()` method to prevent accidental deletion via Eloquent. When a legitimate hard-delete requires removing a ledger entry (order delete, payment delete), bypass the guard using raw DB:
+
+```php
+DB::table('customer_ledger')
+    ->where('reference_type', 'App\Models\Payment')
+    ->where('reference_id', $payment->id)
+    ->delete();
+```
+
+Never remove the boot guard from the model itself.
 
 ## Brand & Design System
 
