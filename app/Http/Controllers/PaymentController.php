@@ -21,7 +21,7 @@ class PaymentController extends Controller
             'bank_account_id' => 'required_if:payment_type,bank_transfer|nullable|exists:bank_accounts,id',
             'payment_date'    => 'required|date',
             'notes'           => 'nullable|string',
-            'receipt_image'   => 'required_if:payment_type,bank_transfer|nullable|file|image|mimes:jpeg,jpg,png,webp|max:5120',
+            'receipt_image'   => 'required_if:payment_type,bank_transfer|nullable|file|mimes:pdf,jpeg,jpg,png,webp|max:5120',
         ]);
 
         $receiptPath = $request->hasFile('receipt_image')
@@ -80,6 +80,43 @@ class PaymentController extends Controller
         });
 
         return back()->with('success', 'Payment of PKR ' . lacs_format($request->amount) . ' recorded.');
+    }
+
+    public function destroy(Order $order, Payment $payment)
+    {
+        if ($payment->order_id !== $order->id) {
+            abort(404);
+        }
+
+        $amount = $payment->amount;
+
+        DB::transaction(function () use ($order, $payment) {
+            // Bypass CustomerLedger model's boot-level deletion guard
+            DB::table('customer_ledger')
+                ->where('reference_type', 'App\Models\Payment')
+                ->where('reference_id', $payment->id)
+                ->delete();
+
+            $payment->delete();
+
+            // Recalculate from DB after deletion (authoritative sum of remaining payments)
+            $newTotalPaid    = $order->payments()->sum('amount');
+            $newOutstanding  = max(0, $order->total_amount - $newTotalPaid);
+
+            $update = [
+                'total_paid'          => $newTotalPaid,
+                'outstanding_balance' => $newOutstanding,
+            ];
+
+            // Revert to received if no payments remain and order is confirmed
+            if ($newTotalPaid == 0 && $order->status === 'confirmed') {
+                $update['status'] = 'received';
+            }
+
+            $order->update($update);
+        });
+
+        return back()->with('success', 'Payment of PKR ' . lacs_format($amount) . ' has been deleted and the order balance updated.');
     }
 
     public function applyCredit(Request $request, Order $order)

@@ -80,6 +80,24 @@
         <a href="{{ route('orders.invoice', $order) }}" class="btn-secondary" target="_blank">
             Download Invoice
         </a>
+
+        @if($order->status === 'received' && $order->total_paid == 0 && in_array(Auth::user()->role, ['admin', 'accountant']))
+        <form id="form-delete-order" method="POST" action="{{ route('orders.destroy', $order) }}">
+            @csrf
+            @method('DELETE')
+        </form>
+        <button type="button"
+                class="btn-secondary text-[#FF3B30] border-[#FF3B30] hover:bg-[#FFF0EF]"
+                @click="$store.confirm.show({
+                    title: 'Delete Order',
+                    message: 'This will permanently remove Order #{{ $order->order_number }} and all related records from the system. This cannot be undone.',
+                    formId: 'form-delete-order',
+                    confirmText: 'Delete Order',
+                    danger: true
+                })">
+            Delete Order
+        </button>
+        @endif
     </div>
 </div>
 
@@ -217,37 +235,36 @@
               enctype="multipart/form-data"
               x-data="{
                 paymentType: '{{ old('payment_type', 'cash') }}',
-                preview: null,
-                dragging: false,
-                fileName: null,
-                lightbox: false,
+                fileName: '',
+                fileType: '',
+                filePreview: '',
+                isDragging: false,
+                lightboxOpen: false,
                 get isBankTransfer() { return this.paymentType === 'bank_transfer'; },
+                processFile(file) {
+                    if (!file) return;
+                    this.fileName = file.name;
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    this.fileType = (ext === 'pdf') ? 'pdf' : 'image';
+                    this.filePreview = this.fileType === 'image' ? URL.createObjectURL(file) : '';
+                },
                 handleFile(e) {
                     const file = e.target.files[0];
-                    if (!file) { this.preview = null; this.fileName = null; return; }
-                    this.fileName = file.name;
-                    const reader = new FileReader();
-                    reader.onload = ev => this.preview = ev.target.result;
-                    reader.readAsDataURL(file);
+                    if (!file) { this.fileName = ''; this.fileType = ''; this.filePreview = ''; return; }
+                    this.processFile(file);
                 },
                 handleDrop(e) {
-                    this.dragging = false;
+                    this.isDragging = false;
                     const file = e.dataTransfer.files[0];
                     if (!file) return;
-                    const input = $el.querySelector('input[name=receipt_image]');
-                    const dt = new DataTransfer();
-                    dt.items.add(file);
-                    input.files = dt.files;
-                    this.fileName = file.name;
-                    const reader = new FileReader();
-                    reader.onload = ev => this.preview = ev.target.result;
-                    reader.readAsDataURL(file);
+                    this.$refs.receiptInput.files = e.dataTransfer.files;
+                    this.processFile(file);
                 },
                 clearFile() {
-                    this.preview = null;
-                    this.fileName = null;
-                    const input = $el.querySelector('input[name=receipt_image]');
-                    input.value = '';
+                    this.fileName = '';
+                    this.fileType = '';
+                    this.filePreview = '';
+                    this.$refs.receiptInput.value = '';
                 }
               }"
               class="space-y-4">
@@ -298,83 +315,71 @@
             <div x-show="isBankTransfer" x-cloak>
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
                     Payment Receipt <span class="text-[#FF3B30]">*</span>
-                    <span class="font-normal normal-case ml-1">· JPG, PNG or WebP · max 5 MB</span>
+                    <span class="font-normal normal-case ml-1">· PDF, JPG, PNG or WebP · max 5 MB</span>
                 </label>
 
-                <div class="flex gap-4 items-start">
+                <input type="file" name="receipt_image" accept=".pdf,.jpg,.jpeg,.png,.webp"
+                       class="hidden" x-ref="receiptInput" :required="isBankTransfer" @change="handleFile($event)">
 
-                    {{-- Drop zone --}}
-                    <label class="flex-1 flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl py-7 px-4 cursor-pointer transition-colors bg-[#F5F5F7]"
-                           :class="dragging ? 'border-[#0071E3] bg-[#EBF5FF] scale-[1.01]' : (preview ? 'border-[#30D158] bg-[#F0FFF4]' : 'border-[#D2D2D7] hover:border-[#0071E3]')"
-                           @dragover.prevent="dragging = true"
-                           @dragleave.prevent="dragging = false"
-                           @drop.prevent="handleDrop($event)">
-                        <input type="file" name="receipt_image" accept="image/jpeg,image/jpg,image/png,image/webp"
-                               class="sr-only" :required="isBankTransfer" @change="handleFile($event)">
+                {{-- Empty state --}}
+                <template x-if="!fileName">
+                    <div class="border-2 border-dashed rounded-xl transition-colors cursor-pointer px-5 py-8 text-center"
+                         :class="isDragging ? 'border-[#0071E3] bg-[#F0F7FF]' : 'border-[#D1D1D6] bg-[#FAFAFA] hover:border-[#0071E3]'"
+                         @dragover.prevent="isDragging = true"
+                         @dragleave.prevent="isDragging = false"
+                         @drop.prevent="handleDrop($event)"
+                         @click="$refs.receiptInput.click()">
+                        <svg class="w-8 h-8 mx-auto text-[#86868B] mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        <p class="text-sm text-[#1D1D1F] font-medium">Click to upload or drag &amp; drop</p>
+                        <p class="text-xs text-[#86868B] mt-1">PDF, JPG, PNG or WebP · max 5 MB</p>
+                    </div>
+                </template>
 
-                        <template x-if="!preview && !dragging">
-                            <div class="text-center pointer-events-none">
-                                <svg class="w-9 h-9 text-[#C7C7CC] mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                </svg>
-                                <p class="text-sm font-medium text-[#1D1D1F]">Click or drag to upload receipt</p>
-                                <p class="text-xs text-[#86868B] mt-0.5">Screenshot, bank slip, or photo</p>
-                            </div>
-                        </template>
-
-                        <template x-if="dragging">
-                            <div class="text-center pointer-events-none">
-                                <svg class="w-9 h-9 text-[#0071E3] mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                                </svg>
-                                <p class="text-sm font-semibold text-[#0071E3]">Drop to attach receipt</p>
-                            </div>
-                        </template>
-
-                        <template x-if="preview && !dragging">
-                            <div class="text-center pointer-events-none">
-                                <p class="text-sm font-medium text-[#30D158]">✓ Receipt selected</p>
-                                <p class="text-xs text-[#86868B] mt-0.5 truncate max-w-[200px]" x-text="fileName"></p>
-                                <p class="text-xs text-[#86868B] mt-1">Click or drag to change</p>
-                            </div>
-                        </template>
-                    </label>
-
-                    {{-- Live preview thumbnail --}}
-                    <div x-show="preview" x-cloak class="relative w-36 h-36 flex-shrink-0">
-                        {{-- Thumbnail — click opens lightbox --}}
-                        <div @click="lightbox = true"
-                             class="w-36 h-36 rounded-xl overflow-hidden border border-[#E8E8ED] shadow-sm bg-[#F5F5F7] cursor-zoom-in">
-                            <img :src="preview" class="w-full h-full object-cover">
+                {{-- File selected --}}
+                <template x-if="fileName">
+                    <div class="flex items-center gap-4 p-3 border border-[#E8E8ED] rounded-xl bg-[#FAFAFA]">
+                        <div class="relative shrink-0 w-20 h-20">
+                            <template x-if="fileType === 'image'">
+                                <img :src="filePreview"
+                                     class="w-20 h-20 object-cover rounded-lg border border-[#E8E8ED] cursor-pointer hover:opacity-80 transition-opacity"
+                                     @click="lightboxOpen = true" alt="Preview">
+                            </template>
+                            <template x-if="fileType === 'pdf'">
+                                <div class="w-20 h-20 rounded-lg border border-[#FFCDD0] bg-[#FFF0EF] flex flex-col items-center justify-center gap-1">
+                                    <svg class="w-8 h-8 text-[#FF3B30]" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <span class="text-[10px] font-bold text-[#FF3B30] tracking-wide">PDF</span>
+                                </div>
+                            </template>
+                            <button type="button" @click.stop="clearFile()"
+                                    class="absolute -top-2 -right-2 w-5 h-5 bg-[#FF3B30] text-white rounded-full flex items-center justify-center hover:bg-red-700 transition-colors shadow">
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                            </button>
                         </div>
-                        {{-- Remove button --}}
-                        <button type="button" @click.stop="clearFile()"
-                                class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#FF3B30] text-white flex items-center justify-center shadow-md hover:bg-[#D70015] transition-colors"
-                                title="Remove receipt">
-                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm text-[#1D1D1F] font-medium truncate" x-text="fileName"></p>
+                            <p x-show="fileType === 'image'" class="text-xs text-[#0066CC] mt-1 cursor-pointer hover:underline" @click="lightboxOpen = true">Click thumbnail to preview</p>
+                            <p x-show="fileType === 'pdf'" class="text-xs text-[#86868B] mt-1">No preview available</p>
+                            <button type="button" @click="$refs.receiptInput.click()" class="text-xs text-[#0066CC] hover:underline mt-1 block">Change file</button>
+                        </div>
+                    </div>
+                </template>
+
+                {{-- Image lightbox --}}
+                <div x-show="lightboxOpen" x-cloak
+                     class="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+                     @click.self="lightboxOpen = false"
+                     @keydown.escape.window="lightboxOpen = false">
+                    <div class="relative max-w-3xl max-h-[90vh] mx-4">
+                        <img :src="filePreview" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" alt="Preview">
+                        <button type="button" @click="lightboxOpen = false"
+                                class="absolute -top-3 -right-3 w-8 h-8 bg-white text-[#1D1D1F] rounded-full flex items-center justify-center shadow-lg hover:bg-[#F5F5F7] transition-colors">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
                         </button>
                     </div>
-                </div>
-            </div>
-
-            {{-- Lightbox --}}
-            <div x-show="lightbox" x-cloak
-                 @click="lightbox = false"
-                 @keydown.escape.window="lightbox = false"
-                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-                 style="display:none;">
-                <div @click.stop class="relative max-w-3xl w-full">
-                    <img :src="preview" class="w-full rounded-xl shadow-2xl object-contain max-h-[80vh]">
-                    <button type="button" @click="lightbox = false"
-                            class="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white text-[#1D1D1F] flex items-center justify-center shadow-lg hover:bg-[#F5F5F7] transition-colors">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
                 </div>
             </div>
 
@@ -407,15 +412,46 @@
                 <td class="text-right text-[#30D158] font-mono font-medium">PKR {{ lacs_format($payment->amount, 0) }}</td>
                 <td class="text-right">
                     @if($payment->receipt_image)
+                    @php $receiptExt = strtolower(pathinfo($payment->receipt_image, PATHINFO_EXTENSION)); @endphp
+                    @if($receiptExt === 'pdf')
+                    <a href="{{ Storage::url($payment->receipt_image) }}" target="_blank"
+                       class="inline-flex w-10 h-10 rounded-lg border border-[#FFCDD0] hover:border-[#FF3B30] transition-colors items-center justify-center bg-[#FFF0EF]"
+                       title="View receipt (PDF)">
+                        <svg class="w-5 h-5 text-[#FF3B30]" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                        </svg>
+                    </a>
+                    @else
                     <a href="{{ Storage::url($payment->receipt_image) }}" target="_blank"
                        class="inline-block w-10 h-10 rounded-lg overflow-hidden border border-[#E8E8ED] hover:border-[#0071E3] transition-colors"
                        title="View receipt">
                         <img src="{{ Storage::url($payment->receipt_image) }}" class="w-full h-full object-cover">
                     </a>
+                    @endif
                     @else
                     <span class="text-[#C7C7CC] text-xs">—</span>
                     @endif
                 </td>
+                @if(in_array(Auth::user()->role, ['admin', 'accountant']))
+                <td class="text-right">
+                    <form id="form-delete-payment-{{ $payment->id }}" method="POST"
+                          action="{{ route('orders.payments.destroy', [$order, $payment]) }}">
+                        @csrf
+                        @method('DELETE')
+                    </form>
+                    <button type="button"
+                            class="text-[#FF3B30] text-xs hover:underline whitespace-nowrap"
+                            @click="$store.confirm.show({
+                                title: 'Delete Payment',
+                                message: 'Permanently delete this payment of PKR {{ lacs_format($payment->amount, 0) }}? The order balance will be recalculated.',
+                                formId: 'form-delete-payment-{{ $payment->id }}',
+                                confirmText: 'Delete Payment',
+                                danger: true
+                            })">
+                        Delete
+                    </button>
+                </td>
+                @endif
             </tr>
             @endforeach
         </tbody>

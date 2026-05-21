@@ -9,6 +9,7 @@ use App\Models\BankAccount;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -156,6 +157,30 @@ class OrderController extends Controller
         $filename = str($catalogue->name)->slug() . '-payments.xlsx';
 
         return (new PaymentSheetExport($orders, $catalogue, $bankAccounts))->download($filename);
+    }
+
+    public function destroy(Order $order)
+    {
+        if ($order->status !== 'received' || $order->total_paid > 0) {
+            abort(403, 'Only received orders with no payments recorded can be deleted.');
+        }
+
+        $orderNumber = $order->order_number;
+
+        DB::transaction(function () use ($order) {
+            // Bypass the CustomerLedger model's boot-level deletion guard
+            DB::table('customer_ledger')
+                ->where('reference_type', 'App\\Models\\Order')
+                ->where('reference_id', $order->id)
+                ->where('transaction_type', 'order_charged')
+                ->delete();
+
+            // order_items cascade via FK; activity_log rows are preserved
+            $order->delete();
+        });
+
+        return redirect()->route('orders.index')
+            ->with('success', 'Order #' . $orderNumber . ' has been permanently deleted.');
     }
 
     public function markStitching(Order $order)

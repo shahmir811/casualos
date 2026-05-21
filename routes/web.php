@@ -94,10 +94,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('orders/excel', [OrderController::class, 'downloadExcel'])->name('orders.excel');
         Route::get('orders/{order}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
         Route::resource('orders', OrderController::class)->except(['create','store','destroy']);
+        Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
         Route::post('orders/{order}/confirm',  [OrderController::class, 'confirm'])->name('orders.confirm');
         Route::post('orders/{order}/stitch',   [OrderController::class, 'markStitching'])->name('orders.stitch');
         // Payments
         Route::resource('orders.payments', PaymentController::class)->only(['store']);
+        Route::delete('orders/{order}/payments/{payment}', [PaymentController::class, 'destroy'])->name('orders.payments.destroy');
         Route::post('orders/{order}/apply-credit', [PaymentController::class, 'applyCredit'])->name('orders.apply-credit');
     });
 
