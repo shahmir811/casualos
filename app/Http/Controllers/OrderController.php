@@ -30,11 +30,12 @@ class OrderController extends Controller
             $query->where('status', $request->input('status'));
         }
 
-        // Search by customer name or city
+        // Search by customer name, city, or order number
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('submitted_name', 'like', '%' . $search . '%')
-                  ->orWhere('submitted_city', 'like', '%' . $search . '%');
+                  ->orWhere('submitted_city', 'like', '%' . $search . '%')
+                  ->orWhere('order_number', 'like', '%' . $search . '%');
             });
         }
 
@@ -75,7 +76,7 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load(['customer', 'catalogue', 'items.design', 'payments.bankAccount', 'reductions.items']);
+        $order->load(['customer', 'catalogue', 'items.design', 'payments.bankAccount', 'reductions.items.design', 'reductions.reducedBy', 'reductions.refund']);
         $bankAccounts = BankAccount::where('is_active', true)->orderBy('title')->get();
         return view('orders.show', compact('order', 'bankAccounts'));
     }
@@ -110,7 +111,7 @@ class OrderController extends Controller
 
     public function invoice(Order $order)
     {
-        $order->load(['customer', 'catalogue', 'items.design', 'payments.bankAccount']);
+        $order->load(['customer', 'catalogue', 'items.design', 'payments.bankAccount', 'reductions.items']);
 
         $pdf = Pdf::loadView('orders.invoice', compact('order'))
             ->setPaper('a4', 'portrait');

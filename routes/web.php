@@ -10,6 +10,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\OrderReductionController;
+use App\Http\Controllers\OrderPieceReassignmentController;
 use App\Http\Controllers\PublicOrderController;
 use App\Http\Controllers\CustomerPortalController;
 use App\Http\Controllers\FabricBatchController;
@@ -100,10 +101,17 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('orders/{order}/apply-credit', [PaymentController::class, 'applyCredit'])->name('orders.apply-credit');
     });
 
-    // Order Reductions (admin only)
-    Route::middleware('role:admin')->group(function () {
+    // Order Reductions (admin + accountant)
+    Route::middleware('role:admin|accountant')->group(function () {
         Route::get('orders/{order}/reduce',  [OrderReductionController::class, 'create'])->name('orders.reduce');
         Route::post('orders/{order}/reduce', [OrderReductionController::class, 'store'])->name('orders.reduce.store');
+        Route::get('orders/{order}/reductions/{reduction}', [OrderReductionController::class, 'show'])->name('orders.reductions.show');
+    });
+
+    // Piece Reassignment (admin only)
+    Route::middleware('role:admin')->group(function () {
+        Route::get('orders/{order}/reassign-pieces',  [OrderPieceReassignmentController::class, 'create'])->name('orders.reassign.create');
+        Route::post('orders/{order}/reassign-pieces', [OrderPieceReassignmentController::class, 'store'])->name('orders.reassign.store');
     });
 
     /*

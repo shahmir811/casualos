@@ -12,7 +12,7 @@ class OrderReduction extends Model
 
     protected $fillable = [
         'order_id', 'reduced_by', 'reduction_date', 'adjustment_type',
-        'original_total', 'new_total', 'adjustment_amount', 'notes',
+        'original_total', 'new_total', 'adjustment_amount', 'notes', 'surplus_action',
     ];
 
     protected $casts = [
@@ -40,5 +40,10 @@ class OrderReduction extends Model
     public function items(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(OrderReductionItem::class);
+    }
+
+    public function refund(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Refund::class, 'order_reduction_id');
     }
 }

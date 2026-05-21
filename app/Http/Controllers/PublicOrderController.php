@@ -137,7 +137,7 @@ class PublicOrderController extends Controller
             CustomerLedger::create([
                 'customer_id'             => $customer->id,
                 'transaction_type'        => 'order_charged',
-                'amount'                  => -$totalAmount, // negative = customer owes
+                'amount'                  => $totalAmount,
                 'running_advance_balance' => $customer->advance_credit_balance ?? 0,
                 'reference_type'          => 'App\Models\Order',
                 'reference_id'            => $order->id,

@@ -98,6 +98,13 @@ class Order extends Model
         return $this->hasMany(OrderReduction::class);
     }
 
+    public function refunds(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Refund::class);
+    }
+
+    public function isCancelled(): bool { return $this->status === 'cancelled'; }
+
     public function dispatchBatches(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(DispatchBatch::class)->orderBy('batch_number');

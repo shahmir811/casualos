@@ -64,6 +64,7 @@
                         'stitching'            => 'badge bg-orange-100 text-orange-700',
                         'partially_dispatched' => 'badge bg-purple-100 text-purple-700',
                         'dispatched'           => 'badge bg-green-100 text-green-700',
+                        'cancelled'            => 'badge bg-red-100 text-red-700',
                     ];
                 @endphp
                 <tr>

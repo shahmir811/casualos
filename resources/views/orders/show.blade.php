@@ -11,6 +11,7 @@
         'stitching'            => 'badge bg-orange-100 text-orange-700',
         'partially_dispatched' => 'badge bg-purple-100 text-purple-700',
         'dispatched'           => 'badge bg-green-100 text-green-700',
+        'cancelled'            => 'badge bg-red-100 text-red-700',
     ];
     $statusLabel = [
         'received'             => 'Received',
@@ -18,8 +19,11 @@
         'stitching'            => 'Stitching',
         'partially_dispatched' => 'Partially Dispatched',
         'dispatched'           => 'Dispatched',
+        'cancelled'            => 'Cancelled',
     ];
 @endphp
+
+<div x-data="{ reductionModal: false, activeReductionId: null }">
 
 <div class="flex items-start justify-between mb-7">
     <div>
@@ -61,9 +65,15 @@
         </form>
         @endif
 
-        @if(Auth::user()->role === 'admin')
+        @if(in_array(Auth::user()->role, ['admin', 'accountant']) && !in_array($order->status, ['cancelled', 'dispatched']))
         <a href="{{ route('orders.reduce', $order) }}" class="btn-secondary">
             Log Reduction
+        </a>
+        @endif
+
+        @if(Auth::user()->role === 'admin' && $order->reductions->count() > 0)
+        <a href="{{ route('orders.reassign.create', $order) }}" class="btn-secondary">
+            Reassign Pieces
         </a>
         @endif
 
@@ -84,6 +94,7 @@
                 'stitching'            => 'text-orange-500',
                 'partially_dispatched' => 'text-purple-600',
                 'dispatched'           => 'text-[#30D158]',
+                'cancelled'            => 'text-red-600',
             ];
         @endphp
         <p class="{{ $statusColors[$order->status] ?? 'text-[#1D1D1F]' }} text-2xl font-light">
@@ -108,15 +119,36 @@
 
 {{-- Order Summary --}}
 @php
-    $firstItem      = $order->items->first();
-    $qxs            = $firstItem?->qty_xs  ?? 0;
-    $qs             = $firstItem?->qty_s   ?? 0;
-    $qm             = $firstItem?->qty_m   ?? 0;
-    $ql             = $firstItem?->qty_l   ?? 0;
-    $qxl            = $firstItem?->qty_xl  ?? 0;
-    $qtyPerDesign   = $qxs + $qs + $qm + $ql + $qxl;
-    $numDesigns     = $order->catalogue?->number_of_designs ?? $order->items->count();
-    $totalPieces    = $qtyPerDesign * $numDesigns;
+    $firstItem  = $order->items->first();
+    $rawXs      = $firstItem?->qty_xs ?? 0;
+    $rawS       = $firstItem?->qty_s  ?? 0;
+    $rawM       = $firstItem?->qty_m  ?? 0;
+    $rawL       = $firstItem?->qty_l  ?? 0;
+    $rawXl      = $firstItem?->qty_xl ?? 0;
+    $numDesigns = $order->catalogue?->number_of_designs ?? $order->items->count();
+
+    // Sum reduction qty per size and total across all reductions
+    $reducedBySize = ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0];
+    $totalReduced  = 0;
+    foreach ($order->reductions as $red) {
+        foreach ($red->items as $ri) {
+            if (isset($reducedBySize[$ri->size])) {
+                $reducedBySize[$ri->size] += $ri->qty_reduced;
+            }
+            $totalReduced += $ri->qty_reduced;
+        }
+    }
+
+    // A size column only zeroes out when ALL pieces of that size across all designs are eliminated
+    $qxs = ($reducedBySize['xs'] >= $rawXs * $numDesigns) ? 0 : $rawXs;
+    $qs  = ($reducedBySize['s']  >= $rawS  * $numDesigns) ? 0 : $rawS;
+    $qm  = ($reducedBySize['m']  >= $rawM  * $numDesigns) ? 0 : $rawM;
+    $ql  = ($reducedBySize['l']  >= $rawL  * $numDesigns) ? 0 : $rawL;
+    $qxl = ($reducedBySize['xl'] >= $rawXl * $numDesigns) ? 0 : $rawXl;
+
+    $qtyPerDesign  = $qxs + $qs + $qm + $ql + $qxl;
+    $originalTotal = ($rawXs + $rawS + $rawM + $rawL + $rawXl) * $numDesigns;
+    $totalPieces   = max(0, $originalTotal - $totalReduced);
 @endphp
 <div class="card mb-5">
     <div class="px-6 py-4 border-b border-[#F2F2F7] flex items-center justify-between">
@@ -128,6 +160,7 @@
             <thead>
                 <tr>
                     <th class="text-left">Catalogue</th>
+                    <th class="text-left">Order #</th>
                     <th class="text-center px-3">XS</th>
                     <th class="text-center px-3">S</th>
                     <th class="text-center px-3">M</th>
@@ -144,6 +177,7 @@
                         <p class="font-medium text-[#1D1D1F] text-sm">{{ $order->catalogue->name ?? '—' }}</p>
                         <p class="text-xs text-[#86868B] mt-0.5">{{ $numDesigns }} designs</p>
                     </td>
+                    <td class="text-[#6E6E73] text-xs tabular-nums font-mono">{{ $order->order_number }}</td>
                     <td class="text-center tabular-nums px-3 {{ $qxs ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $qxs ?: '—' }}</td>
                     <td class="text-center tabular-nums px-3 {{ $qs  ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $qs  ?: '—' }}</td>
                     <td class="text-center tabular-nums px-3 {{ $qm  ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $qm  ?: '—' }}</td>
@@ -389,6 +423,111 @@
 </div>
 @endif
 
+{{-- Refunds --}}
+@if($order->refunds->count())
+<div class="card mb-5">
+    <div class="px-6 py-4 border-b border-[#F2F2F7]">
+        <h2 class="text-[#1D1D1F] text-sm font-semibold">Refunds ({{ $order->refunds->count() }})</h2>
+    </div>
+    <table class="w-full apple-table">
+        <tbody>
+            @foreach($order->refunds as $refund)
+            <tr>
+                <td class="text-[#6E6E73] text-xs whitespace-nowrap">{{ $refund->refund_date->format('d M Y') }}</td>
+                <td>
+                    <span class="badge bg-red-100 text-red-700">{{ $refund->refund_method === 'bank_transfer' ? 'Bank Transfer' : 'Cash' }}</span>
+                    @if($refund->refund_method === 'bank_transfer' && $refund->refund_reference)
+                    <span class="ml-1 text-xs text-[#6E6E73]">· {{ $refund->refund_reference }}</span>
+                    @endif
+                </td>
+                <td class="text-[#6E6E73] text-sm">{{ $refund->notes ?? '—' }}</td>
+                <td class="text-right text-[#FF3B30] font-mono font-medium">− PKR {{ lacs_format($refund->amount, 0) }}</td>
+                <td class="text-right">
+                    @if($refund->refund_document)
+                    @php $docExt = strtolower(pathinfo($refund->refund_document, PATHINFO_EXTENSION)); @endphp
+                    @if(in_array($docExt, ['jpg', 'jpeg', 'png']))
+                    <a href="{{ Storage::url($refund->refund_document) }}" target="_blank"
+                       class="inline-block w-10 h-10 rounded-lg overflow-hidden border border-[#E8E8ED] hover:border-[#0071E3] transition-colors"
+                       title="View transfer proof">
+                        <img src="{{ Storage::url($refund->refund_document) }}" class="w-full h-full object-cover">
+                    </a>
+                    @else
+                    <a href="{{ Storage::url($refund->refund_document) }}" target="_blank"
+                       class="inline-flex w-10 h-10 rounded-lg border border-[#E8E8ED] hover:border-[#0071E3] transition-colors items-center justify-center bg-[#FFF0EF]"
+                       title="View transfer proof (PDF)">
+                        <svg class="w-5 h-5 text-[#FF3B30]" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                        </svg>
+                    </a>
+                    @endif
+                    @else
+                    <span class="text-[#C7C7CC] text-xs">—</span>
+                    @endif
+                </td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+</div>
+@endif
+
+{{-- Reductions --}}
+@if($order->reductions->count())
+<div class="card mb-5">
+    <div class="px-6 py-4 border-b border-[#F2F2F7]">
+        <h2 class="text-[#1D1D1F] text-sm font-semibold">Reductions ({{ $order->reductions->count() }})</h2>
+    </div>
+    <table class="w-full apple-table">
+        <thead>
+            <tr>
+                <th class="text-left">Date</th>
+                <th class="text-left">Type</th>
+                <th class="text-left">Items</th>
+                <th class="text-left">Surplus Action</th>
+                <th class="text-right">Amount Reduced</th>
+                <th class="text-right"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($order->reductions as $reduction)
+            <tr>
+                <td class="text-[#6E6E73] text-xs whitespace-nowrap">{{ $reduction->reduction_date->format('d M Y') }}</td>
+                <td>
+                    <span class="badge bg-yellow-100 text-yellow-700">{{ ucwords(str_replace('_', ' ', $reduction->adjustment_type)) }}</span>
+                </td>
+                <td class="text-[#6E6E73] text-xs">
+                    @if($reduction->items->count())
+                        <div class="space-y-0.5">
+                            @foreach($reduction->items as $ri)
+                            <div>{{ ($ri->design->name ?? '—') }} <span class="font-mono">{{ strtoupper($ri->size) }}×{{ $ri->qty_reduced }}</span></div>
+                            @endforeach
+                        </div>
+                    @else
+                        <span class="text-[#C7C7CC]">—</span>
+                    @endif
+                </td>
+                <td>
+                    @if($reduction->surplus_action === 'credit_to_advance')
+                        <span class="badge bg-purple-100 text-purple-700">Credit to Advance</span>
+                    @elseif($reduction->surplus_action === 'refund')
+                        <span class="badge bg-orange-100 text-orange-700">Refund Issued</span>
+                    @else
+                        <span class="text-[#C7C7CC] text-xs">—</span>
+                    @endif
+                </td>
+                <td class="text-right font-mono font-medium text-[#FF3B30] tabular-nums">− PKR {{ lacs_format($reduction->adjustment_amount, 0) }}</td>
+                <td class="text-right">
+                    <button type="button"
+                            @click="activeReductionId = {{ $reduction->id }}; reductionModal = true"
+                            class="text-[#0066CC] text-xs hover:underline whitespace-nowrap">View Details</button>
+                </td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+</div>
+@endif
+
 {{-- Notes --}}
 @if($order->notes)
 <div class="card p-5">
@@ -396,5 +535,159 @@
     <p class="text-[#1D1D1F] text-sm">{{ $order->notes }}</p>
 </div>
 @endif
+
+{{-- ===== REDUCTION DETAIL MODAL ===== --}}
+<div x-show="reductionModal"
+     x-cloak
+     @click.self="reductionModal = false; activeReductionId = null"
+     @keydown.escape.window="reductionModal = false; activeReductionId = null"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+     style="display:none;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+
+        {{-- Modal header --}}
+        <div class="flex items-center justify-between px-6 py-4 border-b border-[#F2F2F7] sticky top-0 bg-white rounded-t-2xl">
+            <h2 class="text-base font-semibold text-[#1D1D1F]">Order Reduction</h2>
+            <button type="button"
+                    @click="reductionModal = false; activeReductionId = null"
+                    class="w-8 h-8 rounded-full flex items-center justify-center text-[#6E6E73] hover:bg-[#F5F5F7] transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        {{-- Per-reduction panels --}}
+        @foreach($order->reductions as $reduction)
+        <div x-show="activeReductionId === {{ $reduction->id }}" x-cloak class="p-6 space-y-5">
+
+            {{-- Reduction Details --}}
+            <div class="card p-5 space-y-4">
+                <h3 class="text-xs font-semibold text-[#6E6E73] uppercase tracking-widest">Reduction Details</h3>
+                <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                    <div>
+                        <p class="text-[#6E6E73] text-xs uppercase tracking-widest mb-0.5">Date</p>
+                        <p class="text-[#1D1D1F] font-medium">{{ $reduction->reduction_date->format('d M Y') }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[#6E6E73] text-xs uppercase tracking-widest mb-0.5">Logged By</p>
+                        <p class="text-[#1D1D1F] font-medium">{{ $reduction->reducedBy->name ?? '—' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[#6E6E73] text-xs uppercase tracking-widest mb-0.5">Adjustment Type</p>
+                        <p class="text-[#1D1D1F] font-medium">{{ ucwords(str_replace('_', ' ', $reduction->adjustment_type)) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[#6E6E73] text-xs uppercase tracking-widest mb-0.5">Catalogue</p>
+                        <p class="text-[#1D1D1F] font-medium">{{ $order->catalogue->name ?? '—' }}</p>
+                    </div>
+                    @if($reduction->notes)
+                    <div class="col-span-2">
+                        <p class="text-[#6E6E73] text-xs uppercase tracking-widest mb-0.5">Notes</p>
+                        <p class="text-[#1D1D1F]">{{ $reduction->notes }}</p>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Items Reduced --}}
+            <div class="card overflow-hidden">
+                <div class="px-5 py-3 border-b border-[#F2F2F7]">
+                    <h3 class="text-sm font-semibold text-[#1D1D1F]">Items Reduced</h3>
+                </div>
+                <table class="w-full apple-table">
+                    <thead>
+                        <tr>
+                            <th class="text-left">Design</th>
+                            <th class="text-center">Size</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-right">Unit Price</th>
+                            <th class="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($reduction->items as $item)
+                        <tr>
+                            <td class="font-medium text-[#1D1D1F]">{{ $item->design->name ?? '—' }}</td>
+                            <td class="text-center font-mono text-xs">{{ strtoupper($item->size) }}</td>
+                            <td class="text-center tabular-nums">{{ $item->qty_reduced }}</td>
+                            <td class="text-right tabular-nums text-[#6E6E73]">PKR {{ lacs_format($item->unit_price, 0) }}</td>
+                            <td class="text-right tabular-nums font-medium text-[#FF3B30]">PKR {{ lacs_format($item->amount_reduced, 0) }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
+                        <tr class="border-t border-[#E8E8ED]">
+                            <td colspan="4" class="text-right font-semibold text-[#1D1D1F] py-3 pr-4">Total Reduction</td>
+                            <td class="text-right tabular-nums font-semibold text-[#FF3B30] py-3">PKR {{ lacs_format($reduction->adjustment_amount, 0) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            {{-- Financial Impact --}}
+            <div class="card p-5 space-y-3 text-sm">
+                <h3 class="text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-3">Financial Impact</h3>
+                <div class="flex justify-between">
+                    <span class="text-[#6E6E73]">Original order total</span>
+                    <span class="font-medium tabular-nums text-[#1D1D1F]">PKR {{ lacs_format($reduction->original_total, 0) }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-[#6E6E73]">Reduction amount</span>
+                    <span class="font-medium tabular-nums text-[#FF3B30]">− PKR {{ lacs_format($reduction->adjustment_amount, 0) }}</span>
+                </div>
+                <div class="flex justify-between border-t border-[#F2F2F7] pt-2">
+                    <span class="font-semibold text-[#1D1D1F]">New order total</span>
+                    <span class="font-semibold tabular-nums text-[#1D1D1F]">PKR {{ lacs_format($reduction->new_total, 0) }}</span>
+                </div>
+            </div>
+
+            {{-- Surplus Handling --}}
+            @if($reduction->surplus_action && $reduction->surplus_action !== 'none')
+            <div class="card p-5 space-y-3 text-sm">
+                <h3 class="text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-3">Surplus Handling</h3>
+                @if($reduction->surplus_action === 'credit_to_advance')
+                <div class="flex items-center gap-3">
+                    <span class="badge bg-purple-100 text-purple-700">Credit to Advance</span>
+                    <span class="text-[#6E6E73]">Surplus was added to customer's advance credit balance.</span>
+                </div>
+                @elseif($reduction->surplus_action === 'refund')
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="badge bg-orange-100 text-orange-700">Refund Issued</span>
+                </div>
+                @if($reduction->refund)
+                @php $refund = $reduction->refund; @endphp
+                <div class="grid grid-cols-2 gap-x-6 gap-y-3">
+                    <div>
+                        <p class="text-[#6E6E73] text-xs uppercase tracking-widest mb-0.5">Refund Date</p>
+                        <p class="text-[#1D1D1F] font-medium">{{ $refund->refund_date->format('d M Y') }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[#6E6E73] text-xs uppercase tracking-widest mb-0.5">Refund Method</p>
+                        <p class="text-[#1D1D1F] font-medium">{{ $refund->refund_method === 'bank_transfer' ? 'Bank Transfer' : 'Cash' }}</p>
+                    </div>
+                    @if($refund->refund_method === 'bank_transfer' && $refund->refund_reference)
+                    <div>
+                        <p class="text-[#6E6E73] text-xs uppercase tracking-widest mb-0.5">Bank / Reference</p>
+                        <p class="text-[#1D1D1F] font-medium">{{ $refund->refund_reference }}</p>
+                    </div>
+                    @endif
+                    <div>
+                        <p class="text-[#6E6E73] text-xs uppercase tracking-widest mb-0.5">Refund Amount</p>
+                        <p class="text-[#FF3B30] font-semibold tabular-nums">PKR {{ lacs_format($refund->amount, 0) }}</p>
+                    </div>
+                </div>
+                @endif
+                @endif
+            </div>
+            @endif
+
+        </div>
+        @endforeach
+
+    </div>
+</div>
+
+</div>{{-- end x-data wrapper --}}
 
 @endsection
