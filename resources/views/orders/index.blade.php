@@ -50,13 +50,14 @@
             <option value="stitching"            {{ request('status') === 'stitching'            ? 'selected' : '' }}>Stitching</option>
             <option value="partially_dispatched" {{ request('status') === 'partially_dispatched' ? 'selected' : '' }}>Partially Dispatched</option>
             <option value="dispatched"           {{ request('status') === 'dispatched'           ? 'selected' : '' }}>Dispatched</option>
+            <option value="cancelled"            {{ request('status') === 'cancelled'            ? 'selected' : '' }}>Cancelled</option>
         </select>
     </div>
     <div>
         <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-wide mb-1">Search</label>
         <input type="text" name="search" value="{{ request('search') }}"
-               placeholder="Customer name or city…"
-               class="apple-input" style="min-width:220px;">
+               placeholder="Customer name, city or order number…"
+               class="apple-input" style="min-width:260px;">
     </div>
     <button type="submit" class="btn-primary self-end">Apply</button>
     @if(request()->hasAny(['status', 'search']))
@@ -141,6 +142,7 @@
                     <thead>
                         <tr>
                             <th class="text-left" style="min-width:130px;">Submitted</th>
+                            <th class="text-left" style="min-width:120px;">Order #</th>
                             <th class="text-left" style="min-width:170px;">Customer Name</th>
                             <th class="text-left" style="min-width:110px;">City</th>
                             <th class="text-center px-3" style="min-width:50px;">XS</th>
@@ -160,8 +162,9 @@
                             'received'             => 'badge bg-blue-50 text-blue-600',
                             'confirmed'            => 'badge bg-yellow-50 text-yellow-700',
                             'stitching'            => 'badge bg-orange-50 text-orange-700',
-                            'partially_dispatched' => 'badge bg-purple-50 text-purple-700',
+                            'partially_dispatched' => 'badge bg-purple-100 text-purple-700',
                             'dispatched'           => 'badge bg-green-50 text-green-700',
+                            'cancelled'            => 'badge bg-red-100 text-red-700',
                         ];
                         $statusLabel = [
                             'received'             => 'Received',
@@ -169,6 +172,7 @@
                             'stitching'            => 'Stitching',
                             'partially_dispatched' => 'Partially Dispatched',
                             'dispatched'           => 'Dispatched',
+                            'cancelled'            => 'Cancelled',
                         ];
                         $orderList = ($orders instanceof \Illuminate\Pagination\LengthAwarePaginator)
                             ? $orders->items()
@@ -189,7 +193,12 @@
 
                         {{-- Submitted date --}}
                         <td class="text-[#6E6E73] text-xs tabular-nums">
-                            {{ ($order->submitted_at ?? $order->created_at)->format('d/m/Y H:i') }}
+                            {{ ($order->submitted_at ?? $order->created_at)->format('d/m/Y g:i a') }}
+                        </td>
+
+                        {{-- Order number --}}
+                        <td class="text-[#6E6E73] text-xs tabular-nums font-mono">
+                            {{ $order->order_number }}
                         </td>
 
                         {{-- Customer name --}}
@@ -252,7 +261,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="12" class="text-center text-[#86868B] py-12">
+                        <td colspan="13" class="text-center text-[#86868B] py-12">
                             No orders found{{ $selectedCatalogue ? ' for ' . $selectedCatalogue->name : '' }}.
                         </td>
                     </tr>
@@ -261,7 +270,7 @@
                     {{-- Totals footer --}}
                     @if(count($orderList) > 0)
                     <tr style="background:#F5F5F7; border-top: 2px solid #E8E8ED;">
-                        <td colspan="3" class="font-semibold text-[#1D1D1F] text-sm">
+                        <td colspan="4" class="font-semibold text-[#1D1D1F] text-sm">
                             Totals — {{ count($orderList) }} orders
                         </td>
                         <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ lacs_format($summary['xs']) }}</td>

@@ -51,6 +51,7 @@
                             'stitching'            => 'bg-orange-100 text-orange-700',
                             'partially_dispatched' => 'bg-purple-100 text-purple-700',
                             'dispatched'           => 'bg-green-100 text-green-700',
+                            'cancelled'            => 'bg-red-100 text-red-700',
                         ];
                         $prodStatusLabel = [
                             'received'             => 'Received',
@@ -58,6 +59,7 @@
                             'stitching'            => 'Stitching',
                             'partially_dispatched' => 'Partially Dispatched',
                             'dispatched'           => 'Dispatched',
+                            'cancelled'            => 'Cancelled',
                         ];
                     @endphp
                     <span class="badge {{ $prodStatusBadge[$order->status] ?? 'bg-[#F5F5F7] text-[#6E6E73]' }}">

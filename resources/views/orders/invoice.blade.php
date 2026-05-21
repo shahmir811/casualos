@@ -277,6 +277,15 @@
 @php
     $sizes = ['xs' => 'XS', 's' => 'S', 'm' => 'M', 'l' => 'L', 'xl' => 'XL'];
     $totalPieces = 0;
+
+    // Build reduction map: design_id → size → total qty reduced
+    $reductionMap = [];
+    foreach ($order->reductions as $red) {
+        foreach ($red->items as $ri) {
+            $reductionMap[$ri->design_id][$ri->size] =
+                ($reductionMap[$ri->design_id][$ri->size] ?? 0) + $ri->qty_reduced;
+        }
+    }
 @endphp
 
 <table class="items-table">
@@ -294,18 +303,26 @@
     <tbody>
         @foreach($order->items as $i => $item)
         @php
-            $rowQty = $item->qty_xs + $item->qty_s + $item->qty_m + $item->qty_l + $item->qty_xl;
+            $dr     = $reductionMap[$item->design_id] ?? [];
+            $netXs  = max(0, $item->qty_xs - ($dr['xs'] ?? 0));
+            $netS   = max(0, $item->qty_s  - ($dr['s']  ?? 0));
+            $netM   = max(0, $item->qty_m  - ($dr['m']  ?? 0));
+            $netL   = max(0, $item->qty_l  - ($dr['l']  ?? 0));
+            $netXl  = max(0, $item->qty_xl - ($dr['xl'] ?? 0));
+            $netSizes = ['xs' => $netXs, 's' => $netS, 'm' => $netM, 'l' => $netL, 'xl' => $netXl];
+            $rowQty    = $netXs + $netS + $netM + $netL + $netXl;
+            $rowAmount = $rowQty * (float) $item->unit_price;
             $totalPieces += $rowQty;
         @endphp
         <tr class="{{ $i % 2 === 1 ? 'even' : '' }}">
             <td style="text-align:left; font-weight:bold;">{{ $item->design->name ?? '—' }}</td>
             @foreach(array_keys($sizes) as $col)
-            @php $qty = $item->{'qty_' . $col}; @endphp
+            @php $qty = $netSizes[$col]; @endphp
             <td class="{{ $qty ? 'qty-val' : 'qty-zero' }}">{{ $qty ?: '—' }}</td>
             @endforeach
             <td class="qty-val">{{ lacs_format($rowQty) }}</td>
             <td class="price-cell">PKR {{ lacs_format($item->unit_price, 0) }}</td>
-            <td class="amount-cell">PKR {{ lacs_format($item->total_amount, 0) }}</td>
+            <td class="amount-cell">PKR {{ lacs_format($rowAmount, 0) }}</td>
         </tr>
         @endforeach
         <tr class="totals-row">
