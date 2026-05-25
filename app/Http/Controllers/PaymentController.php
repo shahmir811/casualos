@@ -84,7 +84,7 @@ class PaymentController extends Controller
 
     public function destroy(Order $order, Payment $payment)
     {
-        if ($payment->order_id !== $order->id) {
+        if ((int) $payment->order_id !== (int) $order->id) {
             abort(404);
         }
 
