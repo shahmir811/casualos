@@ -32,7 +32,7 @@
                 <td class="font-medium text-[#0066CC]">OB-{{ str_pad($batch->id, 4, '0', STR_PAD_LEFT) }}</td>
                 <td>{{ $batch->catalogue->name ?? '—' }}</td>
                 <td>{{ $batch->received_date->format('d M Y') }}</td>
-                <td>{{ $batch->items->count() }}</td>
+                <td>{{ $batch->items->unique('design_id')->count() }}</td>
                 <td>{{ lacs_format($batch->items->sum('quantity')) }} pcs</td>
                 <td class="text-[#6E6E73] text-xs max-w-xs truncate">{{ $batch->notes ?? '—' }}</td>
                 <td>

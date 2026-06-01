@@ -113,9 +113,9 @@
                 @endif
                 <td class="font-medium">{{ $designsById[$dId]->name ?? '—' }}</td>
                 @foreach($sizes as $size)
-                <td class="text-right">{{ $retItems->where('size', $size)->sum('quantity') ?: '—' }}</td>
+                <td class="text-right">{{ $retItems->where('size', $size)->sum('original_quantity') ?: '—' }}</td>
                 @endforeach
-                <td class="text-right font-bold text-[#0071E3]">{{ lacs_format($retItems->sum('quantity')) }}</td>
+                <td class="text-right font-bold text-[#0071E3]">{{ lacs_format($retItems->sum('original_quantity')) }}</td>
             </tr>
             @endforeach
             @endforeach

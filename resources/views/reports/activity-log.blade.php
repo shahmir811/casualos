@@ -33,6 +33,7 @@
                     'deleted' => 'bg-red-100 text-red-700',
                 ];
                 $modelShort = $log->subject_type ? class_basename($log->subject_type) : '—';
+                $subjectType = $log->subject_type ? ltrim($log->subject_type, '\\') : null;
             @endphp
             <tr>
                 <td class="text-[#86868B] text-xs whitespace-nowrap">
@@ -50,7 +51,36 @@
                         {{ ucfirst($log->event ?? '—') }}
                     </span>
                 </td>
-                <td class="text-[#6E6E73] text-xs font-mono">{{ $modelShort }} #{{ $log->subject_id }}</td>
+                <td class="text-[#6E6E73] text-xs">
+                    @if($subjectType === 'App\Models\Order')
+                        @if($log->subject)
+                            <span class="font-mono font-medium text-[#1D1D1F]">Order # {{ $log->subject->order_number }}</span>
+                            @if($log->subject->catalogue)
+                                <p class="text-[10px] text-[#86868B] mt-0.5">{{ $log->subject->catalogue->name }}</p>
+                            @endif
+                        @else
+                            <span class="font-mono">Order # {{ $log->subject_id }}</span>
+                            <p class="text-[10px] text-[#86868B] mt-0.5">deleted</p>
+                        @endif
+                    @elseif($subjectType === 'App\Models\Payment')
+                        @if($log->subject)
+                            <span class="font-mono">Payment # {{ $log->subject_id }}</span>
+                            @if($log->subject->order)
+                                <p class="text-[10px] text-[#86868B] mt-0.5">
+                                    Order # {{ $log->subject->order->order_number }}
+                                    @if($log->subject->order->catalogue)
+                                        · {{ $log->subject->order->catalogue->name }}
+                                    @endif
+                                </p>
+                            @endif
+                        @else
+                            <span class="font-mono">Payment # {{ $log->subject_id }}</span>
+                            <p class="text-[10px] text-[#86868B] mt-0.5">deleted</p>
+                        @endif
+                    @else
+                        <span class="font-mono">{{ $modelShort }} #{{ $log->subject_id }}</span>
+                    @endif
+                </td>
                 <td class="text-[#6E6E73] text-xs max-w-sm truncate">{{ $log->description }}</td>
             </tr>
             @empty

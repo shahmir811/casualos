@@ -64,9 +64,10 @@ class OutsourcedBatchController extends Controller
                     $qty = (int) ($item[$size] ?? 0);
                     if ($qty > 0) {
                         $batch->items()->create([
-                            'design_id' => $item['design_id'],
-                            'size'      => $size,
-                            'quantity'  => $qty,
+                            'design_id'         => $item['design_id'],
+                            'size'              => $size,
+                            'quantity'          => $qty,
+                            'original_quantity' => $qty,
                         ]);
                     }
                 }

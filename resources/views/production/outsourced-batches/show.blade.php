@@ -26,7 +26,7 @@
 
         <div class="stat-card text-center">
             <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Pieces</p>
-            <p class="text-3xl font-light text-[#1D1D1F]">{{ lacs_format($outsourcedBatch->items->sum('quantity')) }}</p>
+            <p class="text-3xl font-light text-[#1D1D1F]">{{ lacs_format($outsourcedBatch->items->sum('original_quantity')) }}</p>
             <p class="text-[#86868B] text-xs mt-1">across {{ $outsourcedBatch->items->groupBy('design_id')->count() }} design(s)</p>
         </div>
     </div>
@@ -50,12 +50,12 @@
                         @forelse($byDesign as $designId => $designItems)
                         @php
                             $designName  = $designItems->first()->design->name ?? '—';
-                            $designTotal = $designItems->sum('quantity');
+                            $designTotal = $designItems->sum('original_quantity');
                         @endphp
                         <tr>
                             <td class="font-medium">{{ $designName }}</td>
                             @foreach($sizes as $size)
-                            <td class="text-right">{{ lacs_format($designItems->where('size', $size)->sum('quantity')) ?: '—' }}</td>
+                            <td class="text-right">{{ lacs_format($designItems->where('size', $size)->sum('original_quantity')) ?: '—' }}</td>
                             @endforeach
                             <td class="text-right font-bold text-[#0071E3]">{{ lacs_format($designTotal) }}</td>
                         </tr>
@@ -65,7 +65,7 @@
                         @if($byDesign->count())
                         <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
                             <td class="px-5 py-2 font-semibold text-xs text-[#6E6E73]" colspan="{{ count($sizes) + 1 }}">Batch Total</td>
-                            <td class="px-5 py-2 text-right font-bold text-sm">{{ lacs_format($outsourcedBatch->items->sum('quantity')) }} pcs</td>
+                            <td class="px-5 py-2 text-right font-bold text-sm">{{ lacs_format($outsourcedBatch->items->sum('original_quantity')) }} pcs</td>
                         </tr>
                         @endif
                     </tbody>
