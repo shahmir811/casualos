@@ -159,7 +159,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('dispatch/{order}/workspace',       [DispatchController::class, 'workspace'])->name('dispatch.workspace');
         Route::post('dispatch/{order}',                [DispatchController::class, 'store'])->name('dispatch.store');
 
-        // Worker wages
+    });
+
+    // Worker wages (admin, production_manager, accountant)
+    Route::middleware('role:admin|production_manager|accountant')->group(function () {
         Route::get('wages',                    [WagesController::class, 'index'])->name('wages.index');
         Route::get('wages/{wage}',             [WagesController::class, 'show'])->name('wages.show');
         Route::post('wages/recalculate',       [WagesController::class, 'recalculate'])->name('wages.recalculate');

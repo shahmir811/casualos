@@ -10,9 +10,11 @@
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F] mt-3">{{ $customer->name }}</h1>
         <p class="text-[#6E6E73] text-sm mt-1">{{ $customer->city }} · {{ $customer->contact_number }} · {{ $customer->email }}</p>
     </div>
-    @if(Auth::user()->role === 'admin')
+    @if(in_array(Auth::user()->role, ['admin', 'accountant']))
     <div class="flex items-center gap-2.5">
+        @if(Auth::user()->role === 'admin')
         <a href="{{ route('customers.edit', $customer) }}" class="btn-secondary">Edit</a>
+        @endif
         <a href="{{ route('customers.ledger', $customer) }}" class="btn-secondary">Ledger</a>
     </div>
     @endif
