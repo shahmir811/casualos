@@ -32,7 +32,29 @@
                 <td class="font-medium text-[#0066CC]">OB-{{ str_pad($batch->id, 4, '0', STR_PAD_LEFT) }}</td>
                 <td>{{ $batch->catalogue->name ?? '—' }}</td>
                 <td>{{ $batch->received_date->format('d M Y') }}</td>
-                <td>{{ $batch->items->unique('design_id')->count() }}</td>
+                <td>
+                    @php
+                        $badgeColors = [
+                            'bg-blue-50 text-blue-700',
+                            'bg-violet-50 text-violet-700',
+                            'bg-emerald-50 text-emerald-700',
+                            'bg-rose-50 text-rose-700',
+                            'bg-orange-50 text-orange-700',
+                            'bg-indigo-50 text-indigo-700',
+                            'bg-teal-50 text-teal-700',
+                            'bg-pink-50 text-pink-700',
+                        ];
+                    @endphp
+                    <div class="flex flex-col gap-1">
+                        @foreach($batch->items->groupBy('design_id') as $designId => $designItems)
+                        @php $color = $badgeColors[$designId % count($badgeColors)]; @endphp
+                        <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ $color }} rounded px-2 py-0.5 w-fit">
+                            {{ $designItems->first()->design->name ?? '—' }}
+                            <span class="opacity-60">· {{ number_format($designItems->sum('quantity')) }}</span>
+                        </span>
+                        @endforeach
+                    </div>
+                </td>
                 <td>{{ lacs_format($batch->items->sum('quantity')) }} pcs</td>
                 <td class="text-[#6E6E73] text-xs max-w-xs truncate">{{ $batch->notes ?? '—' }}</td>
                 <td>

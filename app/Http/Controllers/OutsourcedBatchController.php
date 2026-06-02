@@ -11,7 +11,7 @@ class OutsourcedBatchController extends Controller
 {
     public function index()
     {
-        $batches = OutsourcedBatch::with(['catalogue', 'items'])->latest()->paginate(20);
+        $batches = OutsourcedBatch::with(['catalogue', 'items.design'])->latest()->paginate(20);
         return view('production.outsourced-batches.index', compact('batches'));
     }
 
