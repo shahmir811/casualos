@@ -50,12 +50,12 @@
                         @php $color = $badgeColors[$designId % count($badgeColors)]; @endphp
                         <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ $color }} rounded px-2 py-0.5 w-fit">
                             {{ $designItems->first()->design->name ?? '—' }}
-                            <span class="opacity-60">· {{ number_format($designItems->sum('quantity')) }}</span>
+                            <span class="opacity-60">· {{ number_format($designItems->sum('original_quantity')) }}</span>
                         </span>
                         @endforeach
                     </div>
                 </td>
-                <td>{{ lacs_format($batch->items->sum('quantity')) }} pcs</td>
+                <td>{{ lacs_format($batch->items->sum('original_quantity')) }} pcs</td>
                 <td class="text-[#6E6E73] text-xs max-w-xs truncate">{{ $batch->notes ?? '—' }}</td>
                 <td>
                     <a href="{{ route('outsourced-batches.show', $batch) }}" class="text-[#0066CC] text-sm hover:underline">View →</a>
