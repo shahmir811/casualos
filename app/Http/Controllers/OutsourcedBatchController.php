@@ -11,7 +11,7 @@ class OutsourcedBatchController extends Controller
 {
     public function index()
     {
-        $batches = OutsourcedBatch::with(['catalogue', 'items'])->latest()->paginate(20);
+        $batches = OutsourcedBatch::with(['catalogue', 'items.design'])->latest()->paginate(20);
         return view('production.outsourced-batches.index', compact('batches'));
     }
 
@@ -64,9 +64,10 @@ class OutsourcedBatchController extends Controller
                     $qty = (int) ($item[$size] ?? 0);
                     if ($qty > 0) {
                         $batch->items()->create([
-                            'design_id' => $item['design_id'],
-                            'size'      => $size,
-                            'quantity'  => $qty,
+                            'design_id'         => $item['design_id'],
+                            'size'              => $size,
+                            'quantity'          => $qty,
+                            'original_quantity' => $qty,
                         ]);
                     }
                 }

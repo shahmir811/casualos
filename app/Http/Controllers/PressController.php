@@ -146,7 +146,7 @@ class PressController extends Controller
             $returnedItems = $returnedByDesign[$designId] ?? collect();
             foreach ($sizes as $size) {
                 $sent     = $sentItems->where('size', $size)->sum('quantity');
-                $returned = $returnedItems->where('size', $size)->sum('quantity');
+                $returned = $returnedItems->where('size', $size)->sum('original_quantity');
                 $outstandingByDesign[$designId][$size] = max(0, $sent - $returned);
             }
         }
@@ -197,7 +197,7 @@ class PressController extends Controller
                 $returnedQty = (int) $allReturnedItems
                     ->where('design_id', $designId)
                     ->where('size', $size)
-                    ->sum('quantity');
+                    ->sum('original_quantity');
 
                 $outstanding = max(0, $sentQty - $returnedQty);
 
@@ -221,9 +221,10 @@ class PressController extends Controller
                 foreach ($designData['items'] as $item) {
                     if ((int) ($item['qty'] ?? 0) > 0) {
                         $pressReturn->items()->create([
-                            'design_id' => $designData['design_id'],
-                            'size'      => $item['size'],
-                            'quantity'  => (int) $item['qty'],
+                            'design_id'         => $designData['design_id'],
+                            'size'              => $item['size'],
+                            'quantity'          => (int) $item['qty'],
+                            'original_quantity' => (int) $item['qty'],
                         ]);
                     }
                 }

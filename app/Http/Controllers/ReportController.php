@@ -15,6 +15,7 @@ use App\Models\Wage;
 use App\Models\Design;
 use App\Models\DispatchBatch;
 use App\Models\OrderReduction;
+use App\Models\Payment;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -122,6 +123,12 @@ class ReportController extends Controller
     public function activityLog(Request $request)
     {
         $logs = Activity::with('causer')->latest()->paginate(50);
+
+        $logs->getCollection()->loadMorph('subject', [
+            Order::class   => ['catalogue'],
+            Payment::class => ['order.catalogue'],
+        ]);
+
         return view('reports.activity-log', compact('logs'));
     }
 

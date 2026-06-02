@@ -12,13 +12,19 @@
     $firstItem   = $order->items->first();
     $rNumDesigns = $order->catalogue?->number_of_designs ?? $order->items->count();
 
-    // Tally all prior reductions
-    $reducedBySize = ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0];
+    // Tally all prior reductions, tracking per-design
+    $reducedBySize    = ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0];
+    $perDesignReduced = [];
     $totalAlreadyReduced = 0;
     foreach ($order->reductions as $red) {
         foreach ($red->items as $ri) {
+            $did = $ri->design_id;
+            if (!isset($perDesignReduced[$did])) {
+                $perDesignReduced[$did] = ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0];
+            }
             if (isset($reducedBySize[$ri->size])) {
-                $reducedBySize[$ri->size] += $ri->qty_reduced;
+                $reducedBySize[$ri->size]          += $ri->qty_reduced;
+                $perDesignReduced[$did][$ri->size] += $ri->qty_reduced;
             }
             $totalAlreadyReduced += $ri->qty_reduced;
         }
@@ -32,12 +38,22 @@
     $rawXl = $firstItem?->qty_xl ?? 0;
     $rawTotalPieces = ($rawXs + $rawS + $rawM + $rawL + $rawXl) * $rNumDesigns;
 
-    // Net display values: zero a size only when ALL pieces of that size across all designs are reduced
-    $rqxs = ($reducedBySize['xs'] >= $rawXs * $rNumDesigns) ? 0 : $rawXs;
-    $rqs  = ($reducedBySize['s']  >= $rawS  * $rNumDesigns) ? 0 : $rawS;
-    $rqm  = ($reducedBySize['m']  >= $rawM  * $rNumDesigns) ? 0 : $rawM;
-    $rql  = ($reducedBySize['l']  >= $rawL  * $rNumDesigns) ? 0 : $rawL;
-    $rqxl = ($reducedBySize['xl'] >= $rawXl * $rNumDesigns) ? 0 : $rawXl;
+    // A size column updates only when the reduction is uniform across ALL designs.
+    $rUniformForSize = function(string $sz) use ($rNumDesigns, $perDesignReduced): int {
+        if ($rNumDesigns === 0 || empty($perDesignReduced)) return 0;
+        $amounts = array_column($perDesignReduced, $sz);
+        if (count($perDesignReduced) < $rNumDesigns) {
+            $amounts[] = 0;
+        }
+        $unique = array_unique($amounts);
+        return count($unique) === 1 ? (int) $unique[0] : 0;
+    };
+
+    $rqxs = max(0, $rawXs - $rUniformForSize('xs'));
+    $rqs  = max(0, $rawS  - $rUniformForSize('s'));
+    $rqm  = max(0, $rawM  - $rUniformForSize('m'));
+    $rql  = max(0, $rawL  - $rUniformForSize('l'));
+    $rqxl = max(0, $rawXl - $rUniformForSize('xl'));
     $rQtyPerDesign = $rqxs + $rqs + $rqm + $rql + $rqxl;
     $rTotalPieces  = max(0, $rawTotalPieces - $totalAlreadyReduced);
 
@@ -49,7 +65,7 @@
         $remainingForSize = max(0, $rawQty * $rNumDesigns - $reducedBySize[$val]);
         if ($remainingForSize > 0) {
             $availableSizes[] = ['value' => $val, 'label' => $label];
-            $sizeQtyMap[$val] = $rawQty;
+            $sizeQtyMap[$val] = max(0, $rawQty - $rUniformForSize($val));
         }
     }
     $defaultSize = $availableSizes[0]['value'] ?? 'xs';
