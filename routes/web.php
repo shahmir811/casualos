@@ -81,7 +81,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     */
     Route::middleware('role:admin|accountant')->group(function () {
         Route::resource('customers', CustomerController::class)->except(['destroy']);
-        Route::get('customers/{customer}/ledger', [LedgerController::class, 'show'])->name('customers.ledger');
+        Route::get('customers/{customer}/ledger',     [LedgerController::class, 'show'])->name('customers.ledger');
+        Route::get('customers/{customer}/ledger/pdf', [LedgerController::class, 'pdf'])->name('customers.ledger.pdf');
     });
 
     /*

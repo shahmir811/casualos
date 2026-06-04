@@ -71,7 +71,7 @@ class OrderPieceReassignmentController extends Controller
                 CustomerLedger::create([
                     'customer_id'             => $targetOrder->customer_id,
                     'transaction_type'        => 'order_charged',
-                    'amount'                  => -$totalAdded,
+                    'amount'                  => $totalAdded,
                     'running_advance_balance' => (float) $customer->advance_credit_balance,
                     'reference_type'          => Order::class,
                     'reference_id'            => $targetOrder->id,

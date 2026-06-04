@@ -3,17 +3,22 @@
 
 @section('content')
 
-<div class="flex items-start justify-between mb-7">
+<div class="flex flex-col gap-4 mb-7 sm:flex-row sm:items-start sm:justify-between">
     <div>
         <a href="{{ route('customers.show', $customer) }}" class="text-[#0066CC] text-sm hover:underline">← {{ $customer->name }}</a>
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F] mt-3">Customer Ledger</h1>
     </div>
-    <div class="stat-card text-right min-w-[180px]">
-        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Outstanding Balance</p>
-        <p class="text-2xl font-light {{ $balance > 0 ? 'text-[#FF3B30]' : 'text-[#30D158]' }}">
-            PKR {{ lacs_format(abs($balance), 0) }}
-            <span class="text-sm">{{ $balance > 0 ? 'Debit' : ($balance < 0 ? 'Credit' : '') }}</span>
-        </p>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start">
+        <a href="{{ route('customers.ledger.pdf', $customer) }}" target="_blank" class="btn-secondary self-start">
+            Download PDF
+        </a>
+        <div class="stat-card text-right w-full sm:min-w-[180px] sm:w-auto">
+            <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Outstanding Balance</p>
+            <p class="text-2xl font-light {{ $balance > 0 ? 'text-[#FF3B30]' : 'text-[#30D158]' }}">
+                PKR {{ lacs_format(abs($balance), 0) }}
+                <span class="text-sm">{{ $balance > 0 ? 'Debit' : ($balance < 0 ? 'Credit' : '') }}</span>
+            </p>
+        </div>
     </div>
 </div>
 
@@ -28,12 +33,14 @@
 }" @keydown.escape.window="open = false">
 
 <div class="card overflow-hidden">
-    <table class="w-full apple-table">
+    <div class="overflow-x-auto">
+    <table class="w-full apple-table min-w-[640px]">
         <thead>
             <tr>
                 <th class="text-left">Date</th>
                 <th class="text-left">Type</th>
                 <th class="text-left">Description</th>
+                <th class="text-left">Catalogue</th>
                 <th class="text-left">Order</th>
                 <th class="text-left">By</th>
                 <th class="text-right">Amount</th>
@@ -78,6 +85,7 @@
                         <span class="text-[#C7C7CC]">—</span>
                     @endif
                 </td>
+                <td class="text-[#6E6E73] text-xs whitespace-nowrap">{{ $orderRef['catalogue'] ?? '—' }}</td>
                 <td class="text-xs whitespace-nowrap">
                     @if($orderRef)
                         <a href="{{ route('orders.show', $orderRef['id']) }}"
@@ -97,10 +105,11 @@
                 </td>
             </tr>
             @empty
-            <tr><td colspan="6" class="text-center text-[#86868B] py-12">No ledger entries.</td></tr>
+            <tr><td colspan="7" class="text-center text-[#86868B] py-12">No ledger entries.</td></tr>
             @endforelse
         </tbody>
     </table>
+    </div>
 </div>
 
 <div class="mt-5">{{ $entries->links() }}</div>

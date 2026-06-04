@@ -16,17 +16,22 @@ class PaymentController extends Controller
     public function store(Request $request, Order $order)
     {
         $request->validate([
-            'amount'          => 'required|numeric|min:1',
-            'payment_type'    => 'required|in:cash,bank_transfer,advance',
-            'bank_account_id' => 'required_if:payment_type,bank_transfer|nullable|exists:bank_accounts,id',
-            'payment_date'    => 'required|date',
-            'notes'           => 'nullable|string',
-            'receipt_image'   => 'required_if:payment_type,bank_transfer|nullable|file|mimes:pdf,jpeg,jpg,png,webp|max:5120',
+            'amount'            => 'required|numeric|min:1',
+            'payment_type'      => 'required|in:cash,bank_transfer,advance',
+            'bank_account_id'   => 'required_if:payment_type,bank_transfer|nullable|exists:bank_accounts,id',
+            'payment_date'      => 'required|date',
+            'notes'             => 'nullable|string',
+            'receipt_images'    => 'required_if:payment_type,bank_transfer|nullable|array|min:1',
+            'receipt_images.*'  => 'file|mimes:pdf,jpeg,jpg,png,webp|max:5120',
         ]);
 
-        $receiptPath = $request->hasFile('receipt_image')
-            ? $request->file('receipt_image')->store('receipts')
-            : null;
+        $receiptPaths = null;
+        if ($request->payment_type === 'bank_transfer' && $request->hasFile('receipt_images')) {
+            $receiptPaths = collect($request->file('receipt_images'))
+                ->map(fn($file) => $file->store('receipts'))
+                ->values()
+                ->toArray();
+        }
 
         $titleGiven = match ($request->payment_type) {
             'bank_transfer' => BankAccount::find($request->bank_account_id)?->title ?? 'Bank Transfer',
@@ -35,7 +40,7 @@ class PaymentController extends Controller
             default         => null,
         };
 
-        DB::transaction(function () use ($request, $receiptPath, $titleGiven, $order) {
+        DB::transaction(function () use ($request, $receiptPaths, $titleGiven, $order) {
             $payment = Payment::create([
                 'order_id'        => $order->id,
                 'customer_id'     => $order->customer_id,
@@ -45,7 +50,7 @@ class PaymentController extends Controller
                 'title_given'     => $titleGiven,
                 'payment_date'    => $request->payment_date,
                 'notes'           => $request->notes ?? null,
-                'receipt_image'   => $receiptPath,
+                'receipt_image'   => $receiptPaths,
                 'logged_by'       => Auth::id(),
             ]);
 

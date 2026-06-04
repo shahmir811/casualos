@@ -38,7 +38,7 @@ class LedgerController extends Controller
             };
         }
 
-        $pack     = fn($o) => $o ? ['id' => $o->id, 'number' => $o->order_number] : null;
+        $pack     = fn($o) => $o ? ['id' => $o->id, 'number' => $o->order_number, 'catalogue' => $o->catalogue->name ?? '—'] : null;
         $orderMap    = [];
         $reductionMap = [];
 
@@ -85,24 +85,94 @@ class LedgerController extends Controller
                 });
         }
         if ($paymentIds) {
-            Payment::whereIn('id', $paymentIds)->with('order:id,order_number')->get()
+            Payment::whereIn('id', $paymentIds)
+                ->with(['order' => fn($q) => $q->select('id', 'order_number', 'catalogue_id')->with('catalogue:id,name')])
+                ->get()
                 ->each(function ($p) use (&$orderMap, $pack) {
                     $orderMap[Payment::class . ':' . $p->id] = $pack($p->order);
                 });
         }
         if ($refundIds) {
-            Refund::whereIn('id', $refundIds)->with('order:id,order_number')->get()
+            Refund::whereIn('id', $refundIds)
+                ->with(['order' => fn($q) => $q->select('id', 'order_number', 'catalogue_id')->with('catalogue:id,name')])
+                ->get()
                 ->each(function ($r) use (&$orderMap, $pack) {
                     $orderMap[Refund::class . ':' . $r->id] = $pack($r->order);
                 });
         }
         if ($directIds) {
-            Order::whereIn('id', $directIds)->get(['id', 'order_number'])
+            Order::whereIn('id', $directIds)
+                ->with('catalogue:id,name')
+                ->get(['id', 'order_number', 'catalogue_id'])
                 ->each(function ($o) use (&$orderMap, $pack) {
                     $orderMap[Order::class . ':' . $o->id] = $pack($o);
                 });
         }
 
         return view('customers.ledger', compact('customer', 'entries', 'balance', 'orderMap', 'reductionMap'));
+    }
+
+    public function pdf(Customer $customer)
+    {
+        $entries = CustomerLedger::where('customer_id', $customer->id)
+            ->with('createdBy')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $balance = $entries->sum('amount');
+
+        $reductionIds = [];
+        $paymentIds   = [];
+        $refundIds    = [];
+        $directIds    = [];
+
+        foreach ($entries as $entry) {
+            if (!$entry->reference_id) continue;
+            match ($entry->reference_type) {
+                OrderReduction::class => $reductionIds[] = $entry->reference_id,
+                Payment::class        => $paymentIds[]   = $entry->reference_id,
+                Refund::class         => $refundIds[]    = $entry->reference_id,
+                Order::class          => $directIds[]    = $entry->reference_id,
+                default               => null,
+            };
+        }
+
+        $pack     = fn($o) => $o ? ['id' => $o->id, 'number' => $o->order_number, 'catalogue' => $o->catalogue->name ?? '—'] : null;
+        $orderMap = [];
+
+        if ($reductionIds) {
+            OrderReduction::whereIn('id', $reductionIds)
+                ->with(['order.catalogue'])
+                ->get()
+                ->each(function ($r) use (&$orderMap, $pack) {
+                    $orderMap[OrderReduction::class . ':' . $r->id] = $pack($r->order);
+                });
+        }
+        if ($paymentIds) {
+            Payment::whereIn('id', $paymentIds)
+                ->with(['order' => fn($q) => $q->select('id', 'order_number', 'catalogue_id')->with('catalogue:id,name')])
+                ->get()
+                ->each(function ($p) use (&$orderMap, $pack) {
+                    $orderMap[Payment::class . ':' . $p->id] = $pack($p->order);
+                });
+        }
+        if ($refundIds) {
+            Refund::whereIn('id', $refundIds)
+                ->with(['order' => fn($q) => $q->select('id', 'order_number', 'catalogue_id')->with('catalogue:id,name')])
+                ->get()
+                ->each(function ($r) use (&$orderMap, $pack) {
+                    $orderMap[Refund::class . ':' . $r->id] = $pack($r->order);
+                });
+        }
+        if ($directIds) {
+            Order::whereIn('id', $directIds)
+                ->with('catalogue:id,name')
+                ->get(['id', 'order_number', 'catalogue_id'])
+                ->each(function ($o) use (&$orderMap, $pack) {
+                    $orderMap[Order::class . ':' . $o->id] = $pack($o);
+                });
+        }
+
+        return view('customers.ledger-pdf', compact('customer', 'entries', 'balance', 'orderMap'));
     }
 }

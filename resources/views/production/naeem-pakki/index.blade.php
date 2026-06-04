@@ -2,12 +2,12 @@
 @section('title', 'Naeem Pakki')
 @section('content')
 
-<div class="flex items-center justify-between mb-6">
+<div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
     <div>
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Naeem Pakki</h1>
         <p class="text-[#6E6E73] text-sm mt-1">Track embroidery pieces sent to and returned from Naeem Pakki</p>
     </div>
-    <a href="{{ route('production-assignments.create') }}" class="btn-primary">
+    <a href="{{ route('production-assignments.create') }}" class="btn-primary self-start sm:self-auto">
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
         </svg>
@@ -43,7 +43,76 @@
     </div>
 </div>
 
-<div class="card overflow-hidden">
+@php
+$badgeColors = [
+    'bg-blue-50 text-blue-700',
+    'bg-violet-50 text-violet-700',
+    'bg-emerald-50 text-emerald-700',
+    'bg-rose-50 text-rose-700',
+    'bg-orange-50 text-orange-700',
+    'bg-indigo-50 text-indigo-700',
+    'bg-teal-50 text-teal-700',
+    'bg-pink-50 text-pink-700',
+];
+@endphp
+
+{{-- Mobile cards --}}
+<div class="card overflow-hidden sm:hidden">
+    @forelse($assignments as $assignment)
+    @php
+        $totalSent        = $assignment->npDesigns->sum('quantity');
+        $totalReturned    = $assignment->npDesigns->sum(fn($d) => $d->totalReturned());
+        $totalOutstanding = $assignment->npDesigns->sum(fn($d) => $d->outstandingPieces());
+        $done             = $totalOutstanding === 0 && $totalSent > 0;
+    @endphp
+    <a href="{{ route('naeem-pakki-sends.show', $assignment) }}"
+       class="block px-5 py-4 border-b border-[#F2F2F7] last:border-b-0 hover:bg-[#F9F9F9] transition-colors">
+        <div class="flex items-start justify-between gap-3 mb-2">
+            <div>
+                <span class="font-semibold text-[#0066CC] text-sm">PA-{{ str_pad($assignment->id, 4, '0', STR_PAD_LEFT) }}</span>
+                <span class="text-[#6E6E73] text-xs ml-2">{{ $assignment->catalogue->name ?? '—' }}</span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                @if($done)
+                    <span class="badge bg-green-100 text-green-700">Complete</span>
+                @else
+                    <span class="badge bg-orange-100 text-orange-700">Pending</span>
+                @endif
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-1 mb-3">
+            @foreach($assignment->npDesigns as $npDesign)
+                @php $color = $badgeColors[($npDesign->design->id ?? $loop->index) % count($badgeColors)]; @endphp
+                <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ $color }} rounded px-2 py-0.5">
+                    {{ $npDesign->design->name ?? '—' }}
+                    <span class="opacity-60">· {{ lacs_format($npDesign->quantity) }}</span>
+                </span>
+            @endforeach
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="bg-[#F5F5F7] rounded-lg py-2 px-1">
+                <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">Sent</p>
+                <p class="text-sm font-semibold tabular-nums text-[#1D1D1F]">{{ lacs_format($totalSent) }}</p>
+            </div>
+            <div class="bg-green-50 rounded-lg py-2 px-1">
+                <p class="text-[10px] text-green-600 uppercase tracking-widest mb-0.5">Returned</p>
+                <p class="text-sm font-semibold tabular-nums text-green-700">{{ lacs_format($totalReturned) }}</p>
+            </div>
+            <div class="{{ $totalOutstanding > 0 ? 'bg-orange-50' : 'bg-[#F5F5F7]' }} rounded-lg py-2 px-1">
+                <p class="text-[10px] {{ $totalOutstanding > 0 ? 'text-orange-500' : 'text-[#86868B]' }} uppercase tracking-widest mb-0.5">Outstanding</p>
+                <p class="text-sm font-semibold tabular-nums {{ $totalOutstanding > 0 ? 'text-orange-600' : 'text-[#86868B]' }}">{{ lacs_format($totalOutstanding) }}</p>
+            </div>
+        </div>
+        <p class="text-[#C7C7CC] text-[10px] mt-2">{{ $assignment->assignment_date->format('d M Y') }}</p>
+    </a>
+    @empty
+    <p class="text-center text-[#86868B] py-12 px-5">No Naeem Pakki assignments recorded yet.</p>
+    @endforelse
+</div>
+
+{{-- Desktop table --}}
+<div class="card overflow-hidden hidden sm:block">
+    <div class="overflow-x-auto">
     <table class="w-full apple-table">
         <thead>
             <tr>
@@ -74,18 +143,6 @@
                 </td>
                 <td class="text-[#6E6E73]">{{ $assignment->catalogue->name ?? '—' }}</td>
                 <td>
-                    @php
-                        $badgeColors = [
-                            'bg-blue-50 text-blue-700',
-                            'bg-violet-50 text-violet-700',
-                            'bg-emerald-50 text-emerald-700',
-                            'bg-rose-50 text-rose-700',
-                            'bg-orange-50 text-orange-700',
-                            'bg-indigo-50 text-indigo-700',
-                            'bg-teal-50 text-teal-700',
-                            'bg-pink-50 text-pink-700',
-                        ];
-                    @endphp
                     <div class="flex flex-col gap-1">
                         @foreach($assignment->npDesigns as $npDesign)
                             @php $color = $badgeColors[($npDesign->design->id ?? $loop->index) % count($badgeColors)]; @endphp
@@ -121,6 +178,7 @@
             @endforelse
         </tbody>
     </table>
+    </div>
 </div>
 
 <div class="mt-5">{{ $assignments->links() }}</div>

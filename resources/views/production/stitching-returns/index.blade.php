@@ -128,11 +128,63 @@
             @endif
         </p>
     </div>
+
+    {{-- Mobile cards --}}
+    <div class="divide-y divide-[#F2F2F7] md:hidden">
+        @foreach($designReport as $row)
+        @php
+            $allDone = $row->is_complete;
+            $anyRet  = $row->kameez + $row->shalwar + $row->dupatta > 0;
+            $colFn = function(int $ret, int $assigned): string {
+                if ($assigned === 0) return 'text-[#D2D2D7]';
+                if ($ret >= $assigned) return 'font-semibold text-[#34C759]';
+                if ($ret > 0)         return 'font-semibold text-[#FF9500]';
+                return 'text-[#D2D2D7]';
+            };
+        @endphp
+        <div class="px-5 py-4">
+            <div class="flex items-start justify-between gap-2 mb-3">
+                <div>
+                    <p class="text-sm font-semibold text-[#1D1D1F]">{{ $row->design_name }}</p>
+                    <p class="text-xs text-[#86868B] mt-0.5">{{ $row->catalogue_name }}</p>
+                </div>
+                @if($allDone)
+                    <span class="badge bg-green-100 text-green-700 shrink-0">Complete</span>
+                @elseif($anyRet)
+                    <span class="badge bg-orange-100 text-orange-700 shrink-0">Partial</span>
+                @else
+                    <span class="badge bg-[#F5F5F7] text-[#86868B] shrink-0">Pending</span>
+                @endif
+            </div>
+            <div class="grid grid-cols-4 gap-2 text-center">
+                <div class="bg-[#F5F5F7] rounded-lg py-2">
+                    <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">Assigned</p>
+                    <p class="text-sm font-semibold tabular-nums text-[#1D1D1F]">{{ lacs_format($row->assigned) }}</p>
+                </div>
+                @foreach(['Kameez' => $row->kameez, 'Shalwar' => $row->shalwar, 'Dupatta' => $row->dupatta] as $label => $val)
+                @php
+                    $cls = $colFn((int)$val, (int)$row->assigned);
+                    $isGreen  = str_contains($cls, '34C759');
+                    $isOrange = str_contains($cls, 'FF9500');
+                    $bg = $isGreen ? 'bg-green-50' : ($isOrange ? 'bg-orange-50' : 'bg-[#F5F5F7]');
+                @endphp
+                <div class="{{ $bg }} rounded-lg py-2">
+                    <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">{{ $label }}</p>
+                    <p class="text-sm tabular-nums {{ $cls }}">{{ lacs_format($val) }}</p>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endforeach
+    </div>
+
+    {{-- Desktop table --}}
+    <div class="hidden md:block overflow-x-auto">
     <table class="w-full apple-table">
         <thead>
             <tr>
                 <th class="text-left">Design</th>
-                <th class="text-left hidden md:table-cell">Catalogue</th>
+                <th class="text-left">Catalogue</th>
                 <th class="text-right">Assigned</th>
                 <th class="text-right">Kameez</th>
                 <th class="text-right">Shalwar</th>
@@ -145,7 +197,6 @@
             @php
                 $allDone = $row->is_complete;
                 $anyRet  = $row->kameez + $row->shalwar + $row->dupatta > 0;
-
                 $colFn = function(int $ret, int $assigned): string {
                     if ($assigned === 0) return 'text-[#D2D2D7]';
                     if ($ret >= $assigned) return 'font-semibold text-[#34C759]';
@@ -155,7 +206,7 @@
             @endphp
             <tr>
                 <td class="font-medium text-[#1D1D1F]">{{ $row->design_name }}</td>
-                <td class="text-[#6E6E73] text-xs hidden md:table-cell">{{ $row->catalogue_name }}</td>
+                <td class="text-[#6E6E73] text-xs">{{ $row->catalogue_name }}</td>
                 <td class="text-right tabular-nums">{{ lacs_format($row->assigned) }}</td>
                 <td class="text-right tabular-nums {{ $colFn($row->kameez, $row->assigned) }}">{{ lacs_format($row->kameez) }}</td>
                 <td class="text-right tabular-nums {{ $colFn($row->shalwar, $row->assigned) }}">{{ lacs_format($row->shalwar) }}</td>
@@ -173,6 +224,7 @@
             @endforeach
         </tbody>
     </table>
+    </div>
 </div>
 @endif
 

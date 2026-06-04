@@ -600,7 +600,8 @@ returns that cause discrepancies — it flags them for review.
   - Reduction detail page (`orders.reductions.show`) — also accessible inline as a modal from the customer ledger "View" link
   - `OrderReduction` model uses `LogsActivity`
 - **Order Cancellation** (auto-only, 2026-05-20): when a reduction brings `new_total` to 0 and order is not `dispatched`, status is set to `cancelled` automatically inside `OrderReductionController::store()`
-- **Piece Reassignment** (2026-05-20, admin only): `OrderPieceReassignmentController` — moves qty from a source order to a target order in the same catalogue; increments target `order_items.qty_{size}`, increases target `total_amount` and `outstanding_balance`, creates `order_charged` ledger entry for the target customer
+- **Piece Reassignment** (2026-05-20, admin only): `OrderPieceReassignmentController` — moves qty from a source order to a target order in the same catalogue; increments target `order_items.qty_{size}`, increases target `total_amount` and `outstanding_balance`, creates `order_charged` ledger entry (positive amount) for the target customer
+- **Customer ledger `order_charged` data fix** (2026-06-04): migration `2026_06_04_000001` corrects two historical data bugs: (1) flips all negative `order_charged` amounts to positive (wrong sign from old controller code and the reassignment bug); (2) inserts missing `order_charged` entries for orders that were placed before the ledger entry was wired up in `PublicOrderController`
 - Fabric batch arrivals — validation allows qty=0 per item (zeros filtered out); index shows per-catalogue / per-design received breakdown cards; show page has formula callout without stat card clutter
 - **Stitching Units** — `stitching_units` table introduced; units are no longer hardcoded integers. `production_assignments.stitching_unit_id` and `stitching_returns.stitching_unit_id` are proper foreign keys. Each per-piece unit holds its own `per_piece_rate`.
 - **Production assignments** — redesigned form (2026-05-02):
@@ -637,7 +638,7 @@ returns that cause discrepancies — it flags them for review.
 8. **`running_advance_balance` hardcoded to 0** in all ledger entries — must be actual customer balance
 9. **Dispatch order status** — ✅ Fixed (2026-05-19): `partially_dispatched` status added; `DispatchController::store()` now sets `partially_dispatched` on partial dispatch and `dispatched` only when `isFullyDispatched()` returns true
 10. **Creative Head role dashboard restriction** — `creative_head` should not see financial/order/production data on dashboard
-11. **`OrderPieceReassignmentController` creates `order_charged` with wrong sign** — currently stored as `-$totalAdded` (negative) but the sign convention requires `order_charged` to be **positive**. Must be fixed to `+$totalAdded`.
+11. **`OrderPieceReassignmentController` creates `order_charged` with wrong sign** — ✅ Fixed (2026-06-04): changed `amount => -$totalAdded` to `amount => $totalAdded` in `OrderPieceReassignmentController::store()`; historical wrong-sign entries corrected by migration `2026_06_04_000001`.
 
 ### All Migrations (run `php artisan migrate` after pulling)
 
@@ -663,6 +664,9 @@ All migrations have been run. No pending migrations. For reference, the full set
 - `2026_05_20_000003` — creates `refunds` table (`order_id`, `order_reduction_id`, `customer_id`, `amount`, `refund_method`, `refund_date`, `notes`, `refunded_by`)
 - `2026_05_20_000004` — adds `surplus_action` enum (`none|credit_to_advance|refund`) to `order_reductions`; corrects `adjustment_type` enum to (`damage|short_supply|price_correction|other`)
 - `2026_05_21_000001` — drops `bank_account_id` FK from `refunds`; adds `refund_reference` (nullable string) and `refund_document` (nullable string for S3 path)
+- `2026_06_01_000001` — adds `original_quantity` to `outsourced_batch_items`
+- `2026_06_01_000002` — adds `original_quantity` to `press_return_items`
+- `2026_06_04_000001` — data fix: flips negative `order_charged` ledger entries to positive; inserts missing `order_charged` entries for orders that had none
 
 ---
 
