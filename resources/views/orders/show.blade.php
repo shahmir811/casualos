@@ -415,9 +415,67 @@
     <div class="px-6 py-4 border-b border-[#F2F2F7]">
         <h2 class="text-[#1D1D1F] text-sm font-semibold">Payments ({{ $order->payments->count() }})</h2>
     </div>
+    {{-- Mobile card list --}}
+    <div class="divide-y divide-[#F2F2F7] sm:hidden">
+        @foreach($order->payments as $payment)
+        @php $receiptExt = $payment->receipt_image ? strtolower(pathinfo($payment->receipt_image, PATHINFO_EXTENSION)) : null; @endphp
+        @if(in_array(Auth::user()->role, ['admin', 'accountant']))
+        <form id="form-delete-payment-{{ $payment->id }}" method="POST"
+              action="{{ route('orders.payments.destroy', [$order, $payment]) }}">
+            @csrf @method('DELETE')
+        </form>
+        @endif
+        <div class="px-5 py-4 space-y-2">
+            <div class="flex items-start justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="badge bg-green-100 text-green-700">{{ ucwords(str_replace('_', ' ', $payment->payment_type)) }}</span>
+                    @if($payment->payment_type === 'bank_transfer' && $payment->bankAccount)
+                    <span class="text-xs text-[#6E6E73]">· {{ $payment->bankAccount->title }}</span>
+                    @endif
+                </div>
+                <span class="text-[#30D158] font-mono font-semibold text-sm whitespace-nowrap">PKR {{ lacs_format($payment->amount, 0) }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+                <span class="text-[#6E6E73] text-xs">{{ $payment->payment_date->format('d M Y') }}</span>
+                <div class="flex items-center gap-3">
+                    @if($receiptExt === 'pdf')
+                    <a href="{{ Storage::url($payment->receipt_image) }}" target="_blank"
+                       class="inline-flex w-8 h-8 rounded-lg border border-[#FFCDD0] items-center justify-center bg-[#FFF0EF]" title="View receipt (PDF)">
+                        <svg class="w-4 h-4 text-[#FF3B30]" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                        </svg>
+                    </a>
+                    @elseif($receiptExt)
+                    <a href="{{ Storage::url($payment->receipt_image) }}" target="_blank"
+                       class="inline-block w-8 h-8 rounded-lg overflow-hidden border border-[#E8E8ED]" title="View receipt">
+                        <img src="{{ Storage::url($payment->receipt_image) }}" class="w-full h-full object-cover">
+                    </a>
+                    @endif
+                    @if(in_array(Auth::user()->role, ['admin', 'accountant']))
+                    <button type="button" class="text-[#FF3B30] text-xs hover:underline"
+                            @click="$store.confirm.show({
+                                title: 'Delete Payment',
+                                message: 'Permanently delete this payment of PKR {{ lacs_format($payment->amount, 0) }}? The order balance will be recalculated.',
+                                formId: 'form-delete-payment-{{ $payment->id }}',
+                                confirmText: 'Delete Payment',
+                                danger: true
+                            })">Delete</button>
+                    @endif
+                </div>
+            </div>
+            @if($payment->notes)
+            <p class="text-[#6E6E73] text-xs">{{ $payment->notes }}</p>
+            @endif
+        </div>
+        @endforeach
+    </div>
+
+    {{-- Desktop table --}}
+    <div class="hidden sm:block overflow-x-auto">
     <table class="w-full apple-table">
         <tbody>
             @foreach($order->payments as $payment)
+            @php $receiptExt = $payment->receipt_image ? strtolower(pathinfo($payment->receipt_image, PATHINFO_EXTENSION)) : null; @endphp
             <tr>
                 <td class="text-[#6E6E73] text-xs whitespace-nowrap">{{ $payment->payment_date->format('d M Y') }}</td>
                 <td>
@@ -429,8 +487,6 @@
                 <td class="text-[#6E6E73] text-sm">{{ $payment->notes ?? '—' }}</td>
                 <td class="text-right text-[#30D158] font-mono font-medium">PKR {{ lacs_format($payment->amount, 0) }}</td>
                 <td class="text-right">
-                    @if($payment->receipt_image)
-                    @php $receiptExt = strtolower(pathinfo($payment->receipt_image, PATHINFO_EXTENSION)); @endphp
                     @if($receiptExt === 'pdf')
                     <a href="{{ Storage::url($payment->receipt_image) }}" target="_blank"
                        class="inline-flex w-10 h-10 rounded-lg border border-[#FFCDD0] hover:border-[#FF3B30] transition-colors items-center justify-center bg-[#FFF0EF]"
@@ -439,20 +495,19 @@
                             <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
                         </svg>
                     </a>
-                    @else
+                    @elseif($receiptExt)
                     <a href="{{ Storage::url($payment->receipt_image) }}" target="_blank"
                        class="inline-block w-10 h-10 rounded-lg overflow-hidden border border-[#E8E8ED] hover:border-[#0071E3] transition-colors"
                        title="View receipt">
                         <img src="{{ Storage::url($payment->receipt_image) }}" class="w-full h-full object-cover">
                     </a>
-                    @endif
                     @else
                     <span class="text-[#C7C7CC] text-xs">—</span>
                     @endif
                 </td>
                 @if(in_array(Auth::user()->role, ['admin', 'accountant']))
                 <td class="text-right">
-                    <form id="form-delete-payment-{{ $payment->id }}" method="POST"
+                    <form id="form-delete-payment-{{ $payment->id }}-desktop" method="POST"
                           action="{{ route('orders.payments.destroy', [$order, $payment]) }}">
                         @csrf
                         @method('DELETE')
@@ -462,7 +517,7 @@
                             @click="$store.confirm.show({
                                 title: 'Delete Payment',
                                 message: 'Permanently delete this payment of PKR {{ lacs_format($payment->amount, 0) }}? The order balance will be recalculated.',
-                                formId: 'form-delete-payment-{{ $payment->id }}',
+                                formId: 'form-delete-payment-{{ $payment->id }}-desktop',
                                 confirmText: 'Delete Payment',
                                 danger: true
                             })">
@@ -474,6 +529,7 @@
             @endforeach
         </tbody>
     </table>
+    </div>
 </div>
 @endif
 

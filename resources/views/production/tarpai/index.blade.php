@@ -2,12 +2,12 @@
 @section('title', 'Tarpai Finishing')
 @section('content')
 
-<div class="flex items-center justify-between mb-7">
+<div class="flex flex-col gap-4 mb-7 sm:flex-row sm:items-center sm:justify-between">
     <div>
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Tarpai Finishing</h1>
         <p class="text-[#6E6E73] text-sm mt-1">Track Kameez pieces sent for tarpai and returns</p>
     </div>
-    <a href="{{ route('tarpai-sends.create') }}" class="btn-primary">
+    <a href="{{ route('tarpai-sends.create') }}" class="btn-primary self-start sm:self-auto">
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
         </svg>
@@ -144,8 +144,89 @@
 </div>
 @endforeach
 
-<div class="card overflow-hidden">
-    <table class="w-full apple-table">
+@php
+$palette = [
+    'bg-blue-100 text-blue-700',
+    'bg-purple-100 text-purple-700',
+    'bg-emerald-100 text-emerald-700',
+    'bg-amber-100 text-amber-700',
+    'bg-rose-100 text-rose-700',
+    'bg-teal-100 text-teal-700',
+    'bg-orange-100 text-orange-700',
+];
+@endphp
+
+{{-- Mobile cards --}}
+<div class="card overflow-hidden sm:hidden">
+    @forelse($sends as $send)
+    @php
+        $sent        = $send->items->sum('quantity');
+        $returned    = $send->returns->flatMap->items->sum('quantity');
+        $outstanding = max(0, $sent - $returned);
+        $designs     = $send->items->pluck('design')->filter()->unique('id');
+        $houseBadge  = $send->tarpai_house === 'rashid_bhai'
+                        ? 'bg-purple-100 text-purple-700'
+                        : ($send->tarpai_house === 'yousaf_bhai' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700');
+    @endphp
+    <div class="px-5 py-4 border-b border-[#F2F2F7] last:border-b-0">
+        <div class="flex items-start justify-between gap-3 mb-2">
+            <div>
+                <span class="font-semibold text-[#0066CC] text-sm">TP-{{ str_pad($send->id, 4, '0', STR_PAD_LEFT) }}</span>
+                <span class="text-[#6E6E73] text-xs ml-2">{{ $send->catalogue->name ?? '—' }}</span>
+            </div>
+            @if($outstanding === 0 && $sent > 0)
+                <span class="badge bg-green-100 text-green-700 shrink-0">Complete</span>
+            @elseif($outstanding > 0)
+                <span class="badge bg-orange-100 text-orange-700 shrink-0">Pending</span>
+            @else
+                <span class="badge bg-[#F5F5F7] text-[#86868B] shrink-0">—</span>
+            @endif
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5 mb-3">
+            <span class="badge {{ $houseBadge }}">{{ $send->tarpaiHouseLabel() }}</span>
+            @foreach($designs as $design)
+            <span class="badge text-[10px] {{ $palette[$design->id % count($palette)] }}">{{ $design->name }}</span>
+            @endforeach
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-center mb-3">
+            <div class="bg-[#F5F5F7] rounded-lg py-2">
+                <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">Sent</p>
+                <p class="text-sm font-semibold tabular-nums text-[#1D1D1F]">{{ lacs_format($sent) }}</p>
+            </div>
+            <div class="bg-green-50 rounded-lg py-2">
+                <p class="text-[10px] text-green-600 uppercase tracking-widest mb-0.5">Returned</p>
+                <p class="text-sm font-semibold tabular-nums text-green-700">{{ lacs_format($returned) }}</p>
+            </div>
+            <div class="bg-[#F5F5F7] rounded-lg py-2">
+                <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">Rate</p>
+                <p class="text-sm font-semibold tabular-nums text-[#6E6E73]">{{ lacs_format($send->per_piece_price, 0) }}/pc</p>
+            </div>
+        </div>
+        <div class="flex items-center justify-between">
+            <span class="text-[#C7C7CC] text-xs">{{ $send->sent_date->format('d M Y') }}</span>
+            <div class="flex items-center gap-3">
+                @if($send->tarpai_house !== 'in_house')
+                <a href="{{ route('tarpai.gate-pass', $send) }}" target="_blank"
+                   class="text-[#6E6E73] text-xs flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                    </svg>
+                    Gate Pass
+                </a>
+                @endif
+                <a href="{{ route('tarpai-sends.show', $send) }}" class="text-[#0066CC] text-sm">View →</a>
+            </div>
+        </div>
+    </div>
+    @empty
+    <p class="text-center text-[#86868B] py-12 px-5">No tarpai sends recorded yet.</p>
+    @endforelse
+</div>
+
+{{-- Desktop table --}}
+<div class="card overflow-hidden hidden sm:block">
+    <div class="overflow-x-auto">
+    <table class="w-full apple-table min-w-[700px]">
         <thead>
             <tr>
                 <th class="text-left">Send #</th>
@@ -165,23 +246,12 @@
                 $sent        = $send->items->sum('quantity');
                 $returned    = $send->returns->flatMap->items->sum('quantity');
                 $outstanding = max(0, $sent - $returned);
+                $designs     = $send->items->pluck('design')->filter()->unique('id');
             @endphp
             <tr>
                 <td class="font-medium text-[#0066CC]">TP-{{ str_pad($send->id, 4, '0', STR_PAD_LEFT) }}</td>
                 <td>
                     <div class="font-medium text-[#1D1D1F] text-sm">{{ $send->catalogue->name ?? '—' }}</div>
-                    @php
-                        $designs = $send->items->pluck('design')->filter()->unique('id');
-                        $palette = [
-                            'bg-blue-100 text-blue-700',
-                            'bg-purple-100 text-purple-700',
-                            'bg-emerald-100 text-emerald-700',
-                            'bg-amber-100 text-amber-700',
-                            'bg-rose-100 text-rose-700',
-                            'bg-teal-100 text-teal-700',
-                            'bg-orange-100 text-orange-700',
-                        ];
-                    @endphp
                     @if($designs->isNotEmpty())
                     <div class="flex flex-wrap gap-1 mt-1">
                         @foreach($designs as $design)
@@ -230,6 +300,7 @@
             @endforelse
         </tbody>
     </table>
+    </div>
 </div>
 
 <div class="mt-5">{{ $sends->links() }}</div>

@@ -44,7 +44,8 @@
         <span class="text-[#86868B] font-normal">— {{ lacs_format($catTotal) }} pcs total</span>
     </h2>
     <div class="card overflow-hidden">
-        <table class="w-full apple-table">
+        <div class="overflow-x-auto">
+        <table class="w-full apple-table min-w-[480px]">
             <thead>
                 <tr>
                     <th class="text-left">Design</th>
@@ -72,6 +73,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
     </div>
 </div>
 @empty
