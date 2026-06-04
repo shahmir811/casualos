@@ -253,36 +253,35 @@
               enctype="multipart/form-data"
               x-data="{
                 paymentType: '{{ old('payment_type', 'cash') }}',
-                fileName: '',
-                fileType: '',
-                filePreview: '',
+                files: [],
                 isDragging: false,
+                lightboxSrc: '',
                 lightboxOpen: false,
                 get isBankTransfer() { return this.paymentType === 'bank_transfer'; },
-                processFile(file) {
-                    if (!file) return;
-                    this.fileName = file.name;
-                    const ext = file.name.split('.').pop().toLowerCase();
-                    this.fileType = (ext === 'pdf') ? 'pdf' : 'image';
-                    this.filePreview = this.fileType === 'image' ? URL.createObjectURL(file) : '';
+                addFiles(fileList) {
+                    Array.from(fileList).forEach(f => {
+                        const ext = f.name.split('.').pop().toLowerCase();
+                        this.files.push({ file: f, name: f.name, type: ext === 'pdf' ? 'pdf' : 'image', preview: ext !== 'pdf' ? URL.createObjectURL(f) : '' });
+                    });
+                    this.syncInput();
                 },
-                handleFile(e) {
-                    const file = e.target.files[0];
-                    if (!file) { this.fileName = ''; this.fileType = ''; this.filePreview = ''; return; }
-                    this.processFile(file);
+                removeFile(idx) {
+                    const f = this.files[idx];
+                    if (f && f.preview) URL.revokeObjectURL(f.preview);
+                    this.files.splice(idx, 1);
+                    this.syncInput();
+                },
+                syncInput() {
+                    const dt = new DataTransfer();
+                    this.files.forEach(({ file }) => dt.items.add(file));
+                    this.$refs.receiptInput.files = dt.files;
+                },
+                handleChange(e) {
+                    this.addFiles(e.target.files);
                 },
                 handleDrop(e) {
                     this.isDragging = false;
-                    const file = e.dataTransfer.files[0];
-                    if (!file) return;
-                    this.$refs.receiptInput.files = e.dataTransfer.files;
-                    this.processFile(file);
-                },
-                clearFile() {
-                    this.fileName = '';
-                    this.fileType = '';
-                    this.filePreview = '';
-                    this.$refs.receiptInput.value = '';
+                    this.addFiles(e.dataTransfer.files);
                 }
               }"
               class="space-y-4">
@@ -333,14 +332,16 @@
             <div x-show="isBankTransfer" x-cloak>
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
                     Payment Receipt <span class="text-[#FF3B30]">*</span>
-                    <span class="font-normal normal-case ml-1">· PDF, JPG, PNG or WebP · max 5 MB</span>
+                    <span class="font-normal normal-case ml-1">· PDF, JPG, PNG or WebP · max 5 MB each</span>
                 </label>
 
-                <input type="file" name="receipt_image" accept=".pdf,.jpg,.jpeg,.png,.webp"
-                       class="hidden" x-ref="receiptInput" :required="isBankTransfer" @change="handleFile($event)">
+                <input type="file" name="receipt_images[]" accept=".pdf,.jpg,.jpeg,.png,.webp"
+                       multiple class="hidden" x-ref="receiptInput"
+                       :required="isBankTransfer && files.length === 0"
+                       @change="handleChange($event)">
 
                 {{-- Empty state --}}
-                <template x-if="!fileName">
+                <template x-if="files.length === 0">
                     <div class="border-2 border-dashed rounded-xl transition-colors cursor-pointer px-5 py-8 text-center"
                          :class="isDragging ? 'border-[#0071E3] bg-[#F0F7FF]' : 'border-[#D1D1D6] bg-[#FAFAFA] hover:border-[#0071E3]'"
                          @dragover.prevent="isDragging = true"
@@ -351,38 +352,50 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                         </svg>
                         <p class="text-sm text-[#1D1D1F] font-medium">Click to upload or drag &amp; drop</p>
-                        <p class="text-xs text-[#86868B] mt-1">PDF, JPG, PNG or WebP · max 5 MB</p>
+                        <p class="text-xs text-[#86868B] mt-1">PDF, JPG, PNG or WebP · max 5 MB each · multiple files allowed</p>
                     </div>
                 </template>
 
-                {{-- File selected --}}
-                <template x-if="fileName">
-                    <div class="flex items-center gap-4 p-3 border border-[#E8E8ED] rounded-xl bg-[#FAFAFA]">
-                        <div class="relative shrink-0 w-20 h-20">
-                            <template x-if="fileType === 'image'">
-                                <img :src="filePreview"
-                                     class="w-20 h-20 object-cover rounded-lg border border-[#E8E8ED] cursor-pointer hover:opacity-80 transition-opacity"
-                                     @click="lightboxOpen = true" alt="Preview">
-                            </template>
-                            <template x-if="fileType === 'pdf'">
-                                <div class="w-20 h-20 rounded-lg border border-[#FFCDD0] bg-[#FFF0EF] flex flex-col items-center justify-center gap-1">
-                                    <svg class="w-8 h-8 text-[#FF3B30]" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
-                                    </svg>
-                                    <span class="text-[10px] font-bold text-[#FF3B30] tracking-wide">PDF</span>
+                {{-- Files selected --}}
+                <template x-if="files.length > 0">
+                    <div class="border border-[#E8E8ED] rounded-xl bg-[#FAFAFA] p-3"
+                         @dragover.prevent="isDragging = true"
+                         @dragleave.prevent="isDragging = false"
+                         @drop.prevent="handleDrop($event)"
+                         :class="isDragging ? 'border-[#0071E3] bg-[#F0F7FF]' : ''">
+                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mb-2">
+                            <template x-for="(f, idx) in files" :key="idx">
+                                <div class="relative group">
+                                    <template x-if="f.type === 'image'">
+                                        <img :src="f.preview"
+                                             class="w-full h-20 object-cover rounded-lg border border-[#E8E8ED] cursor-pointer hover:opacity-80 transition-opacity"
+                                             @click="lightboxSrc = f.preview; lightboxOpen = true" alt="Receipt">
+                                    </template>
+                                    <template x-if="f.type === 'pdf'">
+                                        <div class="w-full h-20 rounded-lg border border-[#FFCDD0] bg-[#FFF0EF] flex flex-col items-center justify-center gap-1">
+                                            <svg class="w-7 h-7 text-[#FF3B30]" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                                            </svg>
+                                            <span class="text-[10px] font-bold text-[#FF3B30] tracking-wide">PDF</span>
+                                        </div>
+                                    </template>
+                                    <button type="button" @click.stop="removeFile(idx)"
+                                            class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#FF3B30] text-white rounded-full flex items-center justify-center hover:bg-red-700 transition-colors shadow opacity-0 group-hover:opacity-100">
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                                    </button>
+                                    <p class="text-[10px] text-[#6E6E73] mt-1 truncate" x-text="f.name"></p>
                                 </div>
                             </template>
-                            <button type="button" @click.stop="clearFile()"
-                                    class="absolute -top-2 -right-2 w-5 h-5 bg-[#FF3B30] text-white rounded-full flex items-center justify-center hover:bg-red-700 transition-colors shadow">
-                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                            {{-- Add more tile --}}
+                            <button type="button" @click="$refs.receiptInput.click()"
+                                    class="w-full h-20 rounded-lg border-2 border-dashed border-[#D1D1D6] hover:border-[#0071E3] hover:text-[#0071E3] transition-colors flex flex-col items-center justify-center gap-1 text-[#86868B]">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                <span class="text-[10px] font-medium">Add more</span>
                             </button>
                         </div>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm text-[#1D1D1F] font-medium truncate" x-text="fileName"></p>
-                            <p x-show="fileType === 'image'" class="text-xs text-[#0066CC] mt-1 cursor-pointer hover:underline" @click="lightboxOpen = true">Click thumbnail to preview</p>
-                            <p x-show="fileType === 'pdf'" class="text-xs text-[#86868B] mt-1">No preview available</p>
-                            <button type="button" @click="$refs.receiptInput.click()" class="text-xs text-[#0066CC] hover:underline mt-1 block">Change file</button>
-                        </div>
+                        <p class="text-xs text-[#86868B]" x-text="files.length + ' file' + (files.length !== 1 ? 's' : '') + ' selected'"></p>
                     </div>
                 </template>
 
@@ -392,7 +405,7 @@
                      @click.self="lightboxOpen = false"
                      @keydown.escape.window="lightboxOpen = false">
                     <div class="relative max-w-3xl max-h-[90vh] mx-4">
-                        <img :src="filePreview" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" alt="Preview">
+                        <img :src="lightboxSrc" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" alt="Preview">
                         <button type="button" @click="lightboxOpen = false"
                                 class="absolute -top-3 -right-3 w-8 h-8 bg-white text-[#1D1D1F] rounded-full flex items-center justify-center shadow-lg hover:bg-[#F5F5F7] transition-colors">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
@@ -418,7 +431,7 @@
     {{-- Mobile card list --}}
     <div class="divide-y divide-[#F2F2F7] sm:hidden">
         @foreach($order->payments as $payment)
-        @php $receiptExt = $payment->receipt_image ? strtolower(pathinfo($payment->receipt_image, PATHINFO_EXTENSION)) : null; @endphp
+        @php $receipts = $payment->receipt_image ?? []; @endphp
         @if(in_array(Auth::user()->role, ['admin', 'accountant']))
         <form id="form-delete-payment-{{ $payment->id }}" method="POST"
               action="{{ route('orders.payments.destroy', [$order, $payment]) }}">
@@ -437,20 +450,23 @@
             </div>
             <div class="flex items-center justify-between gap-3">
                 <span class="text-[#6E6E73] text-xs">{{ $payment->payment_date->format('d M Y') }}</span>
-                <div class="flex items-center gap-3">
-                    @if($receiptExt === 'pdf')
-                    <a href="{{ Storage::url($payment->receipt_image) }}" target="_blank"
+                <div class="flex items-center gap-2">
+                    @foreach($receipts as $receipt)
+                    @php $ext = strtolower(pathinfo($receipt, PATHINFO_EXTENSION)); @endphp
+                    @if($ext === 'pdf')
+                    <a href="{{ Storage::url($receipt) }}" target="_blank"
                        class="inline-flex w-8 h-8 rounded-lg border border-[#FFCDD0] items-center justify-center bg-[#FFF0EF]" title="View receipt (PDF)">
                         <svg class="w-4 h-4 text-[#FF3B30]" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
                         </svg>
                     </a>
-                    @elseif($receiptExt)
-                    <a href="{{ Storage::url($payment->receipt_image) }}" target="_blank"
+                    @else
+                    <a href="{{ Storage::url($receipt) }}" target="_blank"
                        class="inline-block w-8 h-8 rounded-lg overflow-hidden border border-[#E8E8ED]" title="View receipt">
-                        <img src="{{ Storage::url($payment->receipt_image) }}" class="w-full h-full object-cover">
+                        <img src="{{ Storage::url($receipt) }}" class="w-full h-full object-cover">
                     </a>
                     @endif
+                    @endforeach
                     @if(in_array(Auth::user()->role, ['admin', 'accountant']))
                     <button type="button" class="text-[#FF3B30] text-xs hover:underline"
                             @click="$store.confirm.show({
@@ -475,7 +491,7 @@
     <table class="w-full apple-table">
         <tbody>
             @foreach($order->payments as $payment)
-            @php $receiptExt = $payment->receipt_image ? strtolower(pathinfo($payment->receipt_image, PATHINFO_EXTENSION)) : null; @endphp
+            @php $receipts = $payment->receipt_image ?? []; @endphp
             <tr>
                 <td class="text-[#6E6E73] text-xs whitespace-nowrap">{{ $payment->payment_date->format('d M Y') }}</td>
                 <td>
@@ -487,20 +503,27 @@
                 <td class="text-[#6E6E73] text-sm">{{ $payment->notes ?? '—' }}</td>
                 <td class="text-right text-[#30D158] font-mono font-medium">PKR {{ lacs_format($payment->amount, 0) }}</td>
                 <td class="text-right">
-                    @if($receiptExt === 'pdf')
-                    <a href="{{ Storage::url($payment->receipt_image) }}" target="_blank"
-                       class="inline-flex w-10 h-10 rounded-lg border border-[#FFCDD0] hover:border-[#FF3B30] transition-colors items-center justify-center bg-[#FFF0EF]"
-                       title="View receipt (PDF)">
-                        <svg class="w-5 h-5 text-[#FF3B30]" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
-                        </svg>
-                    </a>
-                    @elseif($receiptExt)
-                    <a href="{{ Storage::url($payment->receipt_image) }}" target="_blank"
-                       class="inline-block w-10 h-10 rounded-lg overflow-hidden border border-[#E8E8ED] hover:border-[#0071E3] transition-colors"
-                       title="View receipt">
-                        <img src="{{ Storage::url($payment->receipt_image) }}" class="w-full h-full object-cover">
-                    </a>
+                    @if(count($receipts) > 0)
+                    <div class="flex items-center justify-end gap-1 flex-wrap">
+                        @foreach($receipts as $receipt)
+                        @php $ext = strtolower(pathinfo($receipt, PATHINFO_EXTENSION)); @endphp
+                        @if($ext === 'pdf')
+                        <a href="{{ Storage::url($receipt) }}" target="_blank"
+                           class="inline-flex w-9 h-9 rounded-lg border border-[#FFCDD0] hover:border-[#FF3B30] transition-colors items-center justify-center bg-[#FFF0EF]"
+                           title="View receipt (PDF)">
+                            <svg class="w-4 h-4 text-[#FF3B30]" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                            </svg>
+                        </a>
+                        @else
+                        <a href="{{ Storage::url($receipt) }}" target="_blank"
+                           class="inline-block w-9 h-9 rounded-lg overflow-hidden border border-[#E8E8ED] hover:border-[#0071E3] transition-colors"
+                           title="View receipt">
+                            <img src="{{ Storage::url($receipt) }}" class="w-full h-full object-cover">
+                        </a>
+                        @endif
+                        @endforeach
+                    </div>
                     @else
                     <span class="text-[#C7C7CC] text-xs">—</span>
                     @endif

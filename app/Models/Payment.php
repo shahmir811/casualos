@@ -15,8 +15,9 @@ class Payment extends Model
     ];
 
     protected $casts = [
-        'amount'       => 'decimal:2',
-        'payment_date' => 'date',
+        'amount'        => 'decimal:2',
+        'payment_date'  => 'date',
+        'receipt_image' => 'array',
     ];
 
     public function getActivitylogOptions(): LogOptions
