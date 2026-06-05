@@ -296,7 +296,7 @@ class ProductionAssignmentController extends Controller
 
     public function updateNpRate(Request $request, ProductionAssignment $productionAssignment, ProductionAssignmentNpDesign $npDesign)
     {
-        abort_if($npDesign->production_assignment_id !== $productionAssignment->id, 404);
+        abort_if((int) $npDesign->production_assignment_id !== (int) $productionAssignment->id, 404);
 
         $validated = $request->validate([
             'per_piece_price' => 'required|numeric|min:0',
