@@ -386,6 +386,14 @@
                 Wages
             </a>
 
+            <a href="{{ route('tarpai-charges.index') }}"
+               class="nav-item {{ request()->routeIs('tarpai-charges.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+                </svg>
+                Tarpai Charges
+            </a>
+
             <a href="{{ route('production.tracker') }}"
                class="nav-item {{ request()->routeIs('production.tracker') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -407,6 +415,14 @@
                 Wages
             </a>
 
+            <a href="{{ route('tarpai-charges.index') }}"
+               class="nav-item {{ request()->routeIs('tarpai-charges.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+                </svg>
+                Tarpai Charges
+            </a>
+
             <a href="{{ route('reports.index') }}"
                class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -419,6 +435,14 @@
             {{-- System --}}
             @if($r === 'admin')
             <p class="px-3 pt-3 pb-0.5 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">System</p>
+
+            <a href="{{ route('cron-logs.index') }}"
+               class="nav-item {{ request()->routeIs('cron-logs.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                </svg>
+                Cron Logs
+            </a>
 
             <a href="{{ route('stitching-units.index') }}"
                class="nav-item {{ request()->routeIs('stitching-units.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">

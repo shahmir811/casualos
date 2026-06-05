@@ -33,3 +33,10 @@ Schedule::command('wages:calculate-weekly')
     ->weeklyOn(5, '23:45')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/wages.log'));
+
+// Auto-calculate weekly Tarpai charges every Friday at 23:50
+// Sums pieces sent to Rashid Bhai and Yousaf Bhai for the Saturday→Friday window.
+Schedule::command('tarpai:calculate-weekly')
+    ->weeklyOn(5, '23:50')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/tarpai-charges.log'));

@@ -30,6 +30,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductionTrackerController;
 use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\ActiveCatalogueController;
+use App\Http\Controllers\TarpaiPaymentController;
+use App\Http\Controllers\CronLogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -171,6 +173,14 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('wages/{wage}/confirm',    [WagesController::class, 'confirm'])->name('wages.confirm');
     });
 
+    // Tarpai charges (admin, production_manager, accountant)
+    Route::middleware('role:admin|production_manager|accountant')->group(function () {
+        Route::get('tarpai-charges',                             [TarpaiPaymentController::class, 'index'])->name('tarpai-charges.index');
+        Route::get('tarpai-charges/{tarpaiPayment}',             [TarpaiPaymentController::class, 'show'])->name('tarpai-charges.show');
+        Route::post('tarpai-charges/recalculate',                [TarpaiPaymentController::class, 'recalculate'])->name('tarpai-charges.recalculate');
+        Route::post('tarpai-charges/{tarpaiPayment}/confirm',    [TarpaiPaymentController::class, 'confirm'])->name('tarpai-charges.confirm');
+    });
+
     // Packed Inventory (manager + admin)
     Route::get('packed-inventory', [PressController::class, 'inventory'])->name('packed-inventory.index');
 
@@ -229,6 +239,11 @@ Route::middleware(['auth', 'active'])->group(function () {
     | USER MANAGEMENT (admin only)
     |------------------------------------------------------------------
     */
+    // Cron job execution log (admin only)
+    Route::middleware('role:admin')->group(function () {
+        Route::get('cron-logs', [CronLogController::class, 'index'])->name('cron-logs.index');
+    });
+
     Route::middleware('role:admin')->prefix('users')->name('users.')->group(function () {
         Route::get('/',                          [UserManagementController::class, 'index'])->name('index');
         Route::get('/create',                    [UserManagementController::class, 'create'])->name('create');
