@@ -3,54 +3,51 @@
 namespace App\Console\Commands;
 
 use App\Models\CronLog;
-use App\Models\Wage;
+use App\Models\TarpaiPayment;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
-class CalculateWeeklyWages extends Command
+class CalculateWeeklyTarpaiCharges extends Command
 {
-    protected $signature = 'wages:calculate-weekly
+    protected $signature = 'tarpai:calculate-weekly
                             {--week= : Any date within the target week (default: today). Format: YYYY-MM-DD}
                             {--triggered-by=Scheduler : Who triggered this run (Scheduler or Manual — User Name)}';
 
-    protected $description = 'Calculate wages for all per-piece stitching units based on kameez returned in the week (Saturday → Friday).';
+    protected $description = 'Calculate weekly Tarpai charges for Rashid Bhai and Yousaf Bhai based on pieces sent in the week (Saturday → Friday).';
 
     public function handle(): int
     {
         [$weekStart, $weekEnd] = $this->resolveWeekWindow();
 
-        $this->info("Calculating wages for week: {$weekStart->toDateString()} → {$weekEnd->toDateString()}");
+        $this->info("Calculating Tarpai charges for week: {$weekStart->toDateString()} → {$weekEnd->toDateString()}");
 
         $created = 0;
         $updated = 0;
         $skipped = 0;
 
         try {
-            $rows = DB::table('stitching_return_items as sri')
-                ->join('stitching_returns as sr', 'sr.id', '=', 'sri.stitching_return_id')
-                ->join('stitching_units as su', 'su.id', '=', 'sr.stitching_unit_id')
-                ->where('sri.component', 'kameez')
-                ->where('su.payment_type', 'per_piece')
-                ->whereBetween('sr.return_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
-                ->whereNotNull('sr.stitching_unit_id')
+            $rows = DB::table('tarpai_sends as ts')
+                ->join('tarpai_send_items as tsi', 'tsi.tarpai_send_id', '=', 'ts.id')
+                ->whereIn('ts.tarpai_house', ['rashid_bhai', 'yousaf_bhai'])
+                ->whereBetween('ts.sent_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
                 ->select(
-                    'sr.catalogue_id',
-                    'sr.stitching_unit_id',
-                    'su.per_piece_rate',
-                    DB::raw('SUM(sri.quantity) as kameez_count')
+                    'ts.catalogue_id',
+                    'ts.tarpai_house',
+                    DB::raw('SUM(tsi.quantity) as total_pieces'),
+                    DB::raw('SUM(tsi.quantity * ts.per_piece_price) as total_amount')
                 )
-                ->groupBy('sr.catalogue_id', 'sr.stitching_unit_id', 'su.per_piece_rate')
+                ->groupBy('ts.catalogue_id', 'ts.tarpai_house')
                 ->get();
 
             if ($rows->isEmpty()) {
-                $output = 'No kameez returns found in this week window. No wage records created.';
+                $output = 'No Tarpai sends found for Rashid Bhai or Yousaf Bhai in this week window. No records created.';
                 $this->warn($output);
 
                 CronLog::create([
-                    'job_name'        => 'wages:calculate-weekly',
-                    'job_label'       => 'Worker Wages',
+                    'job_name'        => 'tarpai:calculate-weekly',
+                    'job_label'       => 'Tarpai Charges',
                     'triggered_by'    => $this->option('triggered-by'),
                     'week_start'      => $weekStart->toDateString(),
                     'week_end'        => $weekEnd->toDateString(),
@@ -66,10 +63,8 @@ class CalculateWeeklyWages extends Command
             }
 
             foreach ($rows as $row) {
-                $rate = $row->per_piece_rate ?? 0;
-
-                $existing = Wage::where('catalogue_id', $row->catalogue_id)
-                    ->where('stitching_unit_id', $row->stitching_unit_id)
+                $existing = TarpaiPayment::where('catalogue_id', $row->catalogue_id)
+                    ->where('tarpai_house', $row->tarpai_house)
                     ->where('week_start', $weekStart->toDateString())
                     ->first();
 
@@ -80,20 +75,19 @@ class CalculateWeeklyWages extends Command
                     }
 
                     $existing->update([
-                        'week_end'             => $weekEnd->toDateString(),
-                        'total_suits_stitched' => $row->kameez_count,
-                        'wage_rate'            => $rate,
-                        // total_wages is recomputed in Wage::booted() saving hook
+                        'week_end'           => $weekEnd->toDateString(),
+                        'total_pieces_sent'  => (int) $row->total_pieces,
+                        'total_amount'       => (float) $row->total_amount,
                     ]);
                     $updated++;
                 } else {
-                    Wage::create([
-                        'catalogue_id'         => $row->catalogue_id,
-                        'stitching_unit_id'    => $row->stitching_unit_id,
-                        'week_start'           => $weekStart->toDateString(),
-                        'week_end'             => $weekEnd->toDateString(),
-                        'total_suits_stitched' => $row->kameez_count,
-                        'wage_rate'            => $rate,
+                    TarpaiPayment::create([
+                        'catalogue_id'      => $row->catalogue_id,
+                        'tarpai_house'      => $row->tarpai_house,
+                        'week_start'        => $weekStart->toDateString(),
+                        'week_end'          => $weekEnd->toDateString(),
+                        'total_pieces_sent' => (int) $row->total_pieces,
+                        'total_amount'      => (float) $row->total_amount,
                     ]);
                     $created++;
                 }
@@ -103,8 +97,8 @@ class CalculateWeeklyWages extends Command
             $this->info($output);
 
             CronLog::create([
-                'job_name'        => 'wages:calculate-weekly',
-                'job_label'       => 'Worker Wages',
+                'job_name'        => 'tarpai:calculate-weekly',
+                'job_label'       => 'Tarpai Charges',
                 'triggered_by'    => $this->option('triggered-by'),
                 'week_start'      => $weekStart->toDateString(),
                 'week_end'        => $weekEnd->toDateString(),
@@ -121,8 +115,8 @@ class CalculateWeeklyWages extends Command
             $this->error($output);
 
             CronLog::create([
-                'job_name'        => 'wages:calculate-weekly',
-                'job_label'       => 'Worker Wages',
+                'job_name'        => 'tarpai:calculate-weekly',
+                'job_label'       => 'Tarpai Charges',
                 'triggered_by'    => $this->option('triggered-by'),
                 'week_start'      => $weekStart->toDateString(),
                 'week_end'        => $weekEnd->toDateString(),

@@ -91,7 +91,8 @@ class WagesController extends Controller
         ]);
 
         Artisan::call('wages:calculate-weekly', [
-            '--week' => $request->input('week_date'),
+            '--week'         => $request->input('week_date'),
+            '--triggered-by' => 'Manual — ' . Auth::user()->name,
         ]);
 
         return back()->with('success', 'Wages recalculated for the week containing ' . \Carbon\Carbon::parse($request->input('week_date'))->format('d M Y') . '. Confirmed records were not changed.');
