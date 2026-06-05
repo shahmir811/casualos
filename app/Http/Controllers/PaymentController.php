@@ -55,9 +55,9 @@ class PaymentController extends Controller
             ]);
 
             // Update order financials
-            $newTotalPaid = $order->total_paid + $request->amount;
+            $newTotalPaid   = $order->total_paid + $request->amount;
             $newOutstanding = max(0, $order->total_amount - $newTotalPaid);
-            $statusUpdate = ['total_paid' => $newTotalPaid, 'outstanding_balance' => $newOutstanding];
+            $statusUpdate   = ['total_paid' => $newTotalPaid, 'outstanding_balance' => $newOutstanding];
 
             // Auto-confirm on first payment
             if ($order->status === 'received') {
@@ -71,17 +71,27 @@ class PaymentController extends Controller
 
             $order->update($statusUpdate);
 
-            // Ledger entry
+            $customer = $order->customer;
+
+            // Ledger entry for the payment
             CustomerLedger::create([
                 'customer_id'             => $order->customer_id,
                 'transaction_type'        => 'payment_received',
                 'amount'                  => -$request->amount,
-                'running_advance_balance' => 0,
+                'running_advance_balance' => $customer->advance_credit_balance,
                 'reference_type'          => 'App\Models\Payment',
                 'reference_id'            => $payment->id,
                 'notes'                   => "Payment for Order #{$order->order_number} via {$request->payment_type}",
                 'created_by'              => Auth::id(),
             ]);
+
+            // If payment caused an overpayment, park the surplus as advance credit.
+            // No ledger entry is created — the overpayment is already visible in the
+            // ledger via the payment_received entries exceeding the order_charged amount.
+            $surplus = max(0, $newTotalPaid - $order->total_amount);
+            if ($surplus > 0) {
+                $customer->increment('advance_credit_balance', $surplus);
+            }
         });
 
         return back()->with('success', 'Payment of PKR ' . lacs_format($request->amount) . ' recorded.');
@@ -96,6 +106,9 @@ class PaymentController extends Controller
         $amount = $payment->amount;
 
         DB::transaction(function () use ($order, $payment) {
+            // Surplus that existed before deletion
+            $oldSurplus = max(0, $order->total_paid - $order->total_amount);
+
             // Bypass CustomerLedger model's boot-level deletion guard
             DB::table('customer_ledger')
                 ->where('reference_type', 'App\Models\Payment')
@@ -119,6 +132,17 @@ class PaymentController extends Controller
             }
 
             $order->update($update);
+
+            // If deletion reduced the overpayment surplus, reverse the advance credit.
+            // No ledger entry needed — the ledger balance corrects itself via the
+            // removed payment_received entry.
+            $newSurplus      = max(0, $newTotalPaid - $order->total_amount);
+            $surplusReversed = $oldSurplus - $newSurplus;
+
+            if ($surplusReversed > 0) {
+                $customer = $order->customer->fresh();
+                $customer->decrement('advance_credit_balance', min($surplusReversed, $customer->advance_credit_balance));
+            }
         });
 
         return back()->with('success', 'Payment of PKR ' . lacs_format($amount) . ' has been deleted and the order balance updated.');

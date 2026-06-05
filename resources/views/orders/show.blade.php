@@ -128,10 +128,17 @@
         <p class="text-[#30D158] text-2xl font-light">PKR {{ lacs_format($order->total_paid, 0) }}</p>
     </div>
     <div class="stat-card">
-        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Outstanding</p>
-        <p class="{{ $order->outstanding_balance > 0 ? 'text-[#FF3B30]' : 'text-[#30D158]' }} text-2xl font-light">
-            PKR {{ lacs_format($order->outstanding_balance, 0) }}
-        </p>
+        @php $overpaid = max(0, $order->total_paid - $order->total_amount); @endphp
+        @if($overpaid > 0)
+            <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Overpaid</p>
+            <p class="text-[#30D158] text-2xl font-light">PKR {{ lacs_format($overpaid, 0) }}</p>
+            <p class="text-[#6E6E73] text-xs mt-1">Added to advance credit</p>
+        @else
+            <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Outstanding</p>
+            <p class="{{ $order->outstanding_balance > 0 ? 'text-[#FF3B30]' : 'text-[#30D158]' }} text-2xl font-light">
+                PKR {{ lacs_format($order->outstanding_balance, 0) }}
+            </p>
+        @endif
     </div>
 </div>
 
@@ -228,6 +235,18 @@
     </div>
 </div>
 
+{{-- Advance Credit Notice --}}
+@if(in_array(Auth::user()->role, ['admin', 'accountant']) && ($order->customer?->advance_credit_balance ?? 0) > 0 && $order->outstanding_balance > 0)
+<div class="mb-4 px-4 py-3 bg-[#F0FFF4] border border-[#34C759] rounded-xl flex items-center gap-3">
+    <svg class="w-5 h-5 text-[#30D158] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <p class="text-sm text-[#1D1D1F]">
+        This customer has <span class="font-semibold text-[#30D158]">PKR {{ lacs_format($order->customer->advance_credit_balance, 0) }}</span> in advance credit available.
+    </p>
+</div>
+@endif
+
 {{-- Record Payment --}}
 @if(in_array(Auth::user()->role, ['admin', 'accountant']) && $order->outstanding_balance > 0)
 <div class="card mb-5" x-data="{ open: {{ $errors->any() ? 'true' : 'false' }} }">
@@ -299,7 +318,9 @@
                     <select name="payment_type" required class="apple-input" x-model="paymentType">
                         <option value="cash">Cash</option>
                         <option value="bank_transfer">Bank Transfer</option>
-                        <option value="advance">From Advance Credit</option>
+                        @if(($order->customer?->advance_credit_balance ?? 0) > 0)
+                        <option value="advance">From Advance Credit (PKR {{ lacs_format($order->customer->advance_credit_balance, 0) }} available)</option>
+                        @endif
                     </select>
                 </div>
 

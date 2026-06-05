@@ -10,10 +10,10 @@
 
 <div class="max-w-2xl"
      x-data="{
-        selectedCatalogueId: '{{ old('catalogue_id', '') }}',
+        selectedCatalogueId: '{{ $catalogue->id }}',
         selectedDestination: '{{ old('destination', '') }}',
         selectedUnit: '{{ old('stitching_unit_id', '') }}',
-        catalogues: {{ Js::from($catalogues) }},
+        catalogues: {{ Js::from([$catalogue]) }},
 
         /* NP: quantities and prices keyed by design.id */
         npQty:   {},
@@ -79,12 +79,31 @@
             }, 0);
         },
 
+        showHint: false,
+
         /* Submit guard */
         get canProceed() {
-            if (!this.selectedDestination || !this.selectedCatalogueId) return false;
+            if (!this.selectedDestination) return false;
             if (this.isNaeemPakki)    return this.npDesigns.length > 0 && this.npHasAnyQty && !this.npAnyOverLimit;
-            if (this.isStitchingUnit) return this.selectedDesignId !== '' && !this.nothingAvailable && !this.isOverLimit && this.totalQty > 0;
+            if (this.isStitchingUnit) return this.selectedDesignId !== '' && !this.nothingAvailable && this.selectedUnit !== '' && !this.isOverLimit && this.totalQty > 0;
             return false;
+        },
+
+        get validationHint() {
+            if (!this.selectedDestination) return 'Select a destination — Naeem Pakki or Stitching Unit.';
+            if (this.isNaeemPakki) {
+                if (this.npDesigns.length === 0) return 'No designs in this catalogue are flagged for Naeem Pakki.';
+                if (this.npAnyOverLimit) return 'One or more quantities exceed available stock. Please reduce.';
+                return 'Enter a quantity for at least one design.';
+            }
+            if (this.isStitchingUnit) {
+                if (this.selectedDesignId === '') return 'Select a design first.';
+                if (this.nothingAvailable) return 'No pieces available in factory for this design.';
+                if (this.selectedUnit === '') return 'Select a stitching unit.';
+                if (this.isOverLimit) return 'Total pieces exceed what\'s available. Please reduce.';
+                return 'Enter at least one piece quantity.';
+            }
+            return '';
         }
      }">
 
@@ -103,18 +122,17 @@
 
         <div class="card p-6 space-y-5">
 
-            {{-- ① Catalogue ──────────────────────────────────── --}}
+            {{-- ① Catalogue (read-only — driven by sidebar selector) ─ --}}
             <div>
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Catalogue</label>
-                <select name="catalogue_id" x-model="selectedCatalogueId" class="apple-input" required>
-                    <option value="">— Select catalogue —</option>
-                    @foreach($catalogues as $cat)
-                    <option value="{{ $cat->id }}" {{ old('catalogue_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
-                    @endforeach
-                </select>
+                <input type="hidden" name="catalogue_id" value="{{ $catalogue->id }}">
+                <div class="flex items-center gap-2.5 px-4 py-3 bg-[#F5F5F7] border border-[#E8E8ED] rounded-xl">
+                    <span class="font-semibold text-[#1D1D1F]">{{ $catalogue->name }}</span>
+                    <span class="text-xs text-[#86868B]">· selected from sidebar</span>
+                </div>
             </div>
 
-            {{-- ② Destination (shown once catalogue is picked) ─ --}}
+            {{-- ② Destination ─────────────────────────────────── --}}
             <div x-show="designs.length > 0" x-cloak>
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Destination</label>
                 <div class="grid grid-cols-2 gap-3">
@@ -378,13 +396,25 @@
             </div>
         </div>
 
-        <div class="flex gap-3">
-            <button type="submit" class="btn-primary"
-                    :disabled="!canProceed"
-                    :class="!canProceed ? 'opacity-50 cursor-not-allowed' : ''">
-                Save Assignment
-            </button>
-            <a href="{{ route('production-assignments.index') }}" class="btn-secondary">Cancel</a>
+        <div class="space-y-3">
+            <div class="flex gap-3">
+                <div @click="if (!canProceed) showHint = true">
+                    <button type="submit" class="btn-primary"
+                            :disabled="!canProceed"
+                            :class="!canProceed ? 'opacity-50 cursor-not-allowed' : ''">
+                        Save Assignment
+                    </button>
+                </div>
+                <a href="{{ route('production-assignments.index') }}" class="btn-secondary">Cancel</a>
+            </div>
+
+            <div x-show="showHint && !canProceed" x-cloak
+                 class="flex items-center gap-2 px-3 py-2.5 bg-[#FFF0EF] border border-[#FFCDD0] rounded-xl text-xs text-[#FF3B30] font-medium">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                </svg>
+                <span x-text="validationHint"></span>
+            </div>
         </div>
 
     </form>

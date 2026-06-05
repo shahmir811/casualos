@@ -128,6 +128,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         // Production route assignments (Naeem Pakki / Stitching Unit)
         Route::resource('production-assignments', ProductionAssignmentController::class)->only(['index','create','store','show']);
+        Route::patch('production-assignments/{productionAssignment}/np-designs/{npDesign}/rate', [ProductionAssignmentController::class, 'updateNpRate'])->name('production-assignments.np-designs.update-rate');
 
         // Naeem Pakki (one row per assignment; batch returns with per-design breakdown)
         Route::get('naeem-pakki-sends', [NaeemPakkiController::class, 'index'])->name('naeem-pakki-sends.index');

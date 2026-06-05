@@ -158,7 +158,9 @@ class ReportController extends Controller
         $selectedCatalogue = Catalogue::findOrFail($catalogueId);
         $orders            = $this->loadOrderBillData($catalogueId);
 
-        return Pdf::loadView('reports.customer-order-bill-pdf', compact('selectedCatalogue', 'orders'))
+        $logoDataUri = pdf_logo_data_uri();
+
+        return Pdf::loadView('reports.customer-order-bill-pdf', compact('selectedCatalogue', 'orders', 'logoDataUri'))
             ->setPaper('a4', 'landscape')
             ->download('customer-order-bill-' . str($selectedCatalogue->name)->slug() . '.pdf');
     }
@@ -192,7 +194,9 @@ class ReportController extends Controller
         $bankAccounts      = BankAccount::orderBy('title')->get();
         $orders            = $this->loadBankBreakdownData($catalogueId, $bankAccounts);
 
-        return Pdf::loadView('reports.bank-account-breakdown-pdf', compact('selectedCatalogue', 'bankAccounts', 'orders'))
+        $logoDataUri = pdf_logo_data_uri();
+
+        return Pdf::loadView('reports.bank-account-breakdown-pdf', compact('selectedCatalogue', 'bankAccounts', 'orders', 'logoDataUri'))
             ->setPaper('a4', 'landscape')
             ->download('bank-account-breakdown-' . str($selectedCatalogue->name)->slug() . '.pdf');
     }
@@ -227,7 +231,9 @@ class ReportController extends Controller
         $bankAccounts      = BankAccount::orderBy('title')->get();
         $orders            = $this->loadBankBreakdownData($catalogueId, $bankAccounts, receivableOnly: true);
 
-        return Pdf::loadView('reports.receivables-by-bank-pdf', compact('selectedCatalogue', 'bankAccounts', 'orders'))
+        $logoDataUri = pdf_logo_data_uri();
+
+        return Pdf::loadView('reports.receivables-by-bank-pdf', compact('selectedCatalogue', 'bankAccounts', 'orders', 'logoDataUri'))
             ->setPaper('a4', 'landscape')
             ->download('receivables-by-bank-' . str($selectedCatalogue->name)->slug() . '.pdf');
     }

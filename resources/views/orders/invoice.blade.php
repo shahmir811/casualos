@@ -229,7 +229,9 @@
 <table class="header-table">
     <tr>
         <td style="vertical-align:top; width:50%;">
-            <img src="{{ public_path('images/casualite-logo.png') }}" style="height:54pt; width:auto; display:block;">
+            @if($logoDataUri)
+            <img src="{{ $logoDataUri }}" style="height:54pt; width:auto; display:block;">
+            @endif
         </td>
         <td style="vertical-align:top; text-align:right; width:50%;">
             <div class="invoice-label">

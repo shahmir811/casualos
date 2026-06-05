@@ -429,6 +429,19 @@ A payment record may be **permanently deleted** by admin or accountant at any ti
 
 **UI:** "Delete" link in each row of the Payments History table on `orders/show.blade.php`, visible to admin and accountant only. Uses `$store.confirm.show()` with `danger: true`.
 
+### 5.17 Payment Overpayment — Auto-Convert Surplus to Advance Credit
+
+When `PaymentController::store()` results in `total_paid > total_amount` (i.e. the customer has overpaid):
+
+- `surplus = total_paid − total_amount`
+- Increment `customer.advance_credit_balance` by `$surplus`
+- **No ledger entry is created** — the overpayment is already visible in the ledger via the `payment_received` entries exceeding the `order_charged` amount. Adding an `advance_received` entry would cancel out the existing credit and misrepresent the balance.
+- The order show page displays an **"Overpaid"** stat card (instead of "Outstanding") showing the surplus in green with "Added to advance credit" below.
+- The order show page shows a **green notice banner** above the Record Payment section when the customer has advance credit and the order still has outstanding balance.
+- The **"From Advance Credit"** option in the payment type dropdown is only rendered when `customer.advance_credit_balance > 0`. It also shows the available amount inline.
+
+**On payment deletion (`PaymentController::destroy()`):** If the deleted payment contributed to a surplus, `advance_credit_balance` is decremented by the reduction in surplus — floored at the current balance (no negatives). No ledger entry for this reversal either.
+
 ### 5.14 Piece Reassignment
 
 **Purpose:** When pieces originally allocated to one customer's order need to be given to another customer in the same catalogue (e.g. a cancelled or reduced order frees up inventory), the admin can reassign piece quantities without creating a new order.
@@ -538,6 +551,7 @@ returns that cause discrepancies — it flags them for review.
 | Advance credit applied to order          | `credit_applied`   | **negative**  | decrease                           |
 | Order reduced (any case)                 | `order_reduced`    | **negative**  | none (unless surplus_action=credit_to_advance → increase by surplus) |
 | Refund issued on reduction surplus       | `refund_issued`    | **positive**  | none (surplus already returned to customer as cash) |
+| Payment causes overpayment (total_paid > total_amount) | *(no ledger entry)* | — | increase by surplus |
 
 **Why `order_charged` is positive:** it increases the customer's balance — they now owe more.
 **Why `payment_received` is negative:** it decreases the balance — they owe less.
@@ -626,6 +640,8 @@ returns that cause discrepancies — it flags them for review.
 - **Order hard-delete** (2026-05-22): `OrderController::destroy()` — permanently removes a `received` + `total_paid=0` order; deletes the `order_charged` ledger entry via raw `DB::table()` (bypasses model boot guard), then deletes the order (items cascade); activity log preserved; admin + accountant only; Alpine danger-modal confirmation
 - **Payment deletion** (2026-05-22): `PaymentController::destroy()` — deletes any payment regardless of order status; removes the linked `payment_received` ledger entry via raw `DB::table()`; recalculates `total_paid` and `outstanding_balance`; reverts order status `confirmed` → `received` if `total_paid` drops to 0; admin + accountant only; Alpine danger-modal confirmation
 - **PDF receipts for bank transfer payments** (2026-05-22): `PaymentController::store()` now accepts PDF in addition to JPG/PNG/WebP (validation: `mimes:pdf,jpeg,jpg,png,webp`); upload UI rebuilt to match the refund document upload pattern — hidden file input + `processFile()` Alpine method; PDF shows icon, image shows thumbnail + lightbox; Payments History table renders PDF icon or image thumbnail based on file extension
+- **Orders search fix** (2026-06-05): `OrderController::index()` search now also queries `customers.name` via `whereHas` — previously only `submitted_name` was searched, causing mismatches when the displayed name came from the linked customer record
+- **Overpayment surplus → advance credit** (2026-06-05): `PaymentController::store()` detects when `total_paid > total_amount`, increments `customer.advance_credit_balance` by the surplus, and shows an "Overpaid" stat card on the order show page. No ledger entry is created for the surplus — it is already reflected via the payment_received entries. Payment deletion reverses the surplus from `advance_credit_balance` if applicable. The "From Advance Credit" dropdown option is now only shown when `customer.advance_credit_balance > 0` (with available amount shown inline). A green advance credit notice banner is shown on the order page when the customer has credit and the order has an outstanding balance. Data fix migration `2026_06_05_000001` applied PKR 2,665 surplus to Saad Bhai Wijdan's `advance_credit_balance`.
 
 ### Known Bugs / Incomplete Features (must fix)
 
@@ -635,7 +651,7 @@ returns that cause discrepancies — it flags them for review.
 5. **Packed inventory not deducted after dispatch** — `DispatchController::store()` must decrement `press_return_items` quantities (old `press_pack_records` table has been removed)
 6. **Order status auto-transition to stitching** — ✅ Fixed: `FabricBatchController::store()` auto-transitions confirmed orders on fabric batch creation
 7. **Order reduction surplus logic** — ✅ Fixed (2026-05-20): full three-case logic implemented in `OrderReductionController`
-8. **`running_advance_balance` hardcoded to 0** in all ledger entries — must be actual customer balance
+8. **`running_advance_balance` hardcoded to 0** in all ledger entries — must be actual customer balance (partially fixed 2026-06-05: `PaymentController::store()` now reads actual balance for `payment_received` entries)
 9. **Dispatch order status** — ✅ Fixed (2026-05-19): `partially_dispatched` status added; `DispatchController::store()` now sets `partially_dispatched` on partial dispatch and `dispatched` only when `isFullyDispatched()` returns true
 10. **Creative Head role dashboard restriction** — `creative_head` should not see financial/order/production data on dashboard
 11. **`OrderPieceReassignmentController` creates `order_charged` with wrong sign** — ✅ Fixed (2026-06-04): changed `amount => -$totalAdded` to `amount => $totalAdded` in `OrderPieceReassignmentController::store()`; historical wrong-sign entries corrected by migration `2026_06_04_000001`.
@@ -667,6 +683,7 @@ All migrations have been run. No pending migrations. For reference, the full set
 - `2026_06_01_000001` — adds `original_quantity` to `outsourced_batch_items`
 - `2026_06_01_000002` — adds `original_quantity` to `press_return_items`
 - `2026_06_04_000001` — data fix: flips negative `order_charged` ledger entries to positive; inserts missing `order_charged` entries for orders that had none
+- `2026_06_05_144325` — data fix: adds PKR 2,665 overpayment surplus to Saad Bhai Wijdan's `advance_credit_balance` for Order #524308 (no ledger entry — surplus already in ledger via payment_received entries)
 
 ---
 
