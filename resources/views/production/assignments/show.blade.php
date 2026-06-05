@@ -92,13 +92,14 @@
 
         @if($isNewStyleNP)
         {{-- ═══ New-style NP batch: per-design breakdown ════════════════ --}}
-        <div class="card overflow-hidden">
+        <div class="card">
             <div class="px-5 py-4 border-b border-[#F2F2F7] flex items-center justify-between">
                 <div>
                     <h2 class="text-sm font-semibold text-[#1D1D1F]">Designs in this Naeem Pakki Batch</h2>
                     <p class="text-xs text-[#6E6E73] mt-0.5">{{ $productionAssignment->npDesigns->count() }} design(s) sent for embroidery</p>
                 </div>
             </div>
+            <div class="overflow-x-auto">
             <table class="w-full apple-table">
                 <thead>
                     <tr>
@@ -117,20 +118,55 @@
                         $npReturned    = $npDesign->totalReturned();
                         $npOutstanding = $npDesign->outstandingPieces();
                     @endphp
-                    <tr>
-                        <td class="font-medium text-[#1D1D1F]">{{ $npDesign->design->name ?? '—' }}</td>
-                        <td class="text-right tabular-nums">{{ lacs_format($npDesign->quantity) }} pcs</td>
-                        <td class="text-right tabular-nums text-green-700">{{ lacs_format($npReturned) }} pcs</td>
-                        <td class="text-right tabular-nums {{ $npOutstanding > 0 ? 'text-orange-600 font-semibold' : 'text-[#86868B]' }}">
+                    <tr x-data="{ editing: false, rate: {{ (float) $npDesign->per_piece_price }} }">
+                        <td class="font-medium text-[#1D1D1F] whitespace-nowrap">{{ $npDesign->design->name ?? '—' }}</td>
+                        <td class="text-right tabular-nums whitespace-nowrap">{{ lacs_format($npDesign->quantity) }} pcs</td>
+                        <td class="text-right tabular-nums whitespace-nowrap text-green-700">{{ lacs_format($npReturned) }} pcs</td>
+                        <td class="text-right tabular-nums whitespace-nowrap {{ $npOutstanding > 0 ? 'text-orange-600 font-semibold' : 'text-[#86868B]' }}">
                             {{ lacs_format($npOutstanding) }} pcs
                         </td>
-                        <td class="text-right tabular-nums text-[#6E6E73]">
-                            Rs. {{ lacs_format((float) $npDesign->per_piece_price, 0) }}
+
+                        {{-- Rate — display or inline edit --}}
+                        <td class="text-right tabular-nums" style="min-width:9rem">
+                            <span x-show="!editing" class="text-[#6E6E73] whitespace-nowrap">
+                                Rs. <span x-text="rate.toLocaleString()"></span>/pc
+                                @if(in_array(Auth::user()->role, ['admin', 'production_manager']))
+                                <button type="button" @click="editing = true"
+                                        class="ml-1 text-[#0071E3] hover:text-[#0056B8]" title="Edit rate">
+                                    <svg class="w-3.5 h-3.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.536-6.536a2 2 0 012.828 0l.172.172a2 2 0 010 2.828L12 16H9v-3z"/>
+                                    </svg>
+                                </button>
+                                @endif
+                            </span>
+                            <span x-show="editing" x-cloak class="flex flex-col items-end gap-1">
+                                <form method="POST"
+                                      action="{{ route('production-assignments.np-designs.update-rate', [$productionAssignment, $npDesign]) }}"
+                                      class="flex flex-col items-end gap-1">
+                                    @csrf @method('PATCH')
+                                    <input type="number" name="per_piece_price"
+                                           x-model="rate"
+                                           min="0" step="0.01"
+                                           class="apple-input text-right tabular-nums"
+                                           style="width:5rem">
+                                    <div class="flex items-center gap-1.5">
+                                        <button type="submit"
+                                                class="text-xs font-semibold text-white bg-[#0071E3] hover:bg-[#0056B8] px-2.5 py-1 rounded-lg">
+                                            Save
+                                        </button>
+                                        <button type="button" @click="editing = false; rate = {{ (float) $npDesign->per_piece_price }}"
+                                                class="text-xs text-[#86868B] hover:text-[#1D1D1F]">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </span>
                         </td>
-                        <td class="text-right tabular-nums font-semibold" style="color:#FF9500">
-                            Rs. {{ lacs_format($npDesign->quantity * (float) $npDesign->per_piece_price) }}
+
+                        <td class="text-right tabular-nums font-semibold whitespace-nowrap" style="color:#FF9500">
+                            Rs. <span x-text="(rate * {{ $npDesign->quantity }}).toLocaleString('en-PK', {minimumFractionDigits: 0, maximumFractionDigits: 0})"></span>
                         </td>
-                        <td>
+                        <td class="whitespace-nowrap">
                             @if($npOutstanding > 0)
                                 <span class="text-orange-500 text-xs">{{ lacs_format($npOutstanding) }} pending</span>
                             @else
@@ -158,6 +194,7 @@
                     </tr>
                 </tfoot>
             </table>
+            </div>{{-- /overflow-x-auto --}}
         </div>
 
         {{-- Return status per design --}}
