@@ -36,7 +36,8 @@ class OrderController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('submitted_name', 'like', '%' . $search . '%')
                   ->orWhere('submitted_city', 'like', '%' . $search . '%')
-                  ->orWhere('order_number', 'like', '%' . $search . '%');
+                  ->orWhere('order_number', 'like', '%' . $search . '%')
+                  ->orWhereHas('customer', fn($c) => $c->where('name', 'like', '%' . $search . '%'));
             });
         }
 
