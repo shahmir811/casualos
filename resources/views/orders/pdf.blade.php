@@ -78,7 +78,9 @@
 <table class="header-table">
     <tr>
         <td style="vertical-align:middle; width:25%;">
-            <img src="{{ public_path('images/casualite-logo.png') }}" style="height:40pt; width:auto; display:block;">
+            @if($logoDataUri)
+            <img src="{{ $logoDataUri }}" style="height:40pt; width:auto; display:block;">
+            @endif
         </td>
         <td style="vertical-align:middle; text-align:right;">
             <div class="header">

@@ -1,5 +1,38 @@
 <?php
 
+if (!function_exists('pdf_logo_data_uri')) {
+    function pdf_logo_data_uri(int $maxWidth = 300): string
+    {
+        $path = public_path('images/casualite-logo.png');
+
+        if (!file_exists($path) || !function_exists('imagecreatefrompng')) {
+            return '';
+        }
+
+        $src = @imagecreatefrompng($path);
+        if (!$src) {
+            return '';
+        }
+
+        $origW = imagesx($src);
+        $origH = imagesy($src);
+        $scale = $origW > $maxWidth ? $maxWidth / $origW : 1.0;
+        $newW  = (int) round($origW * $scale);
+        $newH  = (int) round($origH * $scale);
+
+        $dst = imagecreatetruecolor($newW, $newH);
+        imagealphablending($dst, false);
+        imagesavealpha($dst, true);
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $origW, $origH);
+
+        ob_start();
+        imagepng($dst, null, 6);
+        $bytes = ob_get_clean();
+
+        return 'data:image/png;base64,' . base64_encode($bytes);
+    }
+}
+
 if (!function_exists('lacs_format')) {
     /**
      * Format a number using the South Asian (Pakistani) lacs/crore grouping.

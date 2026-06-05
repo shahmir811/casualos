@@ -114,7 +114,9 @@ class OrderController extends Controller
     {
         $order->load(['customer', 'catalogue', 'items.design', 'payments.bankAccount', 'reductions.items']);
 
-        $pdf = Pdf::loadView('orders.invoice', compact('order'))
+        $logoDataUri = pdf_logo_data_uri();
+
+        $pdf = Pdf::loadView('orders.invoice', compact('order', 'logoDataUri'))
             ->setPaper('a4', 'portrait');
 
         $filename = 'invoice-' . $order->order_number . '.pdf';
@@ -134,7 +136,9 @@ class OrderController extends Controller
 
         $bankAccounts = BankAccount::orderBy('id')->get();
 
-        $pdf = Pdf::loadView('orders.pdf', compact('orders', 'catalogue', 'bankAccounts'))
+        $logoDataUri = pdf_logo_data_uri();
+
+        $pdf = Pdf::loadView('orders.pdf', compact('orders', 'catalogue', 'bankAccounts', 'logoDataUri'))
             ->setPaper('a3', 'landscape');
 
         $filename = str($catalogue->name)->slug() . '-payments.pdf';

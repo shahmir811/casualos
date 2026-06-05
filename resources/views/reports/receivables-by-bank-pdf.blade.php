@@ -32,7 +32,9 @@
 
 <div class="header">
     <div class="header-left">
-        <img src="{{ 'file://' . public_path('images/casualite-logo.png') }}" style="height:40pt; width:auto; display:block;">
+        @if($logoDataUri)
+        <img src="{{ $logoDataUri }}" style="height:40pt; width:auto; display:block;">
+        @endif
     </div>
     <div class="header-right">
         <h1>Receivables by Bank — {{ $selectedCatalogue->name }}</h1>
