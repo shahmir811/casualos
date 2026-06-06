@@ -6,13 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
+use App\Models\BankAccount;
 
 class Order extends Model
 {
     use HasFactory, LogsActivity;
 
     protected $fillable = [
-        'customer_id', 'catalogue_id', 'status',
+        'customer_id', 'catalogue_id', 'assigned_bank_account_id', 'status',
         'submitted_name', 'submitted_city', 'submitted_email',
         'total_amount', 'total_paid', 'outstanding_balance',
         'is_flagged', 'notes', 'submitted_at', 'order_number',
@@ -104,6 +105,11 @@ class Order extends Model
     }
 
     public function isCancelled(): bool { return $this->status === 'cancelled'; }
+
+    public function assignedBankAccount(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(BankAccount::class, 'assigned_bank_account_id');
+    }
 
     public function dispatchBatches(): \Illuminate\Database\Eloquent\Relations\HasMany
     {

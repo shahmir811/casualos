@@ -17,8 +17,10 @@ class OrderController extends Controller
     {
         $catalogues = Catalogue::orderBy('name')->get(['id', 'name', 'qty_per_design', 'number_of_designs']);
 
-        $query = Order::with(['customer', 'catalogue', 'items'])
-            ->latest('submitted_at');
+        $sort      = $request->input('sort');
+        $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+
+        $query = Order::with(['customer', 'catalogue', 'items', 'assignedBankAccount']);
 
         // Always filter by the sidebar-selected catalogue
         $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: null;
@@ -39,6 +41,15 @@ class OrderController extends Controller
                   ->orWhere('order_number', 'like', '%' . $search . '%')
                   ->orWhereHas('customer', fn($c) => $c->where('name', 'like', '%' . $search . '%'));
             });
+        }
+
+        // Sorting
+        if ($sort === 'customer_name') {
+            $query->select('orders.*')
+                  ->leftJoin('customers', 'orders.customer_id', '=', 'customers.id')
+                  ->orderByRaw('COALESCE(customers.name, orders.submitted_name) COLLATE utf8mb4_unicode_ci ' . $direction);
+        } else {
+            $query->latest('submitted_at');
         }
 
         // When a catalogue is selected, load all (no pagination) — mirrors the PDF sheet
@@ -71,8 +82,10 @@ class OrderController extends Controller
             ? $catalogues->firstWhere('id', $selectedCatalogueId)
             : null;
 
+        $bankAccounts = BankAccount::where('is_active', true)->orderBy('title')->get();
+
         return view('orders.index', compact(
-            'orders', 'catalogues', 'selectedCatalogue', 'selectedCatalogueId', 'summary'
+            'orders', 'catalogues', 'selectedCatalogue', 'selectedCatalogueId', 'summary', 'bankAccounts', 'sort', 'direction'
         ));
     }
 

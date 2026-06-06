@@ -253,9 +253,9 @@ class ReportController extends Controller
 
     private function loadOrderBillData(int $catalogueId): \Illuminate\Support\Collection
     {
-        return Order::with(['customer', 'items', 'payments'])
+        return Order::with(['customer', 'items', 'payments', 'assignedBankAccount'])
             ->where('catalogue_id', $catalogueId)
-            ->whereIn('status', ['confirmed', 'stitching', 'dispatched'])
+            ->whereNotIn('status', ['cancelled'])
             ->orderBy('submitted_at')
             ->get()
             ->map(function (Order $order) {
@@ -268,11 +268,13 @@ class ReportController extends Controller
                 $order->agg_rate  = $order->agg_total > 0
                     ? (int) round($order->total_amount / $order->agg_total)
                     : 0;
-                $order->title_given_label = $order->payments
+                $paymentTitles = $order->payments
                     ->pluck('title_given')
                     ->filter()
                     ->unique()
-                    ->implode(' / ') ?: '—';
+                    ->implode(' / ');
+                $order->title_given_label = $paymentTitles
+                    ?: ($order->assignedBankAccount?->title ?? '—');
                 return $order;
             });
     }

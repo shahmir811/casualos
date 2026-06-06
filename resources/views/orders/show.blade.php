@@ -102,7 +102,7 @@
 </div>
 
 {{-- Financials --}}
-<div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-7">
+<div class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-7">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Order Status</p>
         @php
@@ -140,6 +140,38 @@
             </p>
         @endif
     </div>
+
+    {{-- Designated Bank --}}
+    @if(in_array(Auth::user()->role, ['admin', 'accountant']))
+    <div class="stat-card" x-data="{ editing: false }">
+        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Designated Bank</p>
+        <div x-show="!editing">
+            <p class="text-[#1D1D1F] text-lg font-light truncate">
+                {{ $order->assignedBankAccount?->title ?? '— Unassigned —' }}
+            </p>
+            <button type="button" @click="editing = true"
+                    class="text-[#0066CC] text-xs mt-1 hover:underline">Change</button>
+        </div>
+        <div x-show="editing" x-cloak>
+            <form method="POST" action="{{ route('orders.assign-bank', $order) }}" class="flex flex-col gap-2 mt-1">
+                @csrf
+                @method('PATCH')
+                <select name="bank_account_id" class="apple-input text-sm">
+                    <option value="">— Unassigned —</option>
+                    @foreach($bankAccounts as $bank)
+                    <option value="{{ $bank->id }}" {{ $order->assigned_bank_account_id == $bank->id ? 'selected' : '' }}>
+                        {{ $bank->title }}
+                    </option>
+                    @endforeach
+                </select>
+                <div class="flex gap-2">
+                    <button type="submit" class="btn-primary text-xs py-1 px-3">Save</button>
+                    <button type="button" @click="editing = false" class="btn-secondary text-xs py-1 px-3">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    @endif
 </div>
 
 {{-- Order Summary --}}
@@ -277,6 +309,7 @@
                 lightboxSrc: '',
                 lightboxOpen: false,
                 get isBankTransfer() { return this.paymentType === 'bank_transfer'; },
+                get needsBank() { return this.paymentType === 'cash' || this.paymentType === 'bank_transfer'; },
                 addFiles(fileList) {
                     Array.from(fileList).forEach(f => {
                         const ext = f.name.split('.').pop().toLowerCase();
@@ -324,15 +357,16 @@
                     </select>
                 </div>
 
-                {{-- Bank account — only when Bank Transfer selected --}}
-                <div x-show="isBankTransfer" x-cloak class="sm:col-span-2">
+                {{-- Bank account — required for Cash and Bank Transfer --}}
+                <div x-show="needsBank" x-cloak class="sm:col-span-2">
                     <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
                         Bank Account <span class="text-[#FF3B30]">*</span>
                     </label>
-                    <select name="bank_account_id" class="apple-input" :required="isBankTransfer">
+                    <select name="bank_account_id" class="apple-input" :required="needsBank">
                         <option value="">— Select bank account —</option>
                         @foreach($bankAccounts as $bank)
-                        <option value="{{ $bank->id }}" {{ old('bank_account_id') == $bank->id ? 'selected' : '' }}>
+                        <option value="{{ $bank->id }}"
+                            {{ old('bank_account_id', $order->assigned_bank_account_id) == $bank->id ? 'selected' : '' }}>
                             {{ $bank->title }}
                         </option>
                         @endforeach
@@ -463,7 +497,7 @@
             <div class="flex items-start justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="badge bg-green-100 text-green-700">{{ ucwords(str_replace('_', ' ', $payment->payment_type)) }}</span>
-                    @if($payment->payment_type === 'bank_transfer' && $payment->bankAccount)
+                    @if($payment->bankAccount)
                     <span class="text-xs text-[#6E6E73]">· {{ $payment->bankAccount->title }}</span>
                     @endif
                 </div>

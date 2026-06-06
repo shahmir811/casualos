@@ -31,6 +31,7 @@
         ['title' => 'Customer Order Bill', 'desc' => 'Total bill, amount received, and outstanding balance per customer per catalogue', 'route' => 'reports.customer-order-bill', 'icon' => 'M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5'],
         ['title' => 'Bank Account Breakdown', 'desc' => 'Payments per customer broken down by each bank account for a catalogue', 'route' => 'reports.bank-account-breakdown', 'icon' => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'],
         ['title' => 'Receivables by Bank', 'desc' => 'Customers with outstanding balances and their payment history per bank account', 'route' => 'reports.receivables-by-bank', 'icon' => 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
+        ['title' => 'Bank Collection', 'desc' => 'Actual payments collected per bank account vs expected amounts for a catalogue', 'route' => 'reports.bank-collection', 'icon' => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'],
     ];
     @endphp
 
