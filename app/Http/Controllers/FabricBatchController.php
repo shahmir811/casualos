@@ -69,11 +69,17 @@ class FabricBatchController extends Controller
 
     public function create()
     {
-        $catalogues = Catalogue::where('status', 'open')
-            ->with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')])
-            ->orderBy('name')
-            ->get();
-        return view('production.fabric-batches.create', compact('catalogues'));
+        $catalogueId = (int) session('active_catalogue_id');
+
+        if (!$catalogueId) {
+            return redirect()->route('fabric-batches.index')
+                ->with('error', 'Please select a catalogue from the sidebar before logging a fabric batch.');
+        }
+
+        $catalogue = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')])
+            ->findOrFail($catalogueId);
+
+        return view('production.fabric-batches.create', compact('catalogue'));
     }
 
     public function store(Request $request)

@@ -43,12 +43,17 @@ class PressController extends Controller
 
     public function create()
     {
-        $catalogues = Catalogue::where('status', 'open')
-            ->with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')->orderBy('name')])
-            ->orderBy('name')
-            ->get();
+        $catalogueId = (int) session('active_catalogue_id');
 
-        $availableQty = $this->computeAvailableQty($catalogues);
+        if (!$catalogueId) {
+            return redirect()->route('press-sends.index')
+                ->with('error', 'Please select a catalogue from the sidebar before logging a press send.');
+        }
+
+        $catalogue = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')->orderBy('name')])
+            ->findOrFail($catalogueId);
+
+        $availableQty = $this->computeAvailableQty(collect([$catalogue]));
 
         $oldQuantities = [];
         foreach (old('designs', []) as $dData) {
@@ -61,7 +66,7 @@ class PressController extends Controller
             }
         }
 
-        return view('production.press.create', compact('catalogues', 'availableQty', 'oldQuantities'));
+        return view('production.press.create', compact('catalogue', 'availableQty', 'oldQuantities'));
     }
 
     public function store(Request $request)
