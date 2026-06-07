@@ -17,10 +17,17 @@ class OutsourcedBatchController extends Controller
 
     public function create()
     {
-        $catalogues = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'outsourced')->orderBy('name')])
-            ->orderBy('name')
-            ->get();
-        return view('production.outsourced-batches.create', compact('catalogues'));
+        $catalogueId = (int) session('active_catalogue_id');
+
+        if (!$catalogueId) {
+            return redirect()->route('outsourced-batches.index')
+                ->with('error', 'Please select a catalogue from the sidebar before logging an outsourced batch.');
+        }
+
+        $catalogue = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'outsourced')->orderBy('name')])
+            ->findOrFail($catalogueId);
+
+        return view('production.outsourced-batches.create', compact('catalogue'));
     }
 
     public function store(Request $request)

@@ -18,7 +18,7 @@ class PaymentController extends Controller
         $request->validate([
             'amount'            => 'required|numeric|min:1',
             'payment_type'      => 'required|in:cash,bank_transfer,advance',
-            'bank_account_id'   => 'required_if:payment_type,bank_transfer|nullable|exists:bank_accounts,id',
+            'bank_account_id'   => 'required_unless:payment_type,advance|nullable|exists:bank_accounts,id',
             'payment_date'      => 'required|date',
             'notes'             => 'nullable|string',
             'receipt_images'    => 'required_if:payment_type,bank_transfer|nullable|array|min:1',
@@ -33,9 +33,13 @@ class PaymentController extends Controller
                 ->toArray();
         }
 
+        $bankAccount = in_array($request->payment_type, ['cash', 'bank_transfer']) && $request->bank_account_id
+            ? BankAccount::find($request->bank_account_id)
+            : null;
+
         $titleGiven = match ($request->payment_type) {
-            'bank_transfer' => BankAccount::find($request->bank_account_id)?->title ?? 'Bank Transfer',
-            'cash'          => 'Cash',
+            'bank_transfer' => $bankAccount?->title ?? 'Bank Transfer',
+            'cash'          => $bankAccount ? 'Cash · ' . $bankAccount->title : 'Cash',
             'advance'       => 'Advance',
             default         => null,
         };
@@ -46,7 +50,7 @@ class PaymentController extends Controller
                 'customer_id'     => $order->customer_id,
                 'amount'          => $request->amount,
                 'payment_type'    => $request->payment_type,
-                'bank_account_id' => $request->payment_type === 'bank_transfer' ? $request->bank_account_id : null,
+                'bank_account_id' => in_array($request->payment_type, ['cash', 'bank_transfer']) ? $request->bank_account_id : null,
                 'title_given'     => $titleGiven,
                 'payment_date'    => $request->payment_date,
                 'notes'           => $request->notes ?? null,

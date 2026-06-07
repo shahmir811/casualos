@@ -10,8 +10,8 @@
 
 <div class="max-w-3xl"
      x-data="{
-        selectedCatalogueId: '{{ old('catalogue_id', '') }}',
-        catalogues: {{ Js::from($catalogues) }},
+        selectedCatalogueId: '{{ $catalogue->id }}',
+        catalogues: {{ Js::from([$catalogue]) }},
         availableQty: {{ Js::from($availableQty) }},
         oldQuantities: {{ Js::from($oldQuantities) }},
         inputValues: {},
@@ -61,12 +61,11 @@
         <div class="card p-6 space-y-5">
             <div>
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Catalogue</label>
-                <select name="catalogue_id" x-model="selectedCatalogueId" class="apple-input" required>
-                    <option value="">— Select catalogue —</option>
-                    @foreach($catalogues as $cat)
-                    <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                    @endforeach
-                </select>
+                <input type="hidden" name="catalogue_id" value="{{ $catalogue->id }}">
+                <div class="flex items-center gap-2.5 px-4 py-3 bg-[#F5F5F7] border border-[#E8E8ED] rounded-xl">
+                    <span class="font-semibold text-[#1D1D1F]">{{ $catalogue->name }}</span>
+                    <span class="text-xs text-[#86868B]">· selected from sidebar</span>
+                </div>
             </div>
 
             <div>

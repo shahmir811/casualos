@@ -37,8 +37,7 @@ class TarpaiController extends Controller
             ->withQueryString();
 
         // ── Summary: pieces returned from Tarpai per design per size ─────
-        $openCatalogues = Catalogue::where('status', 'open')
-            ->when($selectedCatalogueId, fn($q) => $q->where('id', $selectedCatalogueId))
+        $catalogues = Catalogue::when($selectedCatalogueId, fn($q) => $q->where('id', $selectedCatalogueId))
             ->with(['designs' => fn($q) => $q
                 ->where('manufacturing_type', 'in_house')
                 ->when($selectedDesignId, fn($q2) => $q2->where('id', $selectedDesignId))
@@ -46,7 +45,7 @@ class TarpaiController extends Controller
             ->orderBy('name')
             ->get();
 
-        $catIds = $openCatalogues->pluck('id');
+        $catIds = $catalogues->pluck('id');
         $sizes  = ['xs', 's', 'm', 'l', 'xl'];
 
         $returnTotals = DB::table('tarpai_return_items')
@@ -65,7 +64,7 @@ class TarpaiController extends Controller
             ->get()
             ->groupBy(['catalogue_id', 'design_id']);
 
-        $designSummary = $openCatalogues->map(function ($cat) use ($returnTotals, $sizes) {
+        $designSummary = $catalogues->map(function ($cat) use ($returnTotals, $sizes) {
             $designs = $cat->designs->map(function ($design) use ($cat, $returnTotals, $sizes) {
                 $perSize = [];
                 foreach ($sizes as $size) {
@@ -85,11 +84,17 @@ class TarpaiController extends Controller
 
     public function create()
     {
-        $catalogues = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')->orderBy('name')])
-            ->orderBy('name')
-            ->get();
+        $catalogueId = (int) session('active_catalogue_id');
 
-        $availableQty = $this->computeAvailableQty($catalogues);
+        if (!$catalogueId) {
+            return redirect()->route('tarpai-sends.index')
+                ->with('error', 'Please select a catalogue from the sidebar before logging a Tarpai send.');
+        }
+
+        $catalogue = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')->orderBy('name')])
+            ->findOrFail($catalogueId);
+
+        $availableQty = $this->computeAvailableQty(collect([$catalogue]));
 
         // Restore old quantities after a validation error
         $oldQuantities = [];
@@ -103,7 +108,7 @@ class TarpaiController extends Controller
             }
         }
 
-        return view('production.tarpai.create', compact('catalogues', 'availableQty', 'oldQuantities'));
+        return view('production.tarpai.create', compact('catalogue', 'availableQty', 'oldQuantities'));
     }
 
     public function store(Request $request)

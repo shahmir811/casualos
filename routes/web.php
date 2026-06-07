@@ -32,6 +32,8 @@ use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\ActiveCatalogueController;
 use App\Http\Controllers\TarpaiPaymentController;
 use App\Http\Controllers\CronLogController;
+use App\Http\Controllers\OrderBankAssignmentController;
+use App\Http\Controllers\BankCollectionReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -104,6 +106,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::resource('orders.payments', PaymentController::class)->only(['store']);
         Route::delete('orders/{order}/payments/{payment}', [PaymentController::class, 'destroy'])->name('orders.payments.destroy');
         Route::post('orders/{order}/apply-credit', [PaymentController::class, 'applyCredit'])->name('orders.apply-credit');
+
+        // Bank assignment (per order + bulk)
+        Route::patch('orders/{order}/assign-bank', [OrderBankAssignmentController::class, 'update'])->name('orders.assign-bank');
+        Route::post('orders/bulk-assign-bank', [OrderBankAssignmentController::class, 'bulkAssign'])->name('orders.bulk-assign-bank');
     });
 
     // Order Reductions (admin + accountant)
@@ -206,6 +212,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('dispatch-history',      [ReportController::class, 'dispatchHistory'])->name('dispatch-history');
         Route::get('activity-log',          [ReportController::class, 'activityLog'])->name('activity-log');
         Route::get('damage-reductions',     [ReportController::class, 'damageReductions'])->name('damage-reductions');
+        Route::get('bank-collection',       [BankCollectionReportController::class, 'index'])->name('bank-collection');
+        Route::get('bank-collection/pdf',   [BankCollectionReportController::class, 'pdf'])->name('bank-collection.pdf');
+        Route::get('bank-collection/excel', [BankCollectionReportController::class, 'excel'])->name('bank-collection.excel');
 
         // Payment reports
         Route::get('customer-order-bill',           [ReportController::class, 'customerOrderBill'])->name('customer-order-bill');
