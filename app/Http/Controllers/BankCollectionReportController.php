@@ -119,11 +119,6 @@ class BankCollectionReportController extends Controller
             ->where('customer_ledger.transaction_type', 'credit_applied')
             ->sum(DB::raw('ABS(customer_ledger.amount)'));
 
-        $grandCollected = (float) DB::table('payments')
-            ->join('orders', 'payments.order_id', '=', 'orders.id')
-            ->where('orders.catalogue_id', $catalogueId)
-            ->sum('payments.amount') + $miscAmount;
-
         $grandExpected = (float) DB::table('orders')
             ->where('catalogue_id', $catalogueId)
             ->whereNotIn('status', ['cancelled'])
@@ -133,6 +128,9 @@ class BankCollectionReportController extends Controller
             ->where('catalogue_id', $catalogueId)
             ->whereNotIn('status', ['cancelled'])
             ->sum('outstanding_balance');
+
+        // Grand collected = total billed minus what is still outstanding (excludes overpayment surplus)
+        $grandCollected = $grandExpected - $grandReceivable;
 
         // Per-order rows
         $allOrders = DB::table('orders')
@@ -204,8 +202,22 @@ class BankCollectionReportController extends Controller
                     $totalBankPaid += $amt;
                 }
 
-                // Misc = anything paid not via a specific bank (cash + advance credits)
-                $misc = max(0.0, (float) $order->total_paid - $totalBankPaid);
+                // Cap received at the order total — exclude overpayment surplus
+                $amountReceived = min((float) $order->total_paid, (float) $order->total_amount);
+
+                // Actual misc = non-bank payments (cash + advance credit applied to this order)
+                $actualMisc = max(0.0, (float) $order->total_paid - $totalBankPaid);
+
+                // Bank columns absorb the surplus: scale each bank amount down proportionally
+                // so that (sum of bank columns) + misc = amountReceived
+                $cappedBankTotal = max(0.0, $amountReceived - $actualMisc);
+                if ($totalBankPaid > 0) {
+                    $scale = $cappedBankTotal / $totalBankPaid;
+                    foreach ($banks as $bank) {
+                        $bankPayments[$bank->id] = round($bankPayments[$bank->id] * $scale);
+                    }
+                }
+                $misc = $amountReceived - $cappedBankTotal;
 
                 $rows[] = [
                     'name'              => $order->submitted_name,
@@ -219,7 +231,7 @@ class BankCollectionReportController extends Controller
                     'over_all_qty'      => $overAllQty,
                     'rate'              => $rate,
                     'total_bill'        => (float) $order->total_amount,
-                    'amount_received'   => (float) $order->total_paid,
+                    'amount_received'   => $amountReceived,
                     'amount_receivable' => (float) $order->outstanding_balance,
                     'title_given'       => $order->assigned_bank_title ?? '',
                     'bank_payments'     => $bankPayments,

@@ -344,8 +344,8 @@ $bankColors = [
 </div>
 
 <p class="text-xs text-[#86868B] mt-3">
-    Misc / Prev. Balance = advance credits applied + cash payments not attributed to a specific bank account.
-    Amount Received = all payments collected including advance credits.
+    Misc / Prev. Balance = cash payments + advance credits applied to this order (excluding any overpayment surplus credited to advance).
+    Amount Received = amount collected against this order only (capped at Total Bill; overpayments are excluded).
 </p>
 
 @endif
