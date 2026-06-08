@@ -143,10 +143,16 @@ class OrderController extends Controller
         $catalogueId = (int) session('active_catalogue_id');
         $catalogue   = Catalogue::findOrFail($catalogueId);
 
-        $orders = Order::with(['customer', 'items', 'payments.bankAccount'])
+        $query = Order::with(['customer', 'items', 'payments.bankAccount'])
             ->where('catalogue_id', $catalogue->id)
-            ->orderBy('submitted_at')
-            ->get();
+            ->orderBy('submitted_at');
+
+        $ids = array_filter(array_map('intval', (array) $request->input('ids', [])));
+        if (!empty($ids)) {
+            $query->whereIn('id', $ids);
+        }
+
+        $orders = $query->get();
 
         $bankAccounts = BankAccount::orderBy('id')->get();
 
@@ -165,10 +171,16 @@ class OrderController extends Controller
         $catalogueId = (int) session('active_catalogue_id');
         $catalogue   = Catalogue::findOrFail($catalogueId);
 
-        $orders = Order::with(['customer', 'items', 'payments.bankAccount'])
+        $query = Order::with(['customer', 'items', 'payments.bankAccount'])
             ->where('catalogue_id', $catalogue->id)
-            ->orderBy('submitted_at')
-            ->get();
+            ->orderBy('submitted_at');
+
+        $ids = array_filter(array_map('intval', (array) $request->input('ids', [])));
+        if (!empty($ids)) {
+            $query->whereIn('id', $ids);
+        }
+
+        $orders = $query->get();
 
         $bankAccounts = BankAccount::orderBy('id')->get();
 
