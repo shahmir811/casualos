@@ -26,7 +26,7 @@ class PaymentController extends Controller
         ]);
 
         $receiptPaths = null;
-        if ($request->payment_type === 'bank_transfer' && $request->hasFile('receipt_images')) {
+        if (in_array($request->payment_type, ['bank_transfer', 'advance']) && $request->hasFile('receipt_images')) {
             $receiptPaths = collect($request->file('receipt_images'))
                 ->map(fn($file) => $file->store('receipts'))
                 ->values()

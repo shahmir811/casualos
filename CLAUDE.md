@@ -381,15 +381,19 @@ tab displays quantities **broken down per size** (XS / S / M / L / XL) for each 
 There is no "Forgot Password" link on the login page. Intentional — the admin resets
 passwords manually. Do not add one.
 
-### 5.12 Bank Transfer Payment Rules
+### 5.12 Payment Method Rules
 
-When `payment_type = 'bank_transfer'`:
-- `bank_account_id` is **required** — must reference an active `bank_accounts` record
-- `receipt_image` is **required** — the payment slip must be uploaded (**PDF, JPG, PNG or WebP, max 5 MB**)
+| Payment type        | `bank_account_id` | Receipt upload        |
+| ------------------- | ----------------- | --------------------- |
+| `cash`              | **required**      | not required          |
+| `bank_transfer`     | **required**      | **required**          |
+| `advance` (credit)  | not required      | optional (may attach) |
 
-For `cash` and `advance` payments: no bank account and no receipt image required.
+**Why Cash requires a bank account:** even when a customer pays in cash, the company staff deposits that cash into a specific bank. The bank account field records the deposit destination — it is not about the payment being electronic.
 
-These rules are enforced in `PaymentController::store()` via `required_if` validation and in `orders/show.blade.php` via Alpine.js conditional rendering.
+`receipt_image` is required **only** for `bank_transfer` (PDF, JPG, PNG or WebP, max 5 MB).
+
+These rules are enforced in `PaymentController::store()` via `required_if` validation and in `orders/show.blade.php` via Alpine.js conditional rendering (`needsBank` getter returns `true` for `cash` and `bank_transfer`; `isBankTransfer` getter returns `true` only for `bank_transfer`).
 
 The receipt upload UI uses the same pattern as the refund document upload in `reduce.blade.php`: hidden file input accessed via `x-ref`, `processFile()` detects PDF vs image by extension, image shows a thumbnail + lightbox, PDF shows a red PDF icon. In the Payments History table, `pathinfo($payment->receipt_image, PATHINFO_EXTENSION)` determines whether to render a PDF icon link or an image thumbnail.
 

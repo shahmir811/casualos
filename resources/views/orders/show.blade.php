@@ -309,6 +309,7 @@
                 lightboxSrc: '',
                 lightboxOpen: false,
                 get isBankTransfer() { return this.paymentType === 'bank_transfer'; },
+                get isAdvance() { return this.paymentType === 'advance'; },
                 get needsBank() { return this.paymentType === 'cash' || this.paymentType === 'bank_transfer'; },
                 addFiles(fileList) {
                     Array.from(fileList).forEach(f => {
@@ -351,9 +352,7 @@
                     <select name="payment_type" required class="apple-input" x-model="paymentType">
                         <option value="cash">Cash</option>
                         <option value="bank_transfer">Bank Transfer</option>
-                        @if(($order->customer?->advance_credit_balance ?? 0) > 0)
-                        <option value="advance">From Advance Credit (PKR {{ lacs_format($order->customer->advance_credit_balance, 0) }} available)</option>
-                        @endif
+                        <option value="advance">From Advance Credit{{ ($order->customer?->advance_credit_balance ?? 0) > 0 ? ' (PKR ' . lacs_format($order->customer->advance_credit_balance, 0) . ' available)' : '' }}</option>
                     </select>
                 </div>
 
@@ -383,10 +382,12 @@
                 </div>
             </div>
 
-            {{-- Receipt Upload — only when Bank Transfer selected --}}
-            <div x-show="isBankTransfer" x-cloak>
+            {{-- Receipt Upload — required for Bank Transfer, optional for Advance Credit --}}
+            <div x-show="isBankTransfer || isAdvance" x-cloak>
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
-                    Payment Receipt <span class="text-[#FF3B30]">*</span>
+                    Payment Receipt
+                    <span x-show="isBankTransfer" class="text-[#FF3B30]">*</span>
+                    <span x-show="isAdvance" class="font-normal normal-case">(optional)</span>
                     <span class="font-normal normal-case ml-1">· PDF, JPG, PNG or WebP · max 5 MB each</span>
                 </label>
 
