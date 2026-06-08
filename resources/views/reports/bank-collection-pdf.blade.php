@@ -295,8 +295,8 @@ $bankCount = $banks->count();
 
 <p class="footnote">
     OA Qty = Over All Total Qty (across all designs).
-    Misc / Prev. = advance credits applied + cash payments not attributed to a specific bank.
-    Amt Recv. = Amount Received. Receivable = Amount still outstanding.
+    Misc / Prev. = cash payments + advance credits applied to this order (overpayment surplus excluded).
+    Amt Recv. = Amount collected against this order (capped at Total Bill). Receivable = Amount still outstanding.
 </p>
 @else
 <p style="font-size:10px; color:#6E6E73; text-align:center; margin-top:30px;">No orders found for this catalogue.</p>

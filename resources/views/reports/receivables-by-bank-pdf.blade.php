@@ -4,28 +4,60 @@
 <meta charset="UTF-8">
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    @page { margin: 10mm 15mm; }
-    body { font-family: Helvetica, Arial, sans-serif; font-size: 8px; color: #1D1D1F; background: #fff; padding: 0 12mm; }
-    .header { margin-bottom: 14px; border-bottom: 1.5px solid #0071E3; padding-bottom: 8px; display: table; width: 100%; }
-    .header-left { display: table-cell; vertical-align: middle; width: 80px; }
+    @page { margin: 8mm 10mm; size: A4 landscape; }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 7px; color: #1D1D1F; background: #fff; }
+    .header { margin-bottom: 10px; border-bottom: 1.5px solid #0071E3; padding-bottom: 6px; display: table; width: 100%; }
+    .header-left  { display: table-cell; vertical-align: middle; width: 70px; }
     .header-right { display: table-cell; vertical-align: middle; text-align: right; }
-    .header h1 { font-size: 15px; font-weight: 700; color: #1D1D1F; }
-    .header p { font-size: 9px; color: #6E6E73; margin-top: 2px; }
-    .meta { font-size: 8px; color: #86868B; margin-top: 2px; }
-    table { width: 100%; border-collapse: collapse; }
-    th { background: #F5F5F7; color: #6E6E73; font-size: 7px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 4px 5px; border: 1px solid #D2D2D7; }
-    th.right, td.right { text-align: right; }
-    th.left, td.left { text-align: left; }
-    td { padding: 4px 5px; border: 1px solid #D2D2D7; font-size: 8px; }
-    tr:nth-child(even) td { background: #FAFAFA; }
-    tfoot td { background: #F5F5F7 !important; font-weight: 700; font-size: 8px; border: 1px solid #D2D2D7; }
-    .red { color: #DC2626; }
-    .green { color: #16A34A; }
-    .muted { color: #86868B; }
-    .stats { display: table; width: 100%; margin-bottom: 14px; }
-    .stat-box { display: table-cell; width: 50%; border: 1px solid #E8E8ED; padding: 7px 10px; }
-    .stat-label { font-size: 7px; color: #6E6E73; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
-    .stat-value { font-size: 13px; font-weight: 300; }
+    .header h1 { font-size: 12px; font-weight: 700; color: #1D1D1F; }
+    .header p  { font-size: 7px; color: #6E6E73; margin-top: 1px; }
+    .meta      { font-size: 6.5px; color: #86868B; margin-top: 1px; }
+
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th {
+        background: #1D1D1F;
+        color: #fff;
+        font-size: 6.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        padding: 3px 3px;
+        border: 0.5px solid #444;
+        text-align: center;
+        vertical-align: middle;
+        line-height: 1.3;
+    }
+    th.right  { text-align: right; }
+    th.left   { text-align: left; }
+    th.orange { background: #D97706; }
+
+    td {
+        padding: 2.5px 3px;
+        border: 0.5px solid #D2D2D7;
+        font-size: 6.5px;
+        vertical-align: middle;
+    }
+    td.center { text-align: center; }
+    td.right  { text-align: right; }
+    td.left   { text-align: left; }
+    td.name   { font-weight: 600; }
+    td.muted  { color: #C7C7CC; text-align: center; }
+
+    tr.even { background: #fff; }
+    tr.odd  { background: #F9F9F9; }
+
+    tfoot td {
+        background: #E5E5EA !important;
+        font-weight: 700;
+        font-size: 6.5px;
+        border-top: 1.5px solid #1D1D1F;
+        border-bottom: 0.5px solid #999;
+    }
+
+    .bank-pill { display: inline-block; border-radius: 2px; padding: 0px 3px; font-size: 6px; font-weight: 700; }
+    .red   { color: #DC2626; }
+    .footnote { font-size: 6px; color: #86868B; margin-top: 6px; }
+    .highlight-rcv { background: #FFFBEB !important; }
 </style>
 </head>
 <body>
@@ -33,76 +65,128 @@
 <div class="header">
     <div class="header-left">
         @if($logoDataUri)
-        <img src="{{ $logoDataUri }}" style="height:40pt; width:auto; display:block;">
+        <img src="{{ $logoDataUri }}" style="height:32pt; width:auto; display:block;">
         @endif
     </div>
     <div class="header-right">
         <h1>Receivables by Bank — {{ $selectedCatalogue->name }}</h1>
-        <p>Casualite — Customers with outstanding balances and their payment history per bank</p>
+        <p>Casualite — Outstanding balances grouped by assigned bank account</p>
         <p class="meta">Generated: {{ now()->format('d M Y, h:i A') }}</p>
     </div>
 </div>
 
 @php
-    $grandBal    = $orders->sum('outstanding_balance');
-    $grandTotals = $bankAccounts->mapWithKeys(fn($ba) => [$ba->id => $orders->sum(fn($o) => $o->bank_totals[$ba->id] ?? 0)]);
-    $grandMisc   = $orders->sum('misc_total');
+$bankColors = [
+    'Ehsan SB' => ['bg' => '#F3E8FF', 'text' => '#7E22CE'],
+    'HBL'      => ['bg' => '#DCFCE7', 'text' => '#15803D'],
+    'Meezan'   => ['bg' => '#DBEAFE', 'text' => '#1D4ED8'],
+    'Adnan'    => ['bg' => '#FFEDD5', 'text' => '#C2410C'],
+    'Saleem'   => ['bg' => '#E0E7FF', 'text' => '#4338CA'],
+    'Farhan'   => ['bg' => '#CCFBF1', 'text' => '#0F766E'],
+    'Osama'    => ['bg' => '#FFE4E6', 'text' => '#BE123C'],
+    'Akram'    => ['bg' => '#FEF3C7', 'text' => '#B45309'],
+];
 @endphp
 
-<div class="stats">
-    <div class="stat-box">
-        <div class="stat-label">Total Outstanding</div>
-        <div class="stat-value red">Rs. {{ lacs_format($grandBal, 0) }}</div>
-    </div>
-    <div class="stat-box" style="border-left:none;">
-        <div class="stat-label">Customers with Balance</div>
-        <div class="stat-value">{{ $orders->count() }}</div>
-    </div>
-</div>
-
+@if(!empty($rows))
 <table>
+    <colgroup>
+        <col style="width:2%">
+        <col style="width:18%">
+        <col style="width:8%">
+        <col style="width:8%">
+        <col style="width:8%">
+        @foreach($banks as $bank)<col style="width:{{ number_format(54 / $banks->count(), 1) }}%">@endforeach
+        <col style="width:6%">
+    </colgroup>
     <thead>
         <tr>
-            <th class="left">#</th>
-            <th class="left">Customer</th>
+            <th>#</th>
+            <th class="left">Customer Name</th>
             <th class="left">City</th>
-            <th class="right">Outstanding</th>
-            <th class="left">Title Given</th>
-            @foreach($bankAccounts as $ba)
-                <th class="right">{{ $ba->title }}</th>
+            <th class="right orange">Receivable</th>
+            <th>Title Given</th>
+            @foreach($banks as $bank)
+            @php $bc = $bankColors[$bank->title] ?? null; @endphp
+            <th class="right">
+                @if($bc)
+                    <span class="bank-pill" style="background:{{ $bc['bg'] }}; color:{{ $bc['text'] }};">
+                        {{ strtoupper(substr($bank->title, 0, 8)) }}
+                    </span>
+                @else
+                    {{ $bank->title }}
+                @endif
+            </th>
             @endforeach
-            <th class="right">Cash/Adv.</th>
+            <th class="right">Misc</th>
         </tr>
     </thead>
     <tbody>
-        @foreach($orders as $i => $order)
-        <tr>
-            <td class="muted">{{ $i + 1 }}</td>
-            <td>{{ $order->customer?->name ?? $order->submitted_name }}</td>
-            <td class="muted">{{ $order->customer?->city ?? $order->submitted_city }}</td>
-            <td class="right red" style="font-weight:600">{{ lacs_format($order->outstanding_balance, 0) }}</td>
-            <td class="muted">{{ $order->title_given_label }}</td>
-            @foreach($bankAccounts as $ba)
-                <td class="right">
-                    {{ ($order->bank_totals[$ba->id] ?? 0) > 0 ? lacs_format($order->bank_totals[$ba->id], 0) : '—' }}
-                </td>
+        @foreach($rows as $i => $row)
+        <tr class="{{ $i % 2 === 0 ? 'even' : 'odd' }}">
+            <td class="center" style="color:#86868B;">{{ $i + 1 }}</td>
+            <td class="left name">{{ $row['name'] }}</td>
+            <td class="left" style="color:#6E6E73;">{{ $row['city'] ?: '' }}</td>
+
+            <td class="right highlight-rcv">
+                @if($row['receivable'] > 0)
+                    <span class="red" style="font-weight:600;">{{ lacs_format($row['receivable']) }}</span>
+                @endif
+            </td>
+
+            <td class="center">
+                @if($row['title_given'])
+                    @php $bc = $bankColors[$row['title_given']] ?? null; @endphp
+                    @if($bc)
+                        <span class="bank-pill" style="background:{{ $bc['bg'] }}; color:{{ $bc['text'] }};">
+                            {{ $row['title_given'] }}
+                        </span>
+                    @else
+                        {{ $row['title_given'] }}
+                    @endif
+                @endif
+            </td>
+
+            @foreach($banks as $bank)
+            <td class="right">
+                @if(($row['bank_rcv'][$bank->id] ?? 0) > 0)
+                    <span class="red" style="font-weight:600;">{{ lacs_format($row['bank_rcv'][$bank->id]) }}</span>
+                @endif
+            </td>
             @endforeach
-            <td class="right">{{ $order->misc_total > 0 ? lacs_format($order->misc_total, 0) : '—' }}</td>
+
+            <td class="right">
+                @if($row['misc'] > 0)
+                    <span class="red" style="font-weight:600;">{{ lacs_format($row['misc']) }}</span>
+                @endif
+            </td>
         </tr>
         @endforeach
     </tbody>
     <tfoot>
         <tr>
-            <td colspan="3" class="left">Total</td>
-            <td class="right red">Rs. {{ lacs_format($grandBal, 0) }}</td>
+            <td class="center">{{ count($rows) }}</td>
+            <td class="left">Total</td>
             <td></td>
-            @foreach($bankAccounts as $ba)
-                <td class="right">{{ $grandTotals[$ba->id] > 0 ? 'Rs. ' . lacs_format($grandTotals[$ba->id], 0) : '—' }}</td>
+            <td class="right red">{{ lacs_format($grandReceivable) }}</td>
+            <td></td>
+            @foreach($banks as $bank)
+            <td class="right red">
+                {{ ($bankReceivables[$bank->id] ?? 0) > 0 ? lacs_format($bankReceivables[$bank->id]) : '' }}
+            </td>
             @endforeach
-            <td class="right">{{ $grandMisc > 0 ? 'Rs. ' . lacs_format($grandMisc, 0) : '—' }}</td>
+            <td class="right red">{{ $miscReceivable > 0 ? lacs_format($miscReceivable) : '' }}</td>
         </tr>
     </tfoot>
 </table>
+
+<p class="footnote">
+    Receivable = outstanding balance still to be collected. Amount appears in the column matching the assigned bank (Title Given).
+    Misc = outstanding balance for orders with no assigned bank.
+</p>
+@else
+<p style="font-size:10px; color:#6E6E73; text-align:center; margin-top:30px;">No orders found for this catalogue.</p>
+@endif
 
 </body>
 </html>

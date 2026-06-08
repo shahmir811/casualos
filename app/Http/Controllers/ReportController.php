@@ -218,22 +218,27 @@ class ReportController extends Controller
     {
         $catalogueId       = (int) session('active_catalogue_id');
         $selectedCatalogue = Catalogue::findOrFail($catalogueId);
-        $bankAccounts      = BankAccount::orderBy('title')->get();
-        $orders            = $this->loadBankBreakdownData($catalogueId, $bankAccounts, receivableOnly: true);
+        $banks             = BankAccount::orderBy('id')->get();
+        $data              = $this->loadReceivablesByBankData($catalogueId, $banks);
 
-        return view('reports.receivables-by-bank', compact('bankAccounts', 'selectedCatalogue', 'orders'));
+        return view('reports.receivables-by-bank', array_merge(
+            ['selectedCatalogue' => $selectedCatalogue, 'banks' => $banks],
+            $data
+        ));
     }
 
     public function receivablesByBankPdf(Request $request)
     {
         $catalogueId       = (int) session('active_catalogue_id');
         $selectedCatalogue = Catalogue::findOrFail($catalogueId);
-        $bankAccounts      = BankAccount::orderBy('title')->get();
-        $orders            = $this->loadBankBreakdownData($catalogueId, $bankAccounts, receivableOnly: true);
+        $banks             = BankAccount::orderBy('id')->get();
+        $data              = $this->loadReceivablesByBankData($catalogueId, $banks);
+        $logoDataUri       = pdf_logo_data_uri();
 
-        $logoDataUri = pdf_logo_data_uri();
-
-        return Pdf::loadView('reports.receivables-by-bank-pdf', compact('selectedCatalogue', 'bankAccounts', 'orders', 'logoDataUri'))
+        return Pdf::loadView('reports.receivables-by-bank-pdf', array_merge(
+            ['selectedCatalogue' => $selectedCatalogue, 'banks' => $banks, 'logoDataUri' => $logoDataUri],
+            $data
+        ))
             ->setPaper('a4', 'landscape')
             ->download('receivables-by-bank-' . str($selectedCatalogue->name)->slug() . '.pdf');
     }
@@ -242,11 +247,17 @@ class ReportController extends Controller
     {
         $catalogueId       = (int) session('active_catalogue_id');
         $selectedCatalogue = Catalogue::findOrFail($catalogueId);
-        $bankAccounts      = BankAccount::orderBy('title')->get();
-        $orders            = $this->loadBankBreakdownData($catalogueId, $bankAccounts, receivableOnly: true);
+        $banks             = BankAccount::orderBy('id')->get();
+        $data              = $this->loadReceivablesByBankData($catalogueId, $banks);
 
-        return (new ReceivablesByBankExport($orders, $bankAccounts, $selectedCatalogue))
-            ->download('receivables-by-bank-' . str($selectedCatalogue->name)->slug() . '.xlsx');
+        return (new ReceivablesByBankExport(
+            banks:             $banks,
+            rows:              $data['rows'],
+            grandReceivable:   $data['grandReceivable'],
+            bankReceivables:   $data['bankReceivables'],
+            miscReceivable:    $data['miscReceivable'],
+            selectedCatalogue: $selectedCatalogue,
+        ))->download('receivables-by-bank-' . str($selectedCatalogue->name)->slug() . '.xlsx');
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -277,6 +288,57 @@ class ReportController extends Controller
                     ?: ($order->assignedBankAccount?->title ?? '—');
                 return $order;
             });
+    }
+
+    private function loadReceivablesByBankData(int $catalogueId, $banks): array
+    {
+        $orders = DB::table('orders')
+            ->where('catalogue_id', $catalogueId)
+            ->whereNotIn('status', ['cancelled'])
+            ->leftJoin('bank_accounts as ab', 'orders.assigned_bank_account_id', '=', 'ab.id')
+            ->select(
+                'orders.submitted_name',
+                'orders.submitted_city',
+                'orders.outstanding_balance',
+                'orders.assigned_bank_account_id',
+                DB::raw('ab.title as assigned_bank_title')
+            )
+            ->orderBy('orders.id')
+            ->get();
+
+        $grandReceivable  = 0.0;
+        $bankReceivables  = $banks->mapWithKeys(fn($b) => [$b->id => 0.0])->all();
+        $miscReceivable   = 0.0;
+        $rows             = [];
+
+        foreach ($orders as $order) {
+            $outstanding = (float) $order->outstanding_balance;
+            $bankRcv     = $banks->mapWithKeys(fn($b) => [$b->id => 0.0])->all();
+            $misc        = 0.0;
+
+            if ($outstanding > 0) {
+                if ($order->assigned_bank_account_id) {
+                    $bankRcv[$order->assigned_bank_account_id] = $outstanding;
+                    $bankReceivables[$order->assigned_bank_account_id] += $outstanding;
+                } else {
+                    $misc = $outstanding;
+                    $miscReceivable += $outstanding;
+                }
+            }
+
+            $grandReceivable += $outstanding;
+
+            $rows[] = [
+                'name'        => $order->submitted_name,
+                'city'        => $order->submitted_city ?? '',
+                'receivable'  => $outstanding,
+                'title_given' => $order->assigned_bank_title ?? '',
+                'bank_rcv'    => $bankRcv,
+                'misc'        => $misc,
+            ];
+        }
+
+        return compact('rows', 'grandReceivable', 'bankReceivables', 'miscReceivable');
     }
 
     private function loadBankBreakdownData(int $catalogueId, \Illuminate\Support\Collection $bankAccounts, bool $receivableOnly = false): \Illuminate\Support\Collection
