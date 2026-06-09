@@ -68,6 +68,7 @@ class TarpaiPaymentController extends Controller
 
     public function confirm(TarpaiPayment $tarpaiPayment)
     {
+        $this->denyCreativeHead();
         $tarpaiPayment->update([
             'is_confirmed' => true,
             'confirmed_by' => Auth::id(),
@@ -79,6 +80,7 @@ class TarpaiPaymentController extends Controller
 
     public function recalculate(Request $request)
     {
+        $this->denyCreativeHead();
         $request->validate([
             'week_date' => 'required|date',
         ]);

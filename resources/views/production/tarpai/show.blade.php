@@ -18,6 +18,7 @@
             Print Gate Pass
         </a>
         @endif
+        @if(Auth::user()->role !== 'creative_head')
         <form method="POST" action="{{ route('tarpai-sends.destroy', $tarpaiSend) }}"
               onsubmit="return confirm('{{ $tarpaiSend->returns->count() > 0
                   ? 'Delete TP-' . str_pad($tarpaiSend->id, 4, '0', STR_PAD_LEFT) . ' and its ' . $tarpaiSend->returns->count() . ' return batch(es)? This cannot be undone.'
@@ -32,6 +33,7 @@
                 Delete Send
             </button>
         </form>
+        @endif {{-- creative_head guard --}}
     </div>
 </div>
 
@@ -139,6 +141,7 @@
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="text-sm font-semibold text-green-700">{{ $ret->items->sum('quantity') }} pcs returned</span>
+                        @if(Auth::user()->role !== 'creative_head')
                         <form method="POST" action="{{ route('tarpai.return.destroy', [$tarpaiSend, $ret]) }}"
                               onsubmit="return confirm('Delete this return entry? The pieces will go back to outstanding.')">
                             @csrf
@@ -148,6 +151,7 @@
                                 Delete
                             </button>
                         </form>
+                        @endif
                     </div>
                 </div>
                 @foreach($retByDesign as $dId => $dItems)
@@ -174,6 +178,7 @@
     @endif
 
     {{-- Log Return Form --}}
+    @if(Auth::user()->role !== 'creative_head')
     @if($outstanding > 0)
     <div class="card p-5"
          x-data="{
@@ -273,6 +278,7 @@
         </div>
     </div>
     @endif
+    @endif {{-- creative_head guard --}}
 
 </div>
 

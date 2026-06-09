@@ -17,6 +17,7 @@ class OutsourcedBatchController extends Controller
 
     public function create()
     {
+        $this->denyCreativeHead();
         $catalogueId = (int) session('active_catalogue_id');
 
         if (!$catalogueId) {
@@ -32,6 +33,7 @@ class OutsourcedBatchController extends Controller
 
     public function store(Request $request)
     {
+        $this->denyCreativeHead();
         $sizes = ['xs', 's', 'm', 'l', 'xl'];
 
         $validated = $request->validate([

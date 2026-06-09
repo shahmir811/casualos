@@ -7,12 +7,14 @@
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Fabric Batches</h1>
         <p class="text-[#6E6E73] text-sm mt-1">{{ $batches->total() }} total batches logged</p>
     </div>
+    @if(Auth::user()->role !== 'creative_head')
     <a href="{{ route('fabric-batches.create') }}" class="btn-primary">
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
         </svg>
         Log Batch Arrival
     </a>
+    @endif
 </div>
 
 {{-- ── Filter bar ──────────────────────────────────────────────────── --}}

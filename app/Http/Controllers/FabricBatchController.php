@@ -69,6 +69,7 @@ class FabricBatchController extends Controller
 
     public function create()
     {
+        $this->denyCreativeHead();
         $catalogueId = (int) session('active_catalogue_id');
 
         if (!$catalogueId) {
@@ -84,6 +85,7 @@ class FabricBatchController extends Controller
 
     public function store(Request $request)
     {
+        $this->denyCreativeHead();
         $validated = $request->validate([
             'catalogue_id' => 'required|exists:catalogues,id',
             'arrival_date' => 'required|date',

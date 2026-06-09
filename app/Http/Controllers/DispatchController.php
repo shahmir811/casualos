@@ -37,6 +37,7 @@ class DispatchController extends Controller
 
     public function workspace(Order $order)
     {
+        $this->denyCreativeHead();
         $sizes = ['xs', 's', 'm', 'l', 'xl'];
         $order->load(['items.design', 'customer', 'catalogue', 'dispatchBatches.items.design']);
 
@@ -88,6 +89,7 @@ class DispatchController extends Controller
 
     public function create(Order $order)
     {
+        $this->denyCreativeHead();
         $sizes = ['xs', 's', 'm', 'l', 'xl'];
         $order->load(['items.design', 'customer']);
 
@@ -139,6 +141,7 @@ class DispatchController extends Controller
 
     public function store(Request $request, Order $order)
     {
+        $this->denyCreativeHead();
         $validated = $request->validate([
             'dispatch_date'          => 'required|date',
             'shipping_address'       => 'required|string|max:500',

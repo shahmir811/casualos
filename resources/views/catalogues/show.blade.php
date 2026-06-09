@@ -19,7 +19,7 @@
         </p>
     </div>
 
-    @if(Auth::user()->role === 'admin')
+    @if(in_array(Auth::user()->role, ['admin', 'production_manager', 'creative_head']))
     <div class="flex items-center gap-2.5">
         <a href="{{ route('catalogues.edit', $catalogue) }}" class="btn-secondary">
             Edit
@@ -77,7 +77,7 @@
 </div>
 
 {{-- Share Link --}}
-@if(Auth::user()->role === 'admin' && $catalogue->status === 'open' && $shareUrl)
+@if(in_array(Auth::user()->role, ['admin', 'production_manager']) && $catalogue->status === 'open' && $shareUrl)
 <div class="card p-5 mb-7" x-data="{ copied: false }">
     <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-3">Shareable Order Link</p>
     <div class="flex items-center gap-3">

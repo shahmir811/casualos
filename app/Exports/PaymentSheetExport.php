@@ -13,7 +13,8 @@ class PaymentSheetExport
     public function __construct(
         private $orders,
         private $catalogue,
-        private $bankAccounts
+        private $bankAccounts,
+        private bool $hideFinancials = false
     ) {}
 
     public function download(string $filename): StreamedResponse
@@ -36,11 +37,16 @@ class PaymentSheetExport
         $sheet->setTitle(substr($this->catalogue->name, 0, 31));
 
         $bankHeaders = $this->bankAccounts->pluck('title')->toArray();
-        $headers = array_merge(
-            ['#', 'Customer', 'City', 'XS', 'S', 'M', 'L', 'XL', 'Qty/Dsn', 'Total Qty', 'Rate', 'Total Bill', 'Received', 'Receivable', 'Title Given'],
-            $bankHeaders,
-            ['Misc']
-        );
+
+        if ($this->hideFinancials) {
+            $headers = ['#', 'Customer', 'City', 'XS', 'S', 'M', 'L', 'XL', 'Qty/Dsn', 'Total Qty', 'Status', 'Payment'];
+        } else {
+            $headers = array_merge(
+                ['#', 'Customer', 'City', 'XS', 'S', 'M', 'L', 'XL', 'Qty/Dsn', 'Total Qty', 'Rate', 'Total Bill', 'Received', 'Receivable', 'Title Given'],
+                $bankHeaders,
+                ['Misc']
+            );
+        }
 
         $colCount = count($headers);
         $lastCol  = Coordinate::stringFromColumnIndex($colCount);
@@ -56,8 +62,10 @@ class PaymentSheetExport
             'qty_per_design' => 0, 'total_qty' => 0,
             'total_bill' => 0, 'received' => 0, 'receivable' => 0, 'misc' => 0,
         ];
-        foreach ($this->bankAccounts as $bank) {
-            $totals['bank_' . $bank->id] = 0;
+        if (!$this->hideFinancials) {
+            foreach ($this->bankAccounts as $bank) {
+                $totals['bank_' . $bank->id] = 0;
+            }
         }
 
         $row = 2;
@@ -72,36 +80,6 @@ class PaymentSheetExport
             $totalQty     = $qtyPerDesign * $this->catalogue->number_of_designs;
             $rate         = $totalQty > 0 ? (int) round($order->total_amount / $totalQty) : 0;
 
-            $bankPmts   = [];
-            $miscAmt    = 0;
-            $titleGiven = '';
-            foreach ($order->payments as $payment) {
-                if ($payment->payment_type === 'advance') {
-                    $miscAmt += $payment->amount;
-                } elseif ($payment->payment_type === 'bank_transfer' && $payment->bank_account_id) {
-                    $bankPmts[$payment->bank_account_id] = ($bankPmts[$payment->bank_account_id] ?? 0) + $payment->amount;
-                }
-            }
-            $titleGiven = $order->payments
-                ->where('payment_type', 'bank_transfer')
-                ->filter(fn($p) => $p->bankAccount)
-                ->map(fn($p) => $p->bankAccount->title)
-                ->unique()
-                ->implode('/');
-
-            // Cap received at the order total — exclude overpayment surplus
-            $amountReceived  = min((float) $order->total_paid, (float) $order->total_amount);
-
-            // Bank columns absorb the surplus: scale proportionally, keep misc (advance) intact
-            $totalBankPaid   = array_sum($bankPmts);
-            $cappedBankTotal = max(0.0, $amountReceived - $miscAmt);
-            if ($totalBankPaid > 0) {
-                $scale = $cappedBankTotal / $totalBankPaid;
-                foreach ($bankPmts as $bankId => $amt) {
-                    $bankPmts[$bankId] = round($amt * $scale);
-                }
-            }
-
             $totals['xs']             += $xs;
             $totals['s']              += $s;
             $totals['m']              += $m;
@@ -109,21 +87,13 @@ class PaymentSheetExport
             $totals['xl']             += $xl;
             $totals['qty_per_design'] += $qtyPerDesign;
             $totals['total_qty']      += $totalQty;
-            $totals['total_bill']     += $order->total_amount;
-            $totals['received']       += $amountReceived;
-            $totals['receivable']     += $order->outstanding_balance;
-            $totals['misc']           += $miscAmt;
-            foreach ($this->bankAccounts as $bank) {
-                $totals['bank_' . $bank->id] += ($bankPmts[$bank->id] ?? 0);
-            }
 
-            $bankValues = [];
-            foreach ($this->bankAccounts as $bank) {
-                $bankValues[] = ($bankPmts[$bank->id] ?? 0) ?: '';
-            }
+            if ($this->hideFinancials) {
+                $paymentStatus = $order->total_paid <= 0
+                    ? 'Not Paid'
+                    : ($order->outstanding_balance <= 0 ? 'Fully Paid' : 'Partially Paid');
 
-            $rowData = array_merge(
-                [
+                $rowData = [
                     $i + 1,
                     $order->customer?->name ?? $order->submitted_name,
                     $order->submitted_city,
@@ -134,15 +104,71 @@ class PaymentSheetExport
                     $xl ?: '',
                     $qtyPerDesign ?: '',
                     $totalQty     ?: '',
-                    $rate > 0 ? $rate : '',
-                    $order->total_amount,
-                    $amountReceived > 0 ? $amountReceived : '',
-                    $order->outstanding_balance > 0 ? $order->outstanding_balance : '',
-                    $titleGiven,
-                ],
-                $bankValues,
-                [$miscAmt > 0 ? $miscAmt : '']
-            );
+                    ucfirst(str_replace('_', ' ', $order->status)),
+                    $paymentStatus,
+                ];
+            } else {
+                $bankPmts   = [];
+                $miscAmt    = 0;
+                foreach ($order->payments as $payment) {
+                    if ($payment->payment_type === 'advance') {
+                        $miscAmt += $payment->amount;
+                    } elseif ($payment->payment_type === 'bank_transfer' && $payment->bank_account_id) {
+                        $bankPmts[$payment->bank_account_id] = ($bankPmts[$payment->bank_account_id] ?? 0) + $payment->amount;
+                    }
+                }
+                $titleGiven = $order->payments
+                    ->where('payment_type', 'bank_transfer')
+                    ->filter(fn($p) => $p->bankAccount)
+                    ->map(fn($p) => $p->bankAccount->title)
+                    ->unique()
+                    ->implode('/');
+
+                $amountReceived  = min((float) $order->total_paid, (float) $order->total_amount);
+                $totalBankPaid   = array_sum($bankPmts);
+                $cappedBankTotal = max(0.0, $amountReceived - $miscAmt);
+                if ($totalBankPaid > 0) {
+                    $scale = $cappedBankTotal / $totalBankPaid;
+                    foreach ($bankPmts as $bankId => $amt) {
+                        $bankPmts[$bankId] = round($amt * $scale);
+                    }
+                }
+
+                $totals['total_bill'] += $order->total_amount;
+                $totals['received']   += $amountReceived;
+                $totals['receivable'] += $order->outstanding_balance;
+                $totals['misc']       += $miscAmt;
+                foreach ($this->bankAccounts as $bank) {
+                    $totals['bank_' . $bank->id] += ($bankPmts[$bank->id] ?? 0);
+                }
+
+                $bankValues = [];
+                foreach ($this->bankAccounts as $bank) {
+                    $bankValues[] = ($bankPmts[$bank->id] ?? 0) ?: '';
+                }
+
+                $rowData = array_merge(
+                    [
+                        $i + 1,
+                        $order->customer?->name ?? $order->submitted_name,
+                        $order->submitted_city,
+                        $xs ?: '',
+                        $s  ?: '',
+                        $m  ?: '',
+                        $l  ?: '',
+                        $xl ?: '',
+                        $qtyPerDesign ?: '',
+                        $totalQty     ?: '',
+                        $rate > 0 ? $rate : '',
+                        $order->total_amount,
+                        $amountReceived > 0 ? $amountReceived : '',
+                        $order->outstanding_balance > 0 ? $order->outstanding_balance : '',
+                        $titleGiven,
+                    ],
+                    $bankValues,
+                    [$miscAmt > 0 ? $miscAmt : '']
+                );
+            }
 
             $sheet->fromArray($rowData, null, "A{$row}");
 
@@ -156,15 +182,12 @@ class PaymentSheetExport
         }
 
         // Totals row
-        $bankTotalValues = [];
-        foreach ($this->bankAccounts as $bank) {
-            $bankTotalValues[] = $totals['bank_' . $bank->id] > 0 ? $totals['bank_' . $bank->id] : '';
-        }
+        $label = 'TOTAL (' . $this->orders->count() . ' orders)';
 
-        $totalsRow = array_merge(
-            [
+        if ($this->hideFinancials) {
+            $totalsRow = [
                 '', '',
-                'TOTAL (' . $this->orders->count() . ' orders)',
+                $label,
                 $totals['xs'] > 0 ? $totals['xs'] : '',
                 $totals['s']  > 0 ? $totals['s']  : '',
                 $totals['m']  > 0 ? $totals['m']  : '',
@@ -172,15 +195,35 @@ class PaymentSheetExport
                 $totals['xl'] > 0 ? $totals['xl'] : '',
                 $totals['qty_per_design'] > 0 ? $totals['qty_per_design'] : '',
                 $totals['total_qty']      > 0 ? $totals['total_qty']      : '',
-                '',
-                $totals['total_bill'],
-                $totals['received'],
-                $totals['receivable'],
-                '',
-            ],
-            $bankTotalValues,
-            [$totals['misc'] > 0 ? $totals['misc'] : '']
-        );
+                '', '',
+            ];
+        } else {
+            $bankTotalValues = [];
+            foreach ($this->bankAccounts as $bank) {
+                $bankTotalValues[] = $totals['bank_' . $bank->id] > 0 ? $totals['bank_' . $bank->id] : '';
+            }
+
+            $totalsRow = array_merge(
+                [
+                    '', '',
+                    $label,
+                    $totals['xs'] > 0 ? $totals['xs'] : '',
+                    $totals['s']  > 0 ? $totals['s']  : '',
+                    $totals['m']  > 0 ? $totals['m']  : '',
+                    $totals['l']  > 0 ? $totals['l']  : '',
+                    $totals['xl'] > 0 ? $totals['xl'] : '',
+                    $totals['qty_per_design'] > 0 ? $totals['qty_per_design'] : '',
+                    $totals['total_qty']      > 0 ? $totals['total_qty']      : '',
+                    '',
+                    $totals['total_bill'],
+                    $totals['received'],
+                    $totals['receivable'],
+                    '',
+                ],
+                $bankTotalValues,
+                [$totals['misc'] > 0 ? $totals['misc'] : '']
+            );
+        }
 
         $sheet->fromArray($totalsRow, null, "A{$row}");
         $sheet->getStyle("A{$row}:{$lastCol}{$row}")->applyFromArray([

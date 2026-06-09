@@ -84,6 +84,7 @@ class TarpaiController extends Controller
 
     public function create()
     {
+        $this->denyCreativeHead();
         $catalogueId = (int) session('active_catalogue_id');
 
         if (!$catalogueId) {
@@ -113,6 +114,7 @@ class TarpaiController extends Controller
 
     public function store(Request $request)
     {
+        $this->denyCreativeHead();
         $validated = $request->validate([
             'catalogue_id'           => 'required|exists:catalogues,id',
             'tarpai_house'           => 'required|in:rashid_bhai,yousaf_bhai,in_house',
@@ -216,6 +218,7 @@ class TarpaiController extends Controller
 
     public function logReturn(Request $request, TarpaiSend $send)
     {
+        $this->denyCreativeHead();
         $validated = $request->validate([
             'return_date'            => 'required|date',
             'designs'                => 'required|array',
@@ -260,6 +263,7 @@ class TarpaiController extends Controller
 
     public function destroy(TarpaiSend $tarpaiSend)
     {
+        $this->denyCreativeHead();
         $tarpaiSend->load(['items.design', 'returns.items', 'catalogue']);
 
         DB::transaction(function () use ($tarpaiSend) {
@@ -290,6 +294,7 @@ class TarpaiController extends Controller
 
     public function destroyReturn(TarpaiSend $send, TarpaiReturn $return)
     {
+        $this->denyCreativeHead();
         if ($return->tarpai_send_id !== $send->id) {
             abort(403);
         }

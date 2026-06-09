@@ -92,13 +92,20 @@ Route::middleware(['auth', 'active'])->group(function () {
     /*
     |------------------------------------------------------------------
     | ORDERS & PAYMENTS (admin + accountant)
+    | Index + downloads also accessible to production_manager (no financials shown)
     |------------------------------------------------------------------
     */
-    Route::middleware('role:admin|accountant')->group(function () {
+
+    // Index + downloads — production_manager and creative_head allowed (financials hidden in view/export)
+    Route::middleware('role:admin|accountant|production_manager|creative_head')->group(function () {
+        Route::get('orders',       [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/pdf',   [OrderController::class, 'downloadPdf'])->name('orders.pdf');
         Route::get('orders/excel', [OrderController::class, 'downloadExcel'])->name('orders.excel');
+    });
+
+    Route::middleware('role:admin|accountant')->group(function () {
         Route::get('orders/{order}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
-        Route::resource('orders', OrderController::class)->except(['create','store','destroy']);
+        Route::resource('orders', OrderController::class)->only(['show', 'edit', 'update']);
         Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
         Route::post('orders/{order}/confirm',  [OrderController::class, 'confirm'])->name('orders.confirm');
         Route::post('orders/{order}/stitch',   [OrderController::class, 'markStitching'])->name('orders.stitch');
@@ -127,10 +134,10 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     /*
     |------------------------------------------------------------------
-    | IN-HOUSE PRODUCTION TRACKING (production_manager only)
+    | IN-HOUSE PRODUCTION TRACKING (production_manager + creative_head read-only)
     |------------------------------------------------------------------
     */
-    Route::middleware('role:admin|production_manager')->group(function () {
+    Route::middleware('role:admin|production_manager|creative_head')->group(function () {
         // Fabric batch arrivals
         Route::resource('fabric-batches', FabricBatchController::class)->only(['index','create','store','show']);
 
@@ -171,16 +178,16 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     });
 
-    // Worker wages (admin, production_manager, accountant)
-    Route::middleware('role:admin|production_manager|accountant')->group(function () {
+    // Worker wages (admin, production_manager, accountant, creative_head read-only)
+    Route::middleware('role:admin|production_manager|accountant|creative_head')->group(function () {
         Route::get('wages',                    [WagesController::class, 'index'])->name('wages.index');
         Route::get('wages/{wage}',             [WagesController::class, 'show'])->name('wages.show');
         Route::post('wages/recalculate',       [WagesController::class, 'recalculate'])->name('wages.recalculate');
         Route::post('wages/{wage}/confirm',    [WagesController::class, 'confirm'])->name('wages.confirm');
     });
 
-    // Tarpai charges (admin, production_manager, accountant)
-    Route::middleware('role:admin|production_manager|accountant')->group(function () {
+    // Tarpai charges (admin, production_manager, accountant, creative_head read-only)
+    Route::middleware('role:admin|production_manager|accountant|creative_head')->group(function () {
         Route::get('tarpai-charges',                             [TarpaiPaymentController::class, 'index'])->name('tarpai-charges.index');
         Route::get('tarpai-charges/{tarpaiPayment}',             [TarpaiPaymentController::class, 'show'])->name('tarpai-charges.show');
         Route::post('tarpai-charges/recalculate',                [TarpaiPaymentController::class, 'recalculate'])->name('tarpai-charges.recalculate');

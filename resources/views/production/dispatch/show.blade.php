@@ -82,7 +82,7 @@
             </div>
         </div>
 
-        @if($order->status !== 'dispatched')
+        @if($order->status !== 'dispatched' && Auth::user()->role !== 'creative_head')
         <a href="{{ route('dispatch.create', $order) }}" class="btn-primary w-full justify-center">
             {{ $order->dispatchBatches->count() ? 'Dispatch Again' : 'Record Dispatch' }}
         </a>

@@ -125,6 +125,7 @@
 @endif
 
 {{-- Log return form --}}
+@if(Auth::user()->role !== 'creative_head')
 @if($outstanding > 0)
 @php
     // Build the Alpine initialisation data in PHP so Blade loops don't get messy inside x-data
@@ -232,5 +233,6 @@
     <p class="text-[#34C759] font-medium">All pieces have been returned from press.</p>
 </div>
 @endif
+@endif {{-- creative_head guard --}}
 
 @endsection

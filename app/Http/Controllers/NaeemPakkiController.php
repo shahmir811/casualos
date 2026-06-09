@@ -61,6 +61,7 @@ class NaeemPakkiController extends Controller
 
     public function logReturn(Request $request, ProductionAssignment $productionAssignment)
     {
+        $this->denyCreativeHead();
         $productionAssignment->load(['npDesigns.returnItems']);
 
         $request->validate([

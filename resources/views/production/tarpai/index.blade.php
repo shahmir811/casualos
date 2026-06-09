@@ -7,12 +7,14 @@
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Tarpai Finishing</h1>
         <p class="text-[#6E6E73] text-sm mt-1">Track Kameez pieces sent for tarpai and returns</p>
     </div>
+    @if(Auth::user()->role !== 'creative_head')
     <a href="{{ route('tarpai-sends.create') }}" class="btn-primary self-start sm:self-auto">
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
         </svg>
         Log Send
     </a>
+    @endif
 </div>
 
 {{-- ── Filter bar ──────────────────────────────────────────────────── --}}

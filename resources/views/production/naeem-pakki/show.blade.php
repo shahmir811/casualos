@@ -71,6 +71,7 @@
         </div>
 
         {{-- Log Return form --}}
+        @if(Auth::user()->role !== 'creative_head')
         @if($totalOutstanding > 0)
         <div class="card p-5">
             <h3 class="text-sm font-semibold text-[#1D1D1F] mb-1">Log Return Batch</h3>
@@ -151,6 +152,7 @@
             </div>
         </div>
         @endif
+        @endif {{-- creative_head guard --}}
 
         @if(session('success'))
         <div class="px-4 py-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl">
