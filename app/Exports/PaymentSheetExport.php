@@ -89,6 +89,19 @@ class PaymentSheetExport
                 ->unique()
                 ->implode('/');
 
+            // Cap received at the order total — exclude overpayment surplus
+            $amountReceived  = min((float) $order->total_paid, (float) $order->total_amount);
+
+            // Bank columns absorb the surplus: scale proportionally, keep misc (advance) intact
+            $totalBankPaid   = array_sum($bankPmts);
+            $cappedBankTotal = max(0.0, $amountReceived - $miscAmt);
+            if ($totalBankPaid > 0) {
+                $scale = $cappedBankTotal / $totalBankPaid;
+                foreach ($bankPmts as $bankId => $amt) {
+                    $bankPmts[$bankId] = round($amt * $scale);
+                }
+            }
+
             $totals['xs']             += $xs;
             $totals['s']              += $s;
             $totals['m']              += $m;
@@ -97,7 +110,7 @@ class PaymentSheetExport
             $totals['qty_per_design'] += $qtyPerDesign;
             $totals['total_qty']      += $totalQty;
             $totals['total_bill']     += $order->total_amount;
-            $totals['received']       += $order->total_paid;
+            $totals['received']       += $amountReceived;
             $totals['receivable']     += $order->outstanding_balance;
             $totals['misc']           += $miscAmt;
             foreach ($this->bankAccounts as $bank) {
@@ -123,7 +136,7 @@ class PaymentSheetExport
                     $totalQty     ?: '',
                     $rate > 0 ? $rate : '',
                     $order->total_amount,
-                    $order->total_paid > 0 ? $order->total_paid : '',
+                    $amountReceived > 0 ? $amountReceived : '',
                     $order->outstanding_balance > 0 ? $order->outstanding_balance : '',
                     $titleGiven,
                 ],
