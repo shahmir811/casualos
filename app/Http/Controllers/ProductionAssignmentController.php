@@ -38,6 +38,7 @@ class ProductionAssignmentController extends Controller
 
     public function create()
     {
+        $this->denyCreativeHead();
         $catalogueId = (int) session('active_catalogue_id');
 
         if (!$catalogueId) {
@@ -122,6 +123,7 @@ class ProductionAssignmentController extends Controller
 
     public function store(Request $request)
     {
+        $this->denyCreativeHead();
         $request->validate([
             'catalogue_id'    => 'required|exists:catalogues,id',
             'destination'     => 'required|in:naeem_pakki,stitching_unit',
@@ -296,6 +298,7 @@ class ProductionAssignmentController extends Controller
 
     public function updateNpRate(Request $request, ProductionAssignment $productionAssignment, ProductionAssignmentNpDesign $npDesign)
     {
+        $this->denyCreativeHead();
         abort_if((int) $npDesign->production_assignment_id !== (int) $productionAssignment->id, 404);
 
         $validated = $request->validate([

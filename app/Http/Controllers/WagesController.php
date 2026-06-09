@@ -75,6 +75,7 @@ class WagesController extends Controller
 
     public function confirm(Wage $wage)
     {
+        $this->denyCreativeHead();
         $wage->update([
             'is_confirmed' => true,
             'confirmed_by' => Auth::id(),
@@ -86,6 +87,7 @@ class WagesController extends Controller
 
     public function recalculate(Request $request)
     {
+        $this->denyCreativeHead();
         $request->validate([
             'week_date' => 'required|date',
         ]);

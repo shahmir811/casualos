@@ -95,6 +95,7 @@
         </div>
 
         {{-- Log Return form --}}
+        @if(Auth::user()->role !== 'creative_head')
         @if(!$isFullyComplete)
         <div class="card p-5"
              x-data="{
@@ -256,6 +257,7 @@
         </div>
         @endif
         @endif
+        @endif {{-- creative_head guard --}}
 
     </div>
 

@@ -23,7 +23,7 @@ class CatalogueController extends Controller
 
     private function adminOrProductionManager(): void
     {
-        if (! in_array(Auth::user()->role, ['admin', 'production_manager'])) {
+        if (! in_array(Auth::user()->role, ['admin', 'production_manager', 'creative_head'])) {
             abort(403);
         }
     }

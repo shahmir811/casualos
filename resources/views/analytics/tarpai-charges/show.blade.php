@@ -21,7 +21,7 @@
         </p>
     </div>
 
-    @if(!$tarpaiPayment->is_confirmed)
+    @if(!$tarpaiPayment->is_confirmed && Auth::user()->role !== 'creative_head')
     <form id="form-confirm" method="POST" action="{{ route('tarpai-charges.confirm', $tarpaiPayment) }}">@csrf</form>
     <button type="button" class="btn-primary"
             @click="$store.confirm.show({

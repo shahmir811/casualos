@@ -8,6 +8,7 @@
 </div>
 
 {{-- Recalculate panel --}}
+@if(Auth::user()->role !== 'creative_head')
 <div class="card p-5 mb-6"
      x-data="{ open: false }">
     <button type="button"
@@ -44,6 +45,7 @@
         </form>
     </div>
 </div>
+@endif {{-- creative_head guard --}}
 
 {{-- Filters --}}
 <form method="GET" action="{{ route('tarpai-charges.index') }}" class="card p-4 mb-6">

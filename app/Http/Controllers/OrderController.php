@@ -83,7 +83,7 @@ class OrderController extends Controller
             : null;
 
         $bankAccounts    = BankAccount::where('is_active', true)->orderBy('title')->get();
-        $hideFinancials  = Auth::user()->role === 'production_manager';
+        $hideFinancials  = in_array(Auth::user()->role, ['production_manager', 'creative_head']);
 
         return view('orders.index', compact(
             'orders', 'catalogues', 'selectedCatalogue', 'selectedCatalogueId', 'summary', 'bankAccounts', 'sort', 'direction', 'hideFinancials'

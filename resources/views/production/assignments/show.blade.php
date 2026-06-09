@@ -259,7 +259,11 @@
         @else
         <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
             <p class="text-sm text-blue-800">Routed to <strong>Unit {{ $productionAssignment->stitchingUnit?->number }} — {{ $productionAssignment->stitchingUnit?->name }}</strong>. Log stitching return when pieces come back.</p>
+            @if(Auth::user()->role !== 'creative_head')
             <a href="{{ route('stitching-assignments.show', $productionAssignment) }}" class="btn-primary text-xs">Log Return →</a>
+            @else
+            <a href="{{ route('stitching-assignments.show', $productionAssignment) }}" class="btn-secondary text-xs">View Returns →</a>
+            @endif
         </div>
         @endif
 

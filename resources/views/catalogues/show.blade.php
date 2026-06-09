@@ -19,7 +19,7 @@
         </p>
     </div>
 
-    @if(in_array(Auth::user()->role, ['admin', 'production_manager']))
+    @if(in_array(Auth::user()->role, ['admin', 'production_manager', 'creative_head']))
     <div class="flex items-center gap-2.5">
         <a href="{{ route('catalogues.edit', $catalogue) }}" class="btn-secondary">
             Edit

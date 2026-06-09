@@ -43,6 +43,7 @@ class PressController extends Controller
 
     public function create()
     {
+        $this->denyCreativeHead();
         $catalogueId = (int) session('active_catalogue_id');
 
         if (!$catalogueId) {
@@ -71,6 +72,7 @@ class PressController extends Controller
 
     public function store(Request $request)
     {
+        $this->denyCreativeHead();
         $validated = $request->validate([
             'catalogue_id'           => 'required|exists:catalogues,id',
             'sent_date'              => 'required|date',
@@ -165,6 +167,7 @@ class PressController extends Controller
 
     public function logReturn(Request $request, PressSend $pressSend)
     {
+        $this->denyCreativeHead();
         $validated = $request->validate([
             'return_date'            => 'required|date',
             'designs'                => 'required|array',

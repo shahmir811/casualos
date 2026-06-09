@@ -23,7 +23,7 @@
         </p>
     </div>
 
-    @if(!$wage->is_confirmed)
+    @if(!$wage->is_confirmed && Auth::user()->role !== 'creative_head')
     <form id="form-confirm-wage" method="POST" action="{{ route('wages.confirm', $wage) }}">@csrf</form>
     <button type="button" class="btn-primary"
             @click="$store.confirm.show({

@@ -303,10 +303,10 @@
             @endif
 
             {{-- Production --}}
-            @if(in_array($r, ['admin','production_manager']))
+            @if(in_array($r, ['admin','production_manager','creative_head']))
             <p class="px-3 pt-3 pb-1 text-[10px] font-semibold text-[#86868B] tracking-widest uppercase">Production</p>
 
-            @if($r === 'production_manager')
+            @if(in_array($r, ['production_manager','creative_head']))
             <a href="{{ route('orders.index') }}"
                class="nav-item {{ request()->routeIs('orders.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">

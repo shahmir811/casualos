@@ -176,7 +176,7 @@
                 <table class="w-full apple-table whitespace-nowrap">
                     <thead>
                         <tr>
-                            @if(in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager']) && $selectedCatalogue)
+                            @if(in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager', 'creative_head']) && $selectedCatalogue)
                             <th style="width:36px;">
                                 <input type="checkbox" class="rounded border-[#C7C7CC]"
                                        @change="toggleAll($event.target.checked)"
@@ -270,7 +270,7 @@
                     <tr class="{{ $order->is_flagged ? 'border-l-4 border-l-[#FF3B30]' : '' }}">
 
                         {{-- Checkbox --}}
-                        @if(in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager']) && $selectedCatalogue)
+                        @if(in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager', 'creative_head']) && $selectedCatalogue)
                         <td>
                             <input type="checkbox" class="rounded border-[#C7C7CC]"
                                    :checked="selected.includes({{ $order->id }})"
@@ -384,7 +384,7 @@
                     {{-- Totals footer --}}
                     @if(count($orderList) > 0)
                     <tr style="background:#F5F5F7; border-top: 2px solid #E8E8ED;">
-                        @if(in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager']) && $selectedCatalogue)
+                        @if(in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager', 'creative_head']) && $selectedCatalogue)
                         <td></td>
                         @endif
                         <td colspan="4" class="font-semibold text-[#1D1D1F] text-sm">

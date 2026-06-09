@@ -276,6 +276,7 @@ class StitchingReturnController extends Controller
 
     public function storeReturn(Request $request, ProductionAssignment $productionAssignment)
     {
+        $this->denyCreativeHead();
         $productionAssignment->load('items');
 
         $request->validate([
