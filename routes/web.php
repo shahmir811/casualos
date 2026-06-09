@@ -92,13 +92,20 @@ Route::middleware(['auth', 'active'])->group(function () {
     /*
     |------------------------------------------------------------------
     | ORDERS & PAYMENTS (admin + accountant)
+    | Index + downloads also accessible to production_manager (no financials shown)
     |------------------------------------------------------------------
     */
-    Route::middleware('role:admin|accountant')->group(function () {
+
+    // Index + downloads — production_manager allowed (financials hidden in view/export)
+    Route::middleware('role:admin|accountant|production_manager')->group(function () {
+        Route::get('orders',       [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/pdf',   [OrderController::class, 'downloadPdf'])->name('orders.pdf');
         Route::get('orders/excel', [OrderController::class, 'downloadExcel'])->name('orders.excel');
+    });
+
+    Route::middleware('role:admin|accountant')->group(function () {
         Route::get('orders/{order}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
-        Route::resource('orders', OrderController::class)->except(['create','store','destroy']);
+        Route::resource('orders', OrderController::class)->only(['show', 'edit', 'update']);
         Route::delete('orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
         Route::post('orders/{order}/confirm',  [OrderController::class, 'confirm'])->name('orders.confirm');
         Route::post('orders/{order}/stitch',   [OrderController::class, 'markStitching'])->name('orders.stitch');

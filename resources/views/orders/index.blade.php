@@ -66,7 +66,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
-            <span x-text="selected.length > 0 ? 'Payment Sheet (' + selected.length + ')' : 'Download Payment Sheet'"></span>
+            <span x-text="selected.length > 0 ? '{{ $hideFinancials ? 'Orders Sheet' : 'Payment Sheet' }} (' + selected.length + ')' : '{{ $hideFinancials ? 'Download Orders Sheet' : 'Download Payment Sheet' }}'"></span>
         </a>
     </div>
     @endif
@@ -155,7 +155,8 @@
         </div>
     </div>
 
-    {{-- Revenue --}}
+    {{-- Revenue (admin + accountant only) --}}
+    @if(!$hideFinancials)
     <div class="card p-4">
         <p class="text-[10px] font-bold text-[#86868B] uppercase tracking-widest mb-1">Total Revenue</p>
         <p class="text-2xl font-semibold text-[#1D1D1F] tabular-nums leading-tight mt-2">
@@ -163,6 +164,7 @@
         </p>
         <p class="text-xs text-[#86868B] mt-1">{{ ($orders instanceof \Illuminate\Pagination\LengthAwarePaginator ? $orders->total() : $orders->count()) }} orders</p>
     </div>
+    @endif
 
 </div>
 @endif
@@ -174,7 +176,7 @@
                 <table class="w-full apple-table whitespace-nowrap">
                     <thead>
                         <tr>
-                            @if(in_array(Auth::user()->role, ['admin', 'accountant']) && $selectedCatalogue)
+                            @if(in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager']) && $selectedCatalogue)
                             <th style="width:36px;">
                                 <input type="checkbox" class="rounded border-[#C7C7CC]"
                                        @change="toggleAll($event.target.checked)"
@@ -210,9 +212,15 @@
                             <th class="text-center px-3" style="min-width:50px;">L</th>
                             <th class="text-center px-3" style="min-width:50px;">XL</th>
                             <th class="text-center" style="min-width:80px;">Total Qty</th>
+                            @if(!$hideFinancials)
                             <th class="text-right" style="min-width:130px;">Total Bill</th>
+                            @else
+                            <th class="text-center" style="min-width:120px;">Payment</th>
+                            @endif
                             <th class="text-center" style="min-width:96px;">Status</th>
+                            @if(!$hideFinancials)
                             <th style="min-width:56px;"></th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -262,7 +270,7 @@
                     <tr class="{{ $order->is_flagged ? 'border-l-4 border-l-[#FF3B30]' : '' }}">
 
                         {{-- Checkbox --}}
-                        @if(in_array(Auth::user()->role, ['admin', 'accountant']) && $selectedCatalogue)
+                        @if(in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager']) && $selectedCatalogue)
                         <td>
                             <input type="checkbox" class="rounded border-[#C7C7CC]"
                                    :checked="selected.includes({{ $order->id }})"
@@ -291,6 +299,7 @@
                                 <span class="font-medium text-[#1D1D1F] text-sm">
                                     {{ $order->customer?->name ?? $order->submitted_name }}
                                 </span>
+                                @if(!$hideFinancials)
                                 <a href="{{ route('orders.invoice', $order) }}"
                                    target="_blank"
                                    title="Download Invoice"
@@ -299,6 +308,7 @@
                                         <path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V7.414A2 2 0 0017.414 6L14 2.586A2 2 0 0012.586 2H4zm0 2h8v3a1 1 0 001 1h3v8H4V4zm5 5a1 1 0 00-1 1v3.586l-.293-.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l2-2a1 1 0 00-1.414-1.414l-.293.293V10a1 1 0 00-1-1z" clip-rule="evenodd"/>
                                     </svg>
                                 </a>
+                                @endif
                             </div>
                             @if(!$selectedCatalogue)
                             <p class="text-xs text-[#86868B]">{{ $order->catalogue->name ?? '—' }}</p>
@@ -326,10 +336,27 @@
                             {{ lacs_format($totalPieces) }}
                         </td>
 
-                        {{-- Total Bill --}}
+                        {{-- Total Bill (admin + accountant) or Payment status (production_manager) --}}
+                        @if(!$hideFinancials)
                         <td class="text-right font-medium text-[#1D1D1F] tabular-nums">
                             PKR {{ lacs_format($order->total_amount, 0) }}
                         </td>
+                        @else
+                        @php
+                            $paymentStatus = $order->total_paid <= 0
+                                ? 'not_paid'
+                                : ($order->outstanding_balance <= 0 ? 'fully_paid' : 'partially_paid');
+                        @endphp
+                        <td class="text-center">
+                            @if($paymentStatus === 'fully_paid')
+                                <span class="badge bg-green-100 text-green-700">Fully Paid</span>
+                            @elseif($paymentStatus === 'partially_paid')
+                                <span class="badge bg-orange-100 text-orange-700">Partially Paid</span>
+                            @else
+                                <span class="badge bg-[#F5F5F7] text-[#6E6E73]">Not Paid</span>
+                            @endif
+                        </td>
+                        @endif
 
                         {{-- Status --}}
                         <td class="text-center">
@@ -338,11 +365,13 @@
                             </span>
                         </td>
 
-                        {{-- View link --}}
+                        {{-- View link (admin + accountant only) --}}
+                        @if(!$hideFinancials)
                         <td class="text-center">
                             <a href="{{ route('orders.show', $order) }}"
                                class="text-[#0066CC] text-sm hover:underline">View →</a>
                         </td>
+                        @endif
                     </tr>
                     @empty
                     <tr>
@@ -355,7 +384,7 @@
                     {{-- Totals footer --}}
                     @if(count($orderList) > 0)
                     <tr style="background:#F5F5F7; border-top: 2px solid #E8E8ED;">
-                        @if(in_array(Auth::user()->role, ['admin', 'accountant']) && $selectedCatalogue)
+                        @if(in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager']) && $selectedCatalogue)
                         <td></td>
                         @endif
                         <td colspan="4" class="font-semibold text-[#1D1D1F] text-sm">
@@ -367,8 +396,12 @@
                         <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ lacs_format($summary['l']) }}</td>
                         <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ lacs_format($summary['xl']) }}</td>
                         <td class="text-center font-bold text-[#1D1D1F] tabular-nums">{{ lacs_format($summary['total_pieces']) }}</td>
+                        @if(!$hideFinancials)
                         <td class="text-right font-bold text-[#1D1D1F] tabular-nums">PKR {{ lacs_format($summary['total_bill'], 0) }}</td>
-                        <td colspan="2"></td>
+                        @else
+                        <td></td>
+                        @endif
+                        <td colspan="{{ $hideFinancials ? 1 : 2 }}"></td>
                     </tr>
                     @endif
                     </tbody>

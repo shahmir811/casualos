@@ -82,10 +82,11 @@ class OrderController extends Controller
             ? $catalogues->firstWhere('id', $selectedCatalogueId)
             : null;
 
-        $bankAccounts = BankAccount::where('is_active', true)->orderBy('title')->get();
+        $bankAccounts    = BankAccount::where('is_active', true)->orderBy('title')->get();
+        $hideFinancials  = Auth::user()->role === 'production_manager';
 
         return view('orders.index', compact(
-            'orders', 'catalogues', 'selectedCatalogue', 'selectedCatalogueId', 'summary', 'bankAccounts', 'sort', 'direction'
+            'orders', 'catalogues', 'selectedCatalogue', 'selectedCatalogueId', 'summary', 'bankAccounts', 'sort', 'direction', 'hideFinancials'
         ));
     }
 
@@ -154,14 +155,15 @@ class OrderController extends Controller
 
         $orders = $query->get();
 
-        $bankAccounts = BankAccount::orderBy('id')->get();
+        $bankAccounts   = BankAccount::orderBy('id')->get();
+        $hideFinancials = Auth::user()->role === 'production_manager';
 
         $logoDataUri = pdf_logo_data_uri();
 
-        $pdf = Pdf::loadView('orders.pdf', compact('orders', 'catalogue', 'bankAccounts', 'logoDataUri'))
+        $pdf = Pdf::loadView('orders.pdf', compact('orders', 'catalogue', 'bankAccounts', 'logoDataUri', 'hideFinancials'))
             ->setPaper('a3', 'landscape');
 
-        $filename = str($catalogue->name)->slug() . '-payments.pdf';
+        $filename = str($catalogue->name)->slug() . ($hideFinancials ? '-orders' : '-payments') . '.pdf';
 
         return $pdf->download($filename);
     }
@@ -182,11 +184,12 @@ class OrderController extends Controller
 
         $orders = $query->get();
 
-        $bankAccounts = BankAccount::orderBy('id')->get();
+        $bankAccounts   = BankAccount::orderBy('id')->get();
+        $hideFinancials = Auth::user()->role === 'production_manager';
 
-        $filename = str($catalogue->name)->slug() . '-payments.xlsx';
+        $filename = str($catalogue->name)->slug() . ($hideFinancials ? '-orders' : '-payments') . '.xlsx';
 
-        return (new PaymentSheetExport($orders, $catalogue, $bankAccounts))->download($filename);
+        return (new PaymentSheetExport($orders, $catalogue, $bankAccounts, $hideFinancials))->download($filename);
     }
 
     public function destroy(Order $order)

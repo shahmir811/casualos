@@ -84,7 +84,7 @@
         </td>
         <td style="vertical-align:middle; text-align:right;">
             <div class="header">
-                <h1>{{ $catalogue->name }} — Customer Payments Report</h1>
+                <h1>{{ $catalogue->name }} — {{ $hideFinancials ? 'Customer Orders Report' : 'Customer Payments Report' }}</h1>
                 <p>Generated: {{ now()->format('d M Y, H:i') }} &nbsp;|&nbsp; {{ $orders->count() }} orders</p>
             </div>
         </td>
@@ -104,6 +104,7 @@
             <th style="width:3%">XL</th>
             <th style="width:3.5%">Qty/Dsn</th>
             <th style="width:3.5%">Total Qty</th>
+            @if(!$hideFinancials)
             <th style="width:4%">Rate</th>
             <th style="width:5.5%">Total Bill</th>
             <th style="width:5.5%">Received</th>
@@ -113,6 +114,10 @@
             <th style="width:4.5%">{{ $bank->title }}</th>
             @endforeach
             <th style="width:4%">Misc</th>
+            @else
+            <th style="width:7%">Status</th>
+            <th style="width:7%">Payment</th>
+            @endif
         </tr>
     </thead>
     <tbody>
@@ -124,8 +129,10 @@
             'total_bill' => 0, 'received' => 0, 'receivable' => 0,
             'misc' => 0,
         ];
-        foreach ($bankAccounts as $bank) {
-            $totals['bank_' . $bank->id] = 0;
+        if (!$hideFinancials) {
+            foreach ($bankAccounts as $bank) {
+                $totals['bank_' . $bank->id] = 0;
+            }
         }
     @endphp
 
@@ -144,19 +151,21 @@
         $bankPmts   = [];
         $miscAmt    = 0;
         $titleGiven = '';
-        foreach ($order->payments as $payment) {
-            if ($payment->payment_type === 'advance') {
-                $miscAmt += $payment->amount;
-            } elseif ($payment->payment_type === 'bank_transfer' && $payment->bank_account_id) {
-                $bankPmts[$payment->bank_account_id] = ($bankPmts[$payment->bank_account_id] ?? 0) + $payment->amount;
+        if (!$hideFinancials) {
+            foreach ($order->payments as $payment) {
+                if ($payment->payment_type === 'advance') {
+                    $miscAmt += $payment->amount;
+                } elseif ($payment->payment_type === 'bank_transfer' && $payment->bank_account_id) {
+                    $bankPmts[$payment->bank_account_id] = ($bankPmts[$payment->bank_account_id] ?? 0) + $payment->amount;
+                }
             }
+            $titleGiven = $order->payments
+                ->where('payment_type', 'bank_transfer')
+                ->filter(fn($p) => $p->bankAccount)
+                ->map(fn($p) => $p->bankAccount->title)
+                ->unique()
+                ->implode('/');
         }
-        $titleGiven = $order->payments
-            ->where('payment_type', 'bank_transfer')
-            ->filter(fn($p) => $p->bankAccount)
-            ->map(fn($p) => $p->bankAccount->title)
-            ->unique()
-            ->implode('/');
 
         $totals['xs']             += $xs;
         $totals['s']              += $s;
@@ -165,12 +174,14 @@
         $totals['xl']             += $xl;
         $totals['qty_per_design'] += $qtyPerDesign;
         $totals['total_qty']      += $totalQty;
-        $totals['total_bill']     += $order->total_amount;
-        $totals['received']       += $order->total_paid;
-        $totals['receivable']     += $order->outstanding_balance;
-        $totals['misc']           += $miscAmt;
-        foreach ($bankAccounts as $bank) {
-            $totals['bank_' . $bank->id] += ($bankPmts[$bank->id] ?? 0);
+        if (!$hideFinancials) {
+            $totals['total_bill'] += $order->total_amount;
+            $totals['received']   += $order->total_paid;
+            $totals['receivable'] += $order->outstanding_balance;
+            $totals['misc']       += $miscAmt;
+            foreach ($bankAccounts as $bank) {
+                $totals['bank_' . $bank->id] += ($bankPmts[$bank->id] ?? 0);
+            }
         }
     @endphp
     <tr class="{{ $i % 2 === 1 ? 'even' : '' }}">
@@ -184,6 +195,7 @@
         <td>{{ $xl ?: '' }}</td>
         <td>{{ $qtyPerDesign ?: '' }}</td>
         <td>{{ $totalQty ?: '' }}</td>
+        @if(!$hideFinancials)
         <td class="td-right">{{ $rate > 0 ? lacs_format($rate) : '' }}</td>
         <td class="td-right">{{ lacs_format($order->total_amount, 0) }}</td>
         <td class="td-right">{{ $order->total_paid > 0 ? lacs_format($order->total_paid, 0) : '' }}</td>
@@ -194,6 +206,23 @@
         <td class="td-right">{{ $bankAmt > 0 ? lacs_format($bankAmt, 0) : '' }}</td>
         @endforeach
         <td class="td-right">{{ $miscAmt > 0 ? lacs_format($miscAmt, 0) : '' }}</td>
+        @else
+        @php
+            $pmtStatus = $order->total_paid <= 0
+                ? 'Not Paid'
+                : ($order->outstanding_balance <= 0 ? 'Fully Paid' : 'Partially Paid');
+            $statusLabels = [
+                'received'             => 'Received',
+                'confirmed'            => 'Confirmed',
+                'stitching'            => 'Stitching',
+                'partially_dispatched' => 'Partially Dispatched',
+                'dispatched'           => 'Dispatched',
+                'cancelled'            => 'Cancelled',
+            ];
+        @endphp
+        <td>{{ $statusLabels[$order->status] ?? ucfirst($order->status) }}</td>
+        <td>{{ $pmtStatus }}</td>
+        @endif
     </tr>
     @endforeach
 
@@ -207,6 +236,7 @@
         <td>{{ $totals['xl'] > 0 ? lacs_format($totals['xl']) : '' }}</td>
         <td>{{ $totals['qty_per_design'] > 0 ? lacs_format($totals['qty_per_design']) : '' }}</td>
         <td>{{ $totals['total_qty'] > 0 ? lacs_format($totals['total_qty']) : '' }}</td>
+        @if(!$hideFinancials)
         <td></td>
         <td class="td-right">{{ lacs_format($totals['total_bill'], 0) }}</td>
         <td class="td-right">{{ lacs_format($totals['received'], 0) }}</td>
@@ -216,6 +246,9 @@
         <td class="td-right">{{ $totals['bank_' . $bank->id] > 0 ? lacs_format($totals['bank_' . $bank->id], 0) : '' }}</td>
         @endforeach
         <td class="td-right">{{ $totals['misc'] > 0 ? lacs_format($totals['misc'], 0) : '' }}</td>
+        @else
+        <td></td><td></td>
+        @endif
     </tr>
 
     </tbody>
