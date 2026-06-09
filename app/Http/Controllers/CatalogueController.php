@@ -11,12 +11,19 @@ class CatalogueController extends Controller
 {
     /*
     |--------------------------------------------------------------------------
-    | Authorization helper — only admin can create / edit / close / reopen
+    | Authorization helpers
     |--------------------------------------------------------------------------
     */
     private function adminOnly(): void
     {
         if (Auth::user()->role !== 'admin') {
+            abort(403);
+        }
+    }
+
+    private function adminOrProductionManager(): void
+    {
+        if (! in_array(Auth::user()->role, ['admin', 'production_manager'])) {
             abort(403);
         }
     }
@@ -36,20 +43,20 @@ class CatalogueController extends Controller
     }
 
     /**
-     * GET /catalogues/create  (admin only)
+     * GET /catalogues/create  (admin + production_manager)
      */
     public function create()
     {
-        $this->adminOnly();
+        $this->adminOrProductionManager();
         return view('catalogues.create');
     }
 
     /**
-     * POST /catalogues  (admin only)
+     * POST /catalogues  (admin + production_manager)
      */
     public function store(Request $request)
     {
-        $this->adminOnly();
+        $this->adminOrProductionManager();
 
         $validated = $request->validate([
             'name'               => 'required|string|max:255',
@@ -108,20 +115,20 @@ class CatalogueController extends Controller
     }
 
     /**
-     * GET /catalogues/{catalogue}/edit  (admin only)
+     * GET /catalogues/{catalogue}/edit  (admin + production_manager)
      */
     public function edit(Catalogue $catalogue)
     {
-        $this->adminOnly();
+        $this->adminOrProductionManager();
         return view('catalogues.edit', compact('catalogue'));
     }
 
     /**
-     * PUT /catalogues/{catalogue}  (admin only)
+     * PUT /catalogues/{catalogue}  (admin + production_manager)
      */
     public function update(Request $request, Catalogue $catalogue)
     {
-        $this->adminOnly();
+        $this->adminOrProductionManager();
 
         $validated = $request->validate([
             'name'               => 'required|string|max:255',
@@ -168,11 +175,11 @@ class CatalogueController extends Controller
     }
 
     /**
-     * POST /catalogues/{catalogue}/close  (admin only)
+     * POST /catalogues/{catalogue}/close  (admin + production_manager)
      */
     public function close(Catalogue $catalogue)
     {
-        $this->adminOnly();
+        $this->adminOrProductionManager();
 
         $catalogue->update(['status' => 'closed']);
 
@@ -180,11 +187,11 @@ class CatalogueController extends Controller
     }
 
     /**
-     * POST /catalogues/{catalogue}/reopen  (admin only)
+     * POST /catalogues/{catalogue}/reopen  (admin + production_manager)
      */
     public function reopen(Catalogue $catalogue)
     {
-        $this->adminOnly();
+        $this->adminOrProductionManager();
 
         $catalogue->update(['status' => 'open']);
 
