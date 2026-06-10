@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 use App\Models\BankAccount;
@@ -25,11 +26,19 @@ class Order extends Model
 
         static::creating(function (Order $order) {
             if (empty($order->order_number)) {
-                do {
-                    $number = (string) random_int(100000, 999999);
-                } while (static::where('order_number', $number)->exists());
+                $order->order_number = (string) DB::transaction(function () {
+                    $sequence = DB::table('order_number_sequence')
+                        ->lockForUpdate()
+                        ->first();
 
-                $order->order_number = $number;
+                    $next = $sequence->last_number + 1;
+
+                    DB::table('order_number_sequence')
+                        ->where('id', $sequence->id)
+                        ->update(['last_number' => $next]);
+
+                    return $next;
+                });
             }
         });
     }

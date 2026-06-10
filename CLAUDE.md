@@ -76,7 +76,7 @@ The `Catalogue::availablePieces()` method returns `totalPieces() - sum(all order
 4. Total amount is shown live as they type. If the total quantity meets or exceeds the catalogue's `quantity_benchmark`, each design's `discount_price` is used instead of `selling_price`. If `discount_price` is null for a design, `selling_price` is always used for that design.
 5. **Duplicate order prevention**: if the submitted email already has an order for the same catalogue, an alert modal warns the customer before they can re-submit.
 6. On submit, the system looks up the email in the Customer Master List
-7. Each saved order gets a randomly generated `order_number` (not a sequential ID). This is displayed everywhere instead of the database `id`.
+7. Each saved order gets a sequential `order_number` starting from **1005335**, auto-incremented using the `order_number_sequence` table. This is displayed everywhere instead of the database `id`. Existing orders placed before this change retain their original random numbers (100000–999999 range); new sequential numbers (1005335+) can never collide with them.
 
 ### Bank Accounts
 
@@ -152,28 +152,32 @@ There are exactly **4 internal roles** plus customers (who have no login).
 | ----------------------- | -------------------- | ---------------------------------------------------------- |
 | **admin**               | `admin`              | Everything — the full system                               |
 | **accountant**          | `accountant`         | Customers, orders, payments, ledger, reports               |
-| **production_manager**  | `production_manager` | All production tracking, dispatch, wages, packed inventory |
-| **creative_head**       | `creative_head`      | Catalogue view + design photo upload ONLY                  |
+| **production_manager**  | `production_manager` | Catalogue management (create/edit/open/close), all production tracking, dispatch, wages, packed inventory, orders (read-only, no financials) |
+| **creative_head**       | `creative_head`      | Catalogue management (create/edit/open/close, no delete), orders (read-only, no financials), all production screens (read-only — cannot create/edit/delete) |
 
-### Creative Head restrictions (non-negotiable)
+### Creative Head access (as of 2026-06-10)
 
-The `creative_head` role **cannot** see:
+The `creative_head` role **cannot** access:
 
 - Customer records or ledger
 - Payment history or financial data
-- Production tracking screens
-- Order management
 - The dashboard widgets that show orders/payments/production
+- Any write action on production screens (create, edit, delete forms are hidden; controller guards return 403)
+- Catalogue delete/destroy
 
-The creative head gets access only to catalogue listing and design detail/edit for photo upload.
-Route middleware must enforce this — the creative head must not land on a screen showing
-financial or order data.
+The `creative_head` role **can** access:
+
+- Catalogue management — create, edit, open/close (same as production_manager). `CatalogueController` enforces this via `adminOrProductionManager()` which includes `creative_head`; `destroy()` still uses `adminOnly()`.
+- Orders index, PDF export, Excel export — with financials hidden (same `$hideFinancials = true` flag as production_manager)
+- All production screens (fabric batches, production assignments, Naeem Pakki, stitching returns, Tarpai, press, packed inventory, outsourced batches, dispatch, wages, Tarpai charges, production tracker) in read-only mode. Write actions are blocked by `$this->denyCreativeHead()` in each controller's mutating methods.
 
 ### Route middleware groups currently in `routes/web.php`
 
-- `role:admin` — user management, order reductions, bank accounts, stitching units
-- `role:admin|accountant` — customers, orders, payments, reports
-- `role:admin|production_manager` — all production routes, dispatch, wages
+- `role:admin` — user management, order reductions, bank accounts, stitching units, piece reassignment, cron logs
+- `role:admin|accountant` — customers, payments, reports
+- `role:admin|accountant|production_manager|creative_head` — orders index + exports
+- `role:admin|production_manager|creative_head` — all production routes, dispatch
+- `role:admin|production_manager|accountant|creative_head` — wages, Tarpai charges
 - No role restriction (auth only) — dashboard, catalogues (accessible to all including creative_head)
 
 ---
@@ -615,7 +619,7 @@ returns that cause discrepancies — it flags them for review.
 - Customer portal (email verification, 3 tabs) — order status tab shows **size-wise quantity breakdown** per order
 - Public order form (sold-out screen, real-time totals with discount price logic, customer email matching UI, **duplicate order alert modal**)
 - **Discount pricing** — catalogues have `quantity_benchmark`; designs have `selling_price` + optional `discount_price`; the order form applies the correct price tier live and on submission
-- **Random order numbers** — `orders.order_number` is a randomly generated unique identifier displayed everywhere instead of the database `id`
+- **Sequential order numbers** (2026-06-10) — `orders.order_number` is a sequential number starting from 1005335, generated via the `order_number_sequence` table using `lockForUpdate` for atomicity. `Order::boot()` reads `last_number`, increments it, saves it back, and assigns the result — all in a single DB transaction. Existing orders retain their original random numbers (100000–999999). A cancelled order keeps its number (the record stays in DB). A hard-deleted order's number is never reused because the counter only moves forward. Migration: `2026_06_10_000001`
 - Orders view and management — Order Status card shown to all roles; only admin/production_manager can change status
 - Payment recording — receipt upload and bank account selection are conditional on payment method (bank transfer requires both; cash and advance require neither)
 - **Bank Accounts** — `bank_accounts` table, admin-only management page, seeded with 8 accounts (Saleem, Ehsan SB, Farhan, Meezan, HBL, Adnan, Osama, Akram); `payments.bank_account_id` FK added; bank account title shown in payment history
@@ -661,6 +665,7 @@ returns that cause discrepancies — it flags them for review.
 - **Cron Logs** (2026-06-05): Admin-only page (`cron-logs.index`) showing execution history for all scheduled and manually triggered jobs. Uses `cron_logs` DB table (not flat log files). Columns: `job_name`, `job_label`, `triggered_by`, `week_start`, `week_end`, `records_created`, `records_updated`, `records_skipped`, `status` enum(`success|failed`), `output`, `ran_at`. Both `wages:calculate-weekly` and `tarpai:calculate-weekly` write a `CronLog` entry on every invocation (success, failure, and no-data early-return paths). Manual recalculate passes `--triggered-by=Manual — {user name}`. Filters: job, triggered-by (Scheduler / Manual — matched via `LIKE 'Manual%'`), status. Table rows are expandable — clicking a row reveals the output message; implemented via `<tbody x-data="{ open: false }">` per row pair (multiple `<tbody>` elements are valid HTML and correctly scope Alpine's `open` variable to both the main row and the output row). Placed in the System sidebar section (admin only).
 - **Assigned Bank Account on orders** (2026-06-06): `orders.assigned_bank_account_id` nullable FK to `bank_accounts` added via migration `2026_06_06_000001`. Represents the designated collection bank for each order ("Title Given" in reports). `OrderBankAssignmentController` handles two routes: `orders.assign-bank` (per-order dropdown on orders show, admin + accountant) and `orders.bulk-assign-bank` (bulk checkbox assignment on orders index, admin + accountant, scoped to active catalogue session). The assigned bank drives the per-bank groupings in the Bank Collection Report.
 - **Bank Collection Report — per-order format** (2026-06-06/07): Redesigned from a 3-row summary into a full per-order breakdown matching the accountant's working Excel. `BankCollectionReportController::loadData()` now queries per-order data: customer name/city, size quantities (XS/S/M/L/XL from first `order_item` — all designs share the same qty), total qty per design, over-all total qty (sum across all designs), effective rate (`total_amount ÷ over_all_qty`), total bill, amount received (`total_paid`), amount receivable (`outstanding_balance`), assigned bank title, per-bank payment breakdown (bank transfer payments per `bank_account_id`), and misc (= `total_paid − sum(bank transfer payments)`, covering cash + advance credits). Footer has **three rows**: (1) **Total** — sums of all quantity and amount columns; (2) **Total Payment** (blue) — per-bank expected/total-bill amounts (`$expected[$bank->id]`); (3) **Receivable** (yellow) — per-bank outstanding amounts (`$receivable[$bank->id]`). All monetary values use `lacs_format()` throughout (web blade, PDF blade, and Excel export). Excel uses pre-formatted `lacs_format()` strings (no numeric format codes) for consistent South Asian number grouping. PDF uses 6.5px font on A4 landscape to fit all columns.
+- **`creative_head` role expansion + `production_manager` catalogue access** (2026-06-10, branch `start-order-numbers-in-sequence`): `creative_head` now has full catalogue write access (create/edit/open/close, no delete), orders read-only access with financials hidden, and read-only access to all production screens. `production_manager` similarly gained catalogue management access (create/edit/open/close). Implementation: `CatalogueController::adminOrProductionManager()` extended to include `creative_head`; `$this->denyCreativeHead()` guard added to all mutating methods across 10 production controllers (`FabricBatchController`, `ProductionAssignmentController`, `NaeemPakkiController`, `StitchingReturnController`, `TarpaiController`, `PressController`, `OutsourcedBatchController`, `DispatchController`, `WagesController`, `TarpaiPaymentController`); `$hideFinancials` flag in `OrderController` extended to cover `creative_head`; route middleware groups in `routes/web.php` updated; sidebar nav and all production index/show views updated to hide write actions for `creative_head`.
 
 ### Known Bugs / Incomplete Features (must fix)
 
@@ -672,7 +677,7 @@ returns that cause discrepancies — it flags them for review.
 7. **Order reduction surplus logic** — ✅ Fixed (2026-05-20): full three-case logic implemented in `OrderReductionController`
 8. **`running_advance_balance` hardcoded to 0** in all ledger entries — must be actual customer balance (partially fixed 2026-06-05: `PaymentController::store()` now reads actual balance for `payment_received` entries)
 9. **Dispatch order status** — ✅ Fixed (2026-05-19): `partially_dispatched` status added; `DispatchController::store()` now sets `partially_dispatched` on partial dispatch and `dispatched` only when `isFullyDispatched()` returns true
-10. **Creative Head role dashboard restriction** — `creative_head` should not see financial/order/production data on dashboard
+10. **Creative Head role expansion** — ✅ Fixed (2026-06-10): `creative_head` now has catalogue management write access, orders read-only (no financials), and production screens read-only. See Completed entry for full detail.
 11. **`OrderPieceReassignmentController` creates `order_charged` with wrong sign** — ✅ Fixed (2026-06-04): changed `amount => -$totalAdded` to `amount => $totalAdded` in `OrderPieceReassignmentController::store()`; historical wrong-sign entries corrected by migration `2026_06_04_000001`.
 
 ### All Migrations (run `php artisan migrate` after pulling)
@@ -706,6 +711,7 @@ All migrations have been run. No pending migrations. For reference, the full set
 - `2026_06_05_200000` — creates `tarpai_payments` table (`catalogue_id` FK, `tarpai_house` enum(`rashid_bhai`,`yousaf_bhai`), `week_start`, `week_end`, `total_pieces_sent`, `total_amount` decimal, `is_confirmed`, `confirmed_by` nullable FK to users, `confirmed_at`); unique constraint `(catalogue_id, tarpai_house, week_start)`
 - `2026_06_05_210000` — creates `cron_logs` table (`job_name`, `job_label`, `triggered_by`, `week_start` nullable, `week_end` nullable, `records_created`, `records_updated`, `records_skipped`, `status` enum(`success`,`failed`), `output` text nullable, `ran_at` timestamp)
 - `2026_06_06_000001` — adds `assigned_bank_account_id` nullable FK to `orders` (references `bank_accounts`, nullOnDelete)
+- `2026_06_10_000001` — creates `order_number_sequence` table (single row, `last_number` seeded at 1005334); new orders increment this counter atomically instead of using `random_int`
 
 ---
 
