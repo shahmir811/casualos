@@ -102,7 +102,7 @@
                 Cancel
             </a>
 
-            @if(!$catalogue->orders()->exists())
+            @if(Auth::user()->role === 'admin' && !$catalogue->orders()->exists())
             <form id="form-delete-catalogue" method="POST" action="{{ route('catalogues.destroy', $catalogue) }}" class="ml-auto">
                 @csrf @method('DELETE')
             </form>
