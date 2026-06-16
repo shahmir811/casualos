@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class OutsourcedBatchItem extends Model
 {
-    protected $fillable = ['outsourced_batch_id', 'design_id', 'size', 'quantity'];
+    protected $fillable = ['outsourced_batch_id', 'design_id', 'size', 'quantity', 'original_quantity'];
 
     public function batch(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {

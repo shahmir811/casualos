@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class PressReturnItem extends Model
 {
-    protected $fillable = ['press_return_id', 'design_id', 'size', 'quantity'];
+    protected $fillable = ['press_return_id', 'design_id', 'size', 'quantity', 'original_quantity'];
 
     public function pressReturn(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
