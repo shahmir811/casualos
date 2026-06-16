@@ -61,7 +61,7 @@ $badgeColors = [
     @forelse($sends as $send)
     @php
         $totalSent        = $send->items->sum('quantity');
-        $totalReturned    = $send->returns->flatMap->items->sum('quantity');
+        $totalReturned    = $send->returns->flatMap->items->sum('original_quantity');
         $outstanding      = max(0, $totalSent - $totalReturned);
         $returnedByDesign = $send->returns->flatMap->items->groupBy('design_id');
         $designs          = $send->items->groupBy('design_id');
@@ -85,7 +85,7 @@ $badgeColors = [
             @php
                 $designModel = $designItems->first()->design;
                 $dSent       = $designItems->sum('quantity');
-                $dReturned   = $returnedByDesign->get($designId, collect())->sum('quantity');
+                $dReturned   = $returnedByDesign->get($designId, collect())->sum('original_quantity');
                 $color       = $badgeColors[($designId ?? $loop->index) % count($badgeColors)];
             @endphp
             <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ $color }} rounded px-2 py-0.5">
@@ -139,7 +139,7 @@ $badgeColors = [
             @forelse($sends as $send)
             @php
                 $totalSent        = $send->items->sum('quantity');
-                $totalReturned    = $send->returns->flatMap->items->sum('quantity');
+                $totalReturned    = $send->returns->flatMap->items->sum('original_quantity');
                 $outstanding      = max(0, $totalSent - $totalReturned);
                 $returnedByDesign = $send->returns->flatMap->items->groupBy('design_id');
                 $designs          = $send->items->groupBy('design_id');
@@ -153,7 +153,7 @@ $badgeColors = [
                             @php
                                 $designModel = $designItems->first()->design;
                                 $dSent       = $designItems->sum('quantity');
-                                $dReturned   = $returnedByDesign->get($designId, collect())->sum('quantity');
+                                $dReturned   = $returnedByDesign->get($designId, collect())->sum('original_quantity');
                                 $color       = $badgeColors[($designId ?? $loop->index) % count($badgeColors)];
                             @endphp
                             <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ $color }} rounded px-2 py-0.5 w-fit">
