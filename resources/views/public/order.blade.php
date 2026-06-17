@@ -11,10 +11,11 @@
     <meta property="og:url"         content="{{ url()->current() }}">
     <meta property="og:title"       content="{{ $catalogue->name }} — Casualite Booking Form">
     <meta property="og:description" content="Place your order for the {{ $catalogue->name }} catalogue.">
-    @if ($catalogue->cover_photo)
-    <meta property="og:image"       content="{{ Storage::url($catalogue->cover_photo) }}">
+    @if ($catalogue->cover_photo_og ?? $catalogue->cover_photo)
+    <meta property="og:image"        content="{{ Storage::url($catalogue->cover_photo_og ?? $catalogue->cover_photo) }}">
     <meta property="og:image:width"  content="1200">
     <meta property="og:image:height" content="630">
+    <meta property="og:image:type"   content="image/jpeg">
     @endif
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>

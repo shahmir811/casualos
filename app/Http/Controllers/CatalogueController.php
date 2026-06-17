@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Catalogue;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class CatalogueController extends Controller
 {
@@ -71,8 +75,9 @@ class CatalogueController extends Controller
         $validated['status']     = 'open';
 
         if ($request->hasFile('cover_photo')) {
-            $validated['cover_photo'] = $request->file('cover_photo')
-                ->store('catalogues');
+            $file = $request->file('cover_photo');
+            $validated['cover_photo']    = $file->store('catalogues');
+            $validated['cover_photo_og'] = $this->generateOgImage($file);
         }
 
         $catalogue = Catalogue::create($validated);
@@ -143,8 +148,12 @@ class CatalogueController extends Controller
             if ($catalogue->cover_photo) {
                 Storage::delete($catalogue->cover_photo);
             }
-            $validated['cover_photo'] = $request->file('cover_photo')
-                ->store('catalogues');
+            if ($catalogue->cover_photo_og) {
+                Storage::delete($catalogue->cover_photo_og);
+            }
+            $file = $request->file('cover_photo');
+            $validated['cover_photo']    = $file->store('catalogues');
+            $validated['cover_photo_og'] = $this->generateOgImage($file);
         }
 
         $catalogue->update($validated);
@@ -166,6 +175,9 @@ class CatalogueController extends Controller
 
         if ($catalogue->cover_photo) {
             Storage::delete($catalogue->cover_photo);
+        }
+        if ($catalogue->cover_photo_og) {
+            Storage::delete($catalogue->cover_photo_og);
         }
 
         $catalogue->delete();
@@ -196,5 +208,18 @@ class CatalogueController extends Controller
         $catalogue->update(['status' => 'open']);
 
         return back()->with('success', 'Catalogue "' . $catalogue->name . '" is now open.');
+    }
+
+    private function generateOgImage(UploadedFile $file): string
+    {
+        $encoded = (new ImageManager(new Driver()))
+            ->read($file->getContent())
+            ->cover(1200, 630)
+            ->toJpeg(80);
+
+        $path = 'catalogues/og/' . Str::uuid() . '.jpg';
+        Storage::put($path, (string) $encoded);
+
+        return $path;
     }
 }
