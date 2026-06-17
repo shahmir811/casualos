@@ -8,8 +8,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\ImageManager;
 
 class CatalogueController extends Controller
 {
@@ -212,13 +210,35 @@ class CatalogueController extends Controller
 
     private function generateOgImage(UploadedFile $file): string
     {
-        $encoded = (new ImageManager(new Driver()))
-            ->read($file->getContent())
-            ->cover(1200, 630)
-            ->toJpeg(80);
+        $source = imagecreatefromstring($file->getContent());
+
+        $srcW = imagesx($source);
+        $srcH = imagesy($source);
+
+        // Cover crop to 1200×630
+        if (($srcW / $srcH) > (1200 / 630)) {
+            $cropH = $srcH;
+            $cropW = (int) round($srcH * (1200 / 630));
+            $cropX = (int) round(($srcW - $cropW) / 2);
+            $cropY = 0;
+        } else {
+            $cropW = $srcW;
+            $cropH = (int) round($srcW / (1200 / 630));
+            $cropX = 0;
+            $cropY = (int) round(($srcH - $cropH) / 2);
+        }
+
+        $canvas = imagecreatetruecolor(1200, 630);
+        imagecopyresampled($canvas, $source, 0, 0, $cropX, $cropY, 1200, 630, $cropW, $cropH);
+        imagedestroy($source);
+
+        ob_start();
+        imagejpeg($canvas, null, 80);
+        $jpeg = ob_get_clean();
+        imagedestroy($canvas);
 
         $path = 'catalogues/og/' . Str::uuid() . '.jpg';
-        Storage::put($path, (string) $encoded);
+        Storage::put($path, $jpeg);
 
         return $path;
     }
