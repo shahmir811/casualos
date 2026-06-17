@@ -103,9 +103,6 @@
             </a>
 
             @if(Auth::user()->role === 'admin' && !$catalogue->orders()->exists())
-            <form id="form-delete-catalogue" method="POST" action="{{ route('catalogues.destroy', $catalogue) }}" class="ml-auto">
-                @csrf @method('DELETE')
-            </form>
             <button type="button" class="btn-danger ml-auto"
                     @click="$store.confirm.show({
                         title: 'Delete Catalogue',
@@ -119,6 +116,12 @@
             @endif
         </div>
     </form>
+
+    @if(Auth::user()->role === 'admin' && !$catalogue->orders()->exists())
+    <form id="form-delete-catalogue" method="POST" action="{{ route('catalogues.destroy', $catalogue) }}">
+        @csrf @method('DELETE')
+    </form>
+    @endif
 </div>
 
 @endsection
