@@ -11,6 +11,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\OrderReductionController;
 use App\Http\Controllers\OrderPieceReassignmentController;
+use App\Http\Controllers\OgImageController;
 use App\Http\Controllers\PublicOrderController;
 use App\Http\Controllers\CustomerPortalController;
 use App\Http\Controllers\FabricBatchController;
@@ -47,6 +48,7 @@ Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
 // Public catalogue order form (shared via WhatsApp)
+Route::get('/og-image/{token}', [OgImageController::class, 'show'])->name('og.image');
 Route::get('/order/{token}',  [PublicOrderController::class, 'show'])->name('order.public');
 Route::post('/order/{token}', [PublicOrderController::class, 'submit'])->name('order.submit');
 Route::get('/order/{token}/thankyou', [PublicOrderController::class, 'thankyou'])->name('order.thankyou');

@@ -12,7 +12,7 @@
     <meta property="og:title"       content="{{ $catalogue->name }} — Casualite Booking Form">
     <meta property="og:description" content="Place your order for the {{ $catalogue->name }} catalogue.">
     @if ($catalogue->cover_photo_og ?? $catalogue->cover_photo)
-    <meta property="og:image"        content="{{ Storage::url($catalogue->cover_photo_og ?? $catalogue->cover_photo) }}">
+    <meta property="og:image"        content="{{ route('og.image', $catalogue->order_token) }}">
     <meta property="og:image:width"  content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:type"   content="image/jpeg">
