@@ -337,8 +337,9 @@ class StitchingReturnController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($request, $productionAssignment, $linesToSave) {
-            $return = StitchingReturn::create([
+        $stitchingReturn = null;
+        DB::transaction(function () use ($request, $productionAssignment, $linesToSave, &$stitchingReturn) {
+            $stitchingReturn = StitchingReturn::create([
                 'catalogue_id'             => $productionAssignment->catalogue_id,
                 'design_id'                => $productionAssignment->design_id,
                 'stitching_unit_id'        => $productionAssignment->stitching_unit_id,
@@ -348,13 +349,33 @@ class StitchingReturnController extends Controller
             ]);
 
             foreach ($linesToSave as $line) {
-                $return->items()->create([
+                $stitchingReturn->items()->create([
                     'size'      => $line['size'],
                     'component' => $line['component'],
                     'quantity'  => $line['qty'],
                 ]);
             }
         });
+
+        $stitchingReturn->loadMissing(['design', 'stitchingUnit', 'catalogue']);
+        $itemDetails = collect($linesToSave)->map(fn($l) => [
+            'component' => ucfirst($l['component']),
+            'size'      => strtoupper($l['size']),
+            'qty'       => $l['qty'],
+        ])->toArray();
+        activity()
+            ->performedOn($stitchingReturn)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'catalogue'     => $stitchingReturn->catalogue->name ?? '—',
+                'design'        => $stitchingReturn->design->name ?? '—',
+                'stitching_unit'=> $stitchingReturn->stitchingUnit->name ?? '—',
+                'return_date'   => $stitchingReturn->return_date->format('d M Y'),
+                'total_pieces'  => $totalPieces,
+                'items'         => $itemDetails,
+            ])
+            ->log('Stitching return recorded');
 
         $componentLabels = implode(' + ', array_map('ucfirst', $components));
 

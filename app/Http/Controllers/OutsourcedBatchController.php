@@ -91,6 +91,24 @@ class OutsourcedBatchController extends Controller
             }
         });
 
+        $batch->loadMissing(['items.design', 'catalogue']);
+        $itemDetails = $batch->items->map(fn($i) => [
+            'design' => $i->design->name ?? "Design #{$i->design_id}",
+            'size'   => strtoupper($i->size),
+            'qty'    => $i->original_quantity,
+        ])->toArray();
+        activity()
+            ->performedOn($batch)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'catalogue'     => $batch->catalogue->name ?? "Catalogue #{$batch->catalogue_id}",
+                'received_date' => $batch->received_date->format('d M Y'),
+                'total_pieces'  => $batch->items->sum('original_quantity'),
+                'items'         => $itemDetails,
+            ])
+            ->log('Outsourced batch OB-' . str_pad($batch->id, 4, '0', STR_PAD_LEFT) . ' recorded');
+
         return redirect()->route('outsourced-batches.show', $batch)
             ->with('success', 'Outsourced batch recorded.');
     }

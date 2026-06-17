@@ -20,7 +20,7 @@
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Packed</p>
         <p class="text-3xl font-light text-[#1D1D1F]">{{ lacs_format($grandTotal) }}</p>
-        <p class="text-[#86868B] text-xs mt-1">pieces across {{ count($data) }} catalogue(s)</p>
+        <p class="text-[#86868B] text-xs mt-1">pieces in selected catalogue</p>
     </div>
 </div>
 

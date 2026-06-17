@@ -122,14 +122,65 @@ class ReportController extends Controller
 
     public function activityLog(Request $request)
     {
-        $logs = Activity::with('causer')->latest()->paginate(50);
+        $modelMap = [
+            'orders'              => 'App\Models\Order',
+            'payments'            => 'App\Models\Payment',
+            'catalogues'          => 'App\Models\Catalogue',
+            'fabric_batches'      => 'App\Models\FabricBatch',
+            'outsourced_batches'  => 'App\Models\OutsourcedBatch',
+            'press_sends'         => 'App\Models\PressSend',
+            'press_returns'       => 'App\Models\PressReturn',
+            'tarpai_sends'        => 'App\Models\TarpaiSend',
+            'tarpai_returns'      => 'App\Models\TarpaiReturn',
+            'dispatch_batches'    => 'App\Models\DispatchBatch',
+            'assignments'         => 'App\Models\ProductionAssignment',
+            'stitching_returns'   => 'App\Models\StitchingReturn',
+            'naeem_pakki_returns' => 'App\Models\NaeemPakkiReturn',
+            'order_reductions'    => 'App\Models\OrderReduction',
+            'wages'               => 'App\Models\Wage',
+        ];
+
+        $query = Activity::with('causer')->latest();
+
+        if ($search = trim($request->input('search', ''))) {
+            $query->where('description', 'like', "%{$search}%");
+        }
+        if ($event = $request->input('event')) {
+            $query->where('event', $event);
+        }
+        if ($model = $request->input('model')) {
+            $query->where('subject_type', $modelMap[$model] ?? $model);
+        }
+        if ($causerId = $request->input('causer_id')) {
+            $query->where('causer_id', $causerId);
+        }
+        if ($startDate = $request->input('start_date')) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate = $request->input('end_date')) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+
+        $logs = $query->paginate(50)->withQueryString();
 
         $logs->getCollection()->loadMorph('subject', [
-            Order::class   => ['catalogue'],
-            Payment::class => ['order.catalogue'],
+            'App\Models\Order'               => ['catalogue'],
+            'App\Models\Payment'             => ['order.catalogue'],
+            'App\Models\OutsourcedBatch'     => ['catalogue'],
+            'App\Models\FabricBatch'         => ['catalogue'],
+            'App\Models\PressSend'           => ['catalogue'],
+            'App\Models\PressReturn'         => ['send.catalogue'],
+            'App\Models\TarpaiSend'          => ['catalogue'],
+            'App\Models\TarpaiReturn'        => ['send.catalogue'],
+            'App\Models\DispatchBatch'       => ['order.customer', 'order.catalogue'],
+            'App\Models\ProductionAssignment'=> ['catalogue', 'design'],
+            'App\Models\StitchingReturn'     => ['catalogue', 'design'],
+            'App\Models\NaeemPakkiReturn'    => ['assignment.catalogue'],
         ]);
 
-        return view('reports.activity-log', compact('logs'));
+        $users = \App\Models\User::orderBy('name')->get(['id', 'name']);
+
+        return view('reports.activity-log', compact('logs', 'users', 'modelMap'));
     }
 
     public function damageReductions(Request $request)

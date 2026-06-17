@@ -121,6 +121,23 @@ class FabricBatchController extends Controller
             ->where('status', 'confirmed')
             ->update(['status' => 'stitching']);
 
+        $batch->loadMissing(['items.design', 'catalogue']);
+        $itemDetails = $batch->items->map(fn($i) => [
+            'design' => $i->design->name ?? "Design #{$i->design_id}",
+            'qty'    => $i->quantity,
+        ])->toArray();
+        activity()
+            ->performedOn($batch)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'catalogue'    => $batch->catalogue->name ?? "Catalogue #{$batch->catalogue_id}",
+                'arrival_date' => $batch->arrival_date->format('d M Y'),
+                'total_pieces' => $batch->items->sum('quantity'),
+                'items'        => $itemDetails,
+            ])
+            ->log('Fabric batch FB-' . str_pad($batch->id, 4, '0', STR_PAD_LEFT) . ' recorded');
+
         return redirect()->route('fabric-batches.show', $batch)
             ->with('success', 'Fabric batch arrival recorded.');
     }

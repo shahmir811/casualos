@@ -96,8 +96,9 @@ class NaeemPakkiController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($request, $productionAssignment, $linesToSave) {
-            $batch = NaeemPakkiReturn::create([
+        $npReturn = null;
+        DB::transaction(function () use ($request, $productionAssignment, $linesToSave, &$npReturn) {
+            $npReturn = NaeemPakkiReturn::create([
                 'production_assignment_id' => $productionAssignment->id,
                 'return_date'              => $request->return_date,
                 'logged_by'                => Auth::id(),
@@ -105,7 +106,7 @@ class NaeemPakkiController extends Controller
 
             foreach ($linesToSave as $line) {
                 NaeemPakkiReturnItem::create([
-                    'naeem_pakki_return_id' => $batch->id,
+                    'naeem_pakki_return_id' => $npReturn->id,
                     'np_design_id'          => $line['np_design_id'],
                     'quantity'              => $line['quantity'],
                 ]);
@@ -113,6 +114,23 @@ class NaeemPakkiController extends Controller
         });
 
         $total = collect($linesToSave)->sum('quantity');
+
+        $npReturn->loadMissing(['items.npDesign.design', 'assignment.catalogue']);
+        $itemDetails = $npReturn->items->map(fn($i) => [
+            'design' => $i->npDesign->design->name ?? '—',
+            'qty'    => $i->quantity,
+        ])->toArray();
+        activity()
+            ->performedOn($npReturn)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'catalogue'   => $npReturn->assignment->catalogue->name ?? '—',
+                'return_date' => $npReturn->return_date->format('d M Y'),
+                'total_pieces'=> $total,
+                'items'       => $itemDetails,
+            ])
+            ->log('Naeem Pakki return recorded');
 
         return redirect()->route('naeem-pakki-sends.show', $productionAssignment)
             ->with('success', $total . ' pieces returned from Naeem Pakki.');
