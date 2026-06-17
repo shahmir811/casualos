@@ -13,7 +13,7 @@ class Catalogue extends Model
     use HasFactory, LogsActivity;
 
     protected $fillable = [
-        'name', 'cover_photo', 'qty_per_design', 'number_of_designs',
+        'name', 'cover_photo', 'cover_photo_og', 'qty_per_design', 'number_of_designs',
         'quantity_benchmark', 'notes', 'status', 'order_token', 'created_by',
     ];
 
