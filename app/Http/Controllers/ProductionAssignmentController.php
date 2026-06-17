@@ -204,6 +204,25 @@ class ProductionAssignmentController extends Controller
             ]);
         }
 
+        $assignment->loadMissing(['catalogue', 'npDesigns.design']);
+        $itemDetails = $assignment->npDesigns->map(fn($d) => [
+            'design'         => $d->design->name ?? "Design #{$d->design_id}",
+            'qty'            => $d->quantity,
+            'per_piece_rate' => 'PKR ' . number_format($d->per_piece_price, 0),
+        ])->toArray();
+        activity()
+            ->performedOn($assignment)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'catalogue'     => $assignment->catalogue->name ?? '—',
+                'destination'   => 'Naeem Pakki',
+                'assigned_date' => $assignment->assignment_date->format('d M Y'),
+                'total_pieces'  => $assignment->npDesigns->sum('quantity'),
+                'items'         => $itemDetails,
+            ])
+            ->log('Production assignment (Naeem Pakki) created');
+
         return redirect()->route('production-assignments.show', $assignment)
             ->with('success', $items->count() . ' design(s) assigned to Naeem Pakki.');
     }
@@ -285,6 +304,25 @@ class ProductionAssignmentController extends Controller
                 ]);
             }
         }
+
+        $assignment->loadMissing(['catalogue', 'design', 'stitchingUnit', 'items']);
+        $itemDetails = $assignment->items->map(fn($i) => [
+            'size' => strtoupper($i->size),
+            'qty'  => $i->quantity,
+        ])->toArray();
+        activity()
+            ->performedOn($assignment)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'catalogue'      => $assignment->catalogue->name ?? '—',
+                'design'         => $assignment->design->name ?? '—',
+                'stitching_unit' => $assignment->stitchingUnit->name ?? '—',
+                'assigned_date'  => $assignment->assignment_date->format('d M Y'),
+                'total_pieces'   => $assignment->items->sum('quantity'),
+                'items'          => $itemDetails,
+            ])
+            ->log('Production assignment (Stitching) created');
 
         return redirect()->route('production-assignments.show', $assignment)
             ->with('success', 'Stitching assignment created.');

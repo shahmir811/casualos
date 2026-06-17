@@ -182,6 +182,27 @@ class TarpaiController extends Controller
             }
         });
 
+        $send->loadMissing(['items.design', 'catalogue']);
+        $houseLabels = ['rashid_bhai' => 'Rashid Bhai', 'yousaf_bhai' => 'Yousaf Bhai', 'in_house' => 'In-House'];
+        $itemDetails = $send->items->map(fn($i) => [
+            'design' => $i->design->name ?? "Design #{$i->design_id}",
+            'size'   => strtoupper($i->size),
+            'qty'    => $i->quantity,
+        ])->toArray();
+        activity()
+            ->performedOn($send)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'catalogue'       => $send->catalogue->name ?? "Catalogue #{$send->catalogue_id}",
+                'tarpai_house'    => $houseLabels[$send->tarpai_house] ?? $send->tarpai_house,
+                'per_piece_price' => 'PKR ' . number_format($send->per_piece_price, 0),
+                'sent_date'       => $send->sent_date->format('d M Y'),
+                'total_pieces'    => $send->items->sum('quantity'),
+                'items'           => $itemDetails,
+            ])
+            ->log('Tarpai send TS-' . str_pad($send->id, 4, '0', STR_PAD_LEFT) . ' recorded');
+
         return redirect()->route('tarpai-sends.show', $send)
             ->with('success', 'Tarpai send recorded.');
     }
@@ -236,8 +257,9 @@ class TarpaiController extends Controller
             return back()->withErrors(['designs' => 'Please enter at least one piece quantity to log a return.']);
         }
 
-        DB::transaction(function () use ($send, $validated) {
-            $return = TarpaiReturn::create([
+        $tarpaiReturn = null;
+        DB::transaction(function () use ($send, $validated, &$tarpaiReturn) {
+            $tarpaiReturn = TarpaiReturn::create([
                 'tarpai_send_id' => $send->id,
                 'return_date'    => $validated['return_date'],
                 'logged_by'      => Auth::id(),
@@ -248,7 +270,7 @@ class TarpaiController extends Controller
                 $designId = ($designData['design_id'] ?? null) ?: null;
                 foreach ($designData['items'] as $item) {
                     if ((int) ($item['qty'] ?? 0) > 0) {
-                        $return->items()->create([
+                        $tarpaiReturn->items()->create([
                             'design_id' => $designId,
                             'size'      => $item['size'],
                             'quantity'  => (int) $item['qty'],
@@ -257,6 +279,25 @@ class TarpaiController extends Controller
                 }
             }
         });
+
+        $tarpaiReturn->loadMissing(['items.design', 'send.catalogue']);
+        $itemDetails = $tarpaiReturn->items->map(fn($i) => [
+            'design' => $i->design->name ?? ($i->design_id ? "Design #{$i->design_id}" : '—'),
+            'size'   => strtoupper($i->size),
+            'qty'    => $i->quantity,
+        ])->toArray();
+        activity()
+            ->performedOn($tarpaiReturn)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'tarpai_send'  => 'TS-' . str_pad($send->id, 4, '0', STR_PAD_LEFT),
+                'catalogue'    => $tarpaiReturn->send->catalogue->name ?? '—',
+                'return_date'  => $tarpaiReturn->return_date->format('d M Y'),
+                'total_pieces' => $tarpaiReturn->items->sum('quantity'),
+                'items'        => $itemDetails,
+            ])
+            ->log('Tarpai return recorded for TS-' . str_pad($send->id, 4, '0', STR_PAD_LEFT));
 
         return back()->with('success', 'Tarpai return logged.');
     }

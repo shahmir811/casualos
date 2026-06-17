@@ -135,6 +135,24 @@ class PressController extends Controller
             }
         });
 
+        $send->loadMissing(['items.design', 'catalogue']);
+        $itemDetails = $send->items->map(fn($i) => [
+            'design' => $i->design->name ?? "Design #{$i->design_id}",
+            'size'   => strtoupper($i->size),
+            'qty'    => $i->quantity,
+        ])->toArray();
+        activity()
+            ->performedOn($send)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'catalogue'    => $send->catalogue->name ?? "Catalogue #{$send->catalogue_id}",
+                'sent_date'    => $send->sent_date->format('d M Y'),
+                'total_pieces' => $send->items->sum('quantity'),
+                'items'        => $itemDetails,
+            ])
+            ->log('Press send PS-' . str_pad($send->id, 4, '0', STR_PAD_LEFT) . ' recorded');
+
         return redirect()->route('press-sends.show', $send)
             ->with('success', 'Press send recorded.');
     }
@@ -218,7 +236,8 @@ class PressController extends Controller
             }
         }
 
-        DB::transaction(function () use ($pressSend, $validated) {
+        $pressReturn = null;
+        DB::transaction(function () use ($pressSend, $validated, &$pressReturn) {
             $pressReturn = PressReturn::create([
                 'press_send_id' => $pressSend->id,
                 'return_date'   => $validated['return_date'],
@@ -239,12 +258,32 @@ class PressController extends Controller
             }
         });
 
+        $pressReturn->loadMissing(['items.design', 'send.catalogue']);
+        $itemDetails = $pressReturn->items->map(fn($i) => [
+            'design' => $i->design->name ?? "Design #{$i->design_id}",
+            'size'   => strtoupper($i->size),
+            'qty'    => $i->original_quantity,
+        ])->toArray();
+        activity()
+            ->performedOn($pressReturn)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'press_send'   => 'PS-' . str_pad($pressSend->id, 4, '0', STR_PAD_LEFT),
+                'catalogue'    => $pressReturn->send->catalogue->name ?? '—',
+                'return_date'  => $pressReturn->return_date->format('d M Y'),
+                'total_pieces' => $pressReturn->items->sum('original_quantity'),
+                'items'        => $itemDetails,
+            ])
+            ->log('Press return recorded for PS-' . str_pad($pressSend->id, 4, '0', STR_PAD_LEFT));
+
         return back()->with('success', 'Press return logged. Pieces are now in packed inventory.');
     }
 
     public function inventory()
     {
-        $sizes = ['xs', 's', 'm', 'l', 'xl'];
+        $sizes       = ['xs', 's', 'm', 'l', 'xl'];
+        $catalogueId = (int) session('active_catalogue_id', 0) ?: null;
 
         // Unified inventory: [catalogue_id][design_id][size] => total qty
         $data           = [];
@@ -252,26 +291,34 @@ class PressController extends Controller
         $designNames    = [];
 
         // In-house: pieces returned from press
-        $pressItems = PressReturnItem::with([
+        $pressQuery = PressReturnItem::with([
             'pressReturn.send.catalogue',
             'design',
-        ])->get();
+        ]);
 
-        foreach ($pressItems as $item) {
-            $catId   = $item->pressReturn->send->catalogue_id;
+        if ($catalogueId) {
+            $pressQuery->whereHas('pressReturn.send', fn ($q) => $q->where('catalogue_id', $catalogueId));
+        }
+
+        foreach ($pressQuery->get() as $item) {
+            $catId    = $item->pressReturn->send->catalogue_id;
             $designId = $item->design_id;
-            $catalogueNames[$catId]  = $item->pressReturn->send->catalogue->name ?? 'Unknown';
-            $designNames[$designId]  = $item->design->name ?? '—';
+            $catalogueNames[$catId] = $item->pressReturn->send->catalogue->name ?? 'Unknown';
+            $designNames[$designId] = $item->design->name ?? '—';
             $data[$catId][$designId][$item->size] = ($data[$catId][$designId][$item->size] ?? 0) + $item->quantity;
         }
 
         // Outsourced: pieces received directly from external factory
-        $outsourcedItems = OutsourcedBatchItem::with([
+        $outsourcedQuery = OutsourcedBatchItem::with([
             'batch.catalogue',
             'design',
-        ])->get();
+        ]);
 
-        foreach ($outsourcedItems as $item) {
+        if ($catalogueId) {
+            $outsourcedQuery->whereHas('batch', fn ($q) => $q->where('catalogue_id', $catalogueId));
+        }
+
+        foreach ($outsourcedQuery->get() as $item) {
             $catId    = $item->batch->catalogue_id;
             $designId = $item->design_id;
             $catalogueNames[$catId] = $item->batch->catalogue->name ?? 'Unknown';

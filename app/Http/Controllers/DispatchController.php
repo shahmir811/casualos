@@ -217,7 +217,8 @@ class DispatchController extends Controller
             }
         }
 
-        DB::transaction(function () use ($order, $validated, $request) {
+        $dispatchBatch = null;
+        DB::transaction(function () use ($order, $validated, $request, &$dispatchBatch) {
             $cargoPath = null;
             if ($request->hasFile('cargo_document')) {
                 $cargoPath = $request->file('cargo_document')->store('cargo-documents', 's3');
@@ -225,7 +226,7 @@ class DispatchController extends Controller
 
             $nextBatchNumber = ($order->dispatchBatches()->max('batch_number') ?? 0) + 1;
 
-            $batch = DispatchBatch::create([
+            $dispatchBatch = DispatchBatch::create([
                 'order_id'         => $order->id,
                 'batch_number'     => $nextBatchNumber,
                 'dispatch_date'    => $validated['dispatch_date'],
@@ -237,7 +238,7 @@ class DispatchController extends Controller
             foreach ($validated['designs'] as $designData) {
                 foreach ($designData['items'] as $item) {
                     if ((int) ($item['qty'] ?? 0) > 0) {
-                        $batch->items()->create([
+                        $dispatchBatch->items()->create([
                             'design_id' => $designData['design_id'],
                             'size'      => $item['size'],
                             'quantity'  => (int) $item['qty'],
@@ -292,6 +293,28 @@ class DispatchController extends Controller
         });
 
         $batchNumber = $order->dispatchBatches()->max('batch_number');
+
+        $dispatchBatch->loadMissing(['items.design', 'order.customer', 'order.catalogue']);
+        $itemDetails = $dispatchBatch->items->map(fn($i) => [
+            'design' => $i->design->name ?? "Design #{$i->design_id}",
+            'size'   => strtoupper($i->size),
+            'qty'    => $i->quantity,
+        ])->toArray();
+        activity()
+            ->performedOn($dispatchBatch)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'order_number'    => $order->order_number,
+                'customer'        => $order->customer->name ?? $order->submitted_name,
+                'catalogue'       => $dispatchBatch->order->catalogue->name ?? '—',
+                'batch_number'    => $batchNumber,
+                'dispatch_date'   => $dispatchBatch->dispatch_date->format('d M Y'),
+                'shipping_address'=> $validated['shipping_address'],
+                'total_pieces'    => $dispatchBatch->items->sum('quantity'),
+                'items'           => $itemDetails,
+            ])
+            ->log("Dispatch batch #{$batchNumber} recorded for Order #{$order->order_number}");
 
         return redirect()->route('dispatch.show', $order)
             ->with('success', "Dispatch batch #{$batchNumber} recorded successfully.");
