@@ -44,7 +44,11 @@ class PaymentController extends Controller
             default         => null,
         };
 
-        DB::transaction(function () use ($request, $receiptPaths, $titleGiven, $order) {
+        $payment          = null;
+        $wasAutoConfirmed = false;
+        $surplus          = 0;
+
+        DB::transaction(function () use ($request, $receiptPaths, $titleGiven, $order, &$payment, &$wasAutoConfirmed, &$surplus) {
             $payment = Payment::create([
                 'order_id'        => $order->id,
                 'customer_id'     => $order->customer_id,
@@ -66,6 +70,7 @@ class PaymentController extends Controller
             // Auto-confirm on first payment
             if ($order->status === 'received') {
                 $statusUpdate['status'] = 'confirmed';
+                $wasAutoConfirmed       = true;
             }
 
             // Unflag if fully paid
@@ -98,6 +103,29 @@ class PaymentController extends Controller
             }
         });
 
+        $order->loadMissing('customer');
+        $props = [
+            'order'          => 'Order #' . $order->order_number,
+            'customer'       => $order->customer?->name ?? $order->submitted_name,
+            'payment_type'   => ucfirst(str_replace('_', ' ', $request->payment_type)),
+            'amount'         => 'PKR ' . number_format((float) $request->amount, 0),
+            'payment_date'   => \Carbon\Carbon::parse($request->payment_date)->format('d M Y'),
+            'bank_account'   => $bankAccount?->title ?? '—',
+            'receipt_attached' => $receiptPaths ? 'Yes (' . count((array) $receiptPaths) . ' file(s))' : 'No',
+        ];
+        if ($wasAutoConfirmed) {
+            $props['order_status_changed'] = 'received → confirmed (auto)';
+        }
+        if ($surplus > 0) {
+            $props['overpayment_surplus'] = 'PKR ' . number_format($surplus, 0) . ' added to advance credit';
+        }
+        activity()
+            ->performedOn($order)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties($props)
+            ->log('Payment of PKR ' . number_format((float) $request->amount, 0) . ' recorded on Order #' . $order->order_number);
+
         return back()->with('success', 'Payment of PKR ' . lacs_format($request->amount) . ' recorded.');
     }
 
@@ -107,9 +135,14 @@ class PaymentController extends Controller
             abort(404);
         }
 
-        $amount = $payment->amount;
+        $amount      = $payment->amount;
+        $paymentType = $payment->payment_type;
+        $paymentDate = $payment->payment_date?->format('d M Y') ?? '—';
+        $bankTitle   = $payment->bankAccount?->title ?? '—';
 
-        DB::transaction(function () use ($order, $payment) {
+        $statusReverted = false;
+
+        DB::transaction(function () use ($order, $payment, &$statusReverted) {
             // Surplus that existed before deletion
             $oldSurplus = max(0, $order->total_paid - $order->total_amount);
 
@@ -132,7 +165,8 @@ class PaymentController extends Controller
 
             // Revert to received if no payments remain and order is confirmed
             if ($newTotalPaid == 0 && $order->status === 'confirmed') {
-                $update['status'] = 'received';
+                $update['status']  = 'received';
+                $statusReverted    = true;
             }
 
             $order->update($update);
@@ -149,6 +183,28 @@ class PaymentController extends Controller
             }
         });
 
+        $order->loadMissing('customer');
+        $order->refresh();
+        $deleteProps = [
+            'order'              => 'Order #' . $order->order_number,
+            'customer'           => $order->customer?->name ?? $order->submitted_name,
+            'deleted_payment_type' => ucfirst(str_replace('_', ' ', $paymentType)),
+            'deleted_amount'     => 'PKR ' . number_format((float) $amount, 0),
+            'original_date'      => $paymentDate,
+            'bank_account'       => $bankTitle,
+            'new_total_paid'     => 'PKR ' . number_format((float) $order->total_paid, 0),
+            'new_outstanding'    => 'PKR ' . number_format((float) $order->outstanding_balance, 0),
+        ];
+        if ($statusReverted) {
+            $deleteProps['order_status_changed'] = 'confirmed → received (no payments remain)';
+        }
+        activity()
+            ->performedOn($order)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties($deleteProps)
+            ->log('Payment of PKR ' . number_format((float) $amount, 0) . ' DELETED from Order #' . $order->order_number);
+
         return back()->with('success', 'Payment of PKR ' . lacs_format($amount) . ' has been deleted and the order balance updated.');
     }
 
@@ -159,11 +215,16 @@ class PaymentController extends Controller
             'notes'         => 'nullable|string',
         ]);
 
+        $order->loadMissing('customer');
+        $customer             = $order->customer;
+        $balanceBefore        = (float) $customer->advance_credit_balance;
+        $wasAutoConfirmed     = false;
+
         CustomerLedger::create([
             'customer_id'             => $order->customer_id,
             'transaction_type'        => 'credit_applied',
             'amount'                  => -$validated['credit_amount'],
-            'running_advance_balance' => 0,
+            'running_advance_balance' => $balanceBefore,
             'reference_type'          => 'App\Models\Order',
             'reference_id'            => $order->id,
             'notes'                   => 'Credit: ' . ($validated['notes'] ?? 'Manual credit adjustment'),
@@ -173,7 +234,25 @@ class PaymentController extends Controller
         // Auto-confirm on first credit application
         if ($order->status === 'received') {
             $order->update(['status' => 'confirmed']);
+            $wasAutoConfirmed = true;
         }
+
+        $creditProps = [
+            'order'                   => 'Order #' . $order->order_number,
+            'customer'                => $customer?->name ?? $order->submitted_name,
+            'credit_applied'          => 'PKR ' . number_format((float) $validated['credit_amount'], 0),
+            'advance_balance_before'  => 'PKR ' . number_format($balanceBefore, 0),
+            'notes'                   => $validated['notes'] ?? '—',
+        ];
+        if ($wasAutoConfirmed) {
+            $creditProps['order_status_changed'] = 'received → confirmed (auto)';
+        }
+        activity()
+            ->performedOn($order)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties($creditProps)
+            ->log('Advance credit of PKR ' . number_format((float) $validated['credit_amount'], 0) . ' applied to Order #' . $order->order_number);
 
         return back()->with('success', 'Credit of PKR ' . lacs_format($validated['credit_amount']) . ' applied.');
     }

@@ -149,6 +149,39 @@ class OrderReductionController extends Controller
             if ($newTotal == 0 && $order->status !== 'dispatched') {
                 $order->update(['status' => 'cancelled']);
             }
+
+            // Granular audit log
+            $reductionItems = collect($itemData)->map(fn($i) => [
+                'design'      => $i['design_id'] ? ($orderItemsByDesign->get($i['design_id'])?->design?->name ?? "Design #{$i['design_id']}") : '—',
+                'size'        => strtoupper($i['size']),
+                'qty_reduced' => $i['qty_reduced'],
+                'unit_price'  => 'PKR ' . number_format($i['unit_price'], 0),
+                'amount'      => 'PKR ' . number_format($i['amount_reduced'], 0),
+            ])->toArray();
+            $logProps = [
+                'order'           => 'Order #' . $order->order_number,
+                'customer'        => $customer->name,
+                'adjustment_type' => $adjustmentLabel,
+                'original_total'  => 'PKR ' . number_format($originalTotal, 0),
+                'amount_reduced'  => 'PKR ' . number_format($totalReduced, 0),
+                'new_total'       => 'PKR ' . number_format($newTotal, 0),
+                'surplus_action'  => $surplusAction === 'none' ? 'None' : ucwords(str_replace('_', ' ', $surplusAction)),
+            ];
+            if ($surplus > 0) {
+                $logProps['surplus_amount'] = 'PKR ' . number_format($surplus, 0);
+            }
+            if ($newTotal == 0) {
+                $logProps['order_cancelled'] = 'Yes — new total is zero';
+            }
+            if ($request->notes) {
+                $logProps['notes'] = $request->notes;
+            }
+            activity()
+                ->performedOn($reduction)
+                ->causedBy(Auth::user())
+                ->event('detail')
+                ->withProperties(array_merge($logProps, ['items' => $reductionItems]))
+                ->log("Order #{$order->order_number} reduced by PKR " . number_format($totalReduced, 0) . " ({$adjustmentLabel})");
         });
 
         return redirect()->route('orders.show', $order)

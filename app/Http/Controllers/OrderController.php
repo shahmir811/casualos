@@ -122,6 +122,19 @@ class OrderController extends Controller
 
         $order->update(['status' => 'confirmed']);
 
+        activity()
+            ->performedOn($order)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'order'              => 'Order #' . $order->order_number,
+                'customer'           => $order->customer?->name ?? $order->submitted_name,
+                'catalogue'          => $order->catalogue?->name ?? '—',
+                'status_changed'     => 'received → confirmed',
+                'confirmation_type'  => 'Manual (zero-payment confirmation)',
+            ])
+            ->log('Order #' . $order->order_number . ' manually confirmed (zero-payment)');
+
         return back()->with('success', 'Order #' . $order->order_number . ' confirmed.');
     }
 
@@ -198,9 +211,36 @@ class OrderController extends Controller
             abort(403, 'Only received orders with no payments recorded can be deleted.');
         }
 
-        $orderNumber = $order->order_number;
+        $orderNumber   = $order->order_number;
+        $order->loadMissing(['customer', 'catalogue', 'items.design']);
+        $customerName  = $order->customer?->name ?? $order->submitted_name;
+        $catalogueName = $order->catalogue?->name ?? '—';
+        $totalAmount   = $order->total_amount;
+        $submittedAt   = $order->submitted_at?->format('d M Y') ?? '—';
+        $itemSummary   = $order->items->map(fn($i) => [
+            'design' => $i->design?->name ?? "Design #{$i->design_id}",
+            'xs' => $i->qty_xs, 's' => $i->qty_s, 'm' => $i->qty_m,
+            'l'  => $i->qty_l,  'xl' => $i->qty_xl,
+            'unit_price' => 'PKR ' . number_format((float) $i->unit_price, 0),
+        ])->toArray();
 
-        DB::transaction(function () use ($order) {
+        DB::transaction(function () use ($order, $orderNumber, $customerName, $catalogueName, $totalAmount, $submittedAt, $itemSummary) {
+            // Log before delete so performedOn() still resolves the subject
+            activity()
+                ->performedOn($order)
+                ->causedBy(Auth::user())
+                ->event('detail')
+                ->withProperties([
+                    'order'          => 'Order #' . $orderNumber,
+                    'customer'       => $customerName,
+                    'catalogue'      => $catalogueName,
+                    'total_amount'   => 'PKR ' . number_format((float) $totalAmount, 0),
+                    'submitted_at'   => $submittedAt,
+                    'deletion_type'  => 'Hard delete (received + no payments)',
+                    'items'          => $itemSummary,
+                ])
+                ->log('Order #' . $orderNumber . ' PERMANENTLY DELETED by ' . Auth::user()->name);
+
             // Bypass the CustomerLedger model's boot-level deletion guard
             DB::table('customer_ledger')
                 ->where('reference_type', 'App\\Models\\Order')
@@ -227,6 +267,21 @@ class OrderController extends Controller
         }
 
         $order->update(['status' => 'stitching']);
+
+        $order->loadMissing(['customer', 'catalogue']);
+        activity()
+            ->performedOn($order)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'order'              => 'Order #' . $order->order_number,
+                'customer'           => $order->customer?->name ?? $order->submitted_name,
+                'catalogue'          => $order->catalogue?->name ?? '—',
+                'status_changed'     => 'confirmed → stitching',
+                'override_type'      => 'Manual admin override (not triggered by fabric batch)',
+                'overridden_by'      => Auth::user()->name,
+            ])
+            ->log('Order #' . $order->order_number . ' manually moved to stitching by ' . Auth::user()->name);
 
         return back()->with('success', 'Order #' . $order->order_number . ' moved to stitching.');
     }

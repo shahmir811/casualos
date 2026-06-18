@@ -80,6 +80,21 @@ class CatalogueController extends Controller
 
         $catalogue = Catalogue::create($validated);
 
+        activity()
+            ->performedOn($catalogue)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'name'                => $catalogue->name,
+                'qty_per_design'      => $catalogue->qty_per_design,
+                'number_of_designs'   => $catalogue->number_of_designs,
+                'total_pieces'        => $catalogue->qty_per_design * $catalogue->number_of_designs,
+                'quantity_benchmark'  => $catalogue->quantity_benchmark ?? 'None (no discount)',
+                'status'              => 'open',
+                'cover_photo'         => $catalogue->cover_photo ? 'Uploaded' : 'None',
+            ])
+            ->log('Catalogue "' . $catalogue->name . '" created');
+
         return redirect()->route('catalogues.show', $catalogue)
             ->with('success', 'Catalogue "' . $catalogue->name . '" created successfully.');
     }
@@ -154,7 +169,31 @@ class CatalogueController extends Controller
             $validated['cover_photo_og'] = $this->generateOgImage($file);
         }
 
+        $changed = [];
+        foreach (['name', 'qty_per_design', 'number_of_designs', 'quantity_benchmark', 'notes'] as $field) {
+            $old = $catalogue->getOriginal($field);
+            $new = $validated[$field] ?? null;
+            if ((string) $old !== (string) $new) {
+                $changed[$field] = ['from' => $old ?? '—', 'to' => $new ?? '—'];
+            }
+        }
+        $coverChanged = isset($validated['cover_photo']);
+
         $catalogue->update($validated);
+
+        $logProps = ['catalogue' => $catalogue->name];
+        foreach ($changed as $field => $diff) {
+            $logProps[$field] = $diff['from'] . ' → ' . $diff['to'];
+        }
+        if ($coverChanged) {
+            $logProps['cover_photo'] = 'Replaced';
+        }
+        activity()
+            ->performedOn($catalogue)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties($logProps)
+            ->log('Catalogue "' . $catalogue->name . '" updated');
 
         return redirect()->route('catalogues.show', $catalogue)
             ->with('success', 'Catalogue updated successfully.');
@@ -193,6 +232,17 @@ class CatalogueController extends Controller
 
         $catalogue->update(['status' => 'closed']);
 
+        activity()
+            ->performedOn($catalogue)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'catalogue'      => $catalogue->name,
+                'status_changed' => 'open → closed',
+                'orders_count'   => $catalogue->orders()->count(),
+            ])
+            ->log('Catalogue "' . $catalogue->name . '" closed (order link deactivated)');
+
         return back()->with('success', 'Catalogue "' . $catalogue->name . '" has been closed.');
     }
 
@@ -204,6 +254,17 @@ class CatalogueController extends Controller
         $this->adminOrProductionManager();
 
         $catalogue->update(['status' => 'open']);
+
+        activity()
+            ->performedOn($catalogue)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'catalogue'      => $catalogue->name,
+                'status_changed' => 'closed → open',
+                'orders_count'   => $catalogue->orders()->count(),
+            ])
+            ->log('Catalogue "' . $catalogue->name . '" reopened (order link reactivated)');
 
         return back()->with('success', 'Catalogue "' . $catalogue->name . '" is now open.');
     }

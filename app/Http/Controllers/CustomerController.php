@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class CustomerController extends Controller
 {
@@ -42,6 +43,18 @@ class CustomerController extends Controller
 
         $customer = Customer::create($validated);
 
+        activity()
+            ->performedOn($customer)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'name'           => $customer->name,
+                'email'          => $customer->email,
+                'contact_number' => $customer->contact_number,
+                'city'           => $customer->city,
+            ])
+            ->log('Customer "' . $customer->name . '" created');
+
         return redirect()->route('customers.show', $customer)
             ->with('success', 'Customer "' . $customer->name . '" added.');
     }
@@ -66,7 +79,23 @@ class CustomerController extends Controller
             'email'          => 'required|email|unique:customers,email,' . $customer->id,
         ]);
 
+        $logProps = ['customer' => $validated['name']];
+        foreach (['name', 'email', 'contact_number', 'city'] as $field) {
+            $old = (string) ($customer->getOriginal($field) ?? '');
+            $new = (string) ($validated[$field] ?? '');
+            if ($old !== $new) {
+                $logProps[$field] = $old . ' → ' . $new;
+            }
+        }
+
         $customer->update($validated);
+
+        activity()
+            ->performedOn($customer)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties($logProps)
+            ->log('Customer "' . $customer->name . '" profile updated');
 
         return redirect()->route('customers.show', $customer)
             ->with('success', 'Customer updated.');

@@ -41,9 +41,11 @@ class OrderPieceReassignmentController extends Controller
             return back()->withErrors(['target_order_id' => 'Target order must be from the same catalogue.']);
         }
 
-        DB::transaction(function () use ($request, $order, $targetOrder) {
+        $logItems   = [];
+        $totalAdded = 0;
+
+        DB::transaction(function () use ($request, $order, $targetOrder, &$logItems, &$totalAdded) {
             $targetItemsByDesign = $targetOrder->items->keyBy('design_id');
-            $totalAdded          = 0;
 
             foreach ($request->items as $item) {
                 $designId  = $item['design_id'];
@@ -58,7 +60,15 @@ class OrderPieceReassignmentController extends Controller
                     // Re-save to trigger auto-total computation
                     $targetItem->refresh();
                     $targetItem->save();
-                    $totalAdded += $targetItem->unit_price * $qty;
+                    $lineAmount  = $targetItem->unit_price * $qty;
+                    $totalAdded += $lineAmount;
+                    $logItems[] = [
+                        'design'     => $targetItem->design?->name ?? "Design #{$designId}",
+                        'size'       => strtoupper($size),
+                        'qty_moved'  => $qty,
+                        'unit_price' => 'PKR ' . number_format((float) $targetItem->unit_price, 0),
+                        'amount'     => 'PKR ' . number_format($lineAmount, 0),
+                    ];
                 }
             }
 
@@ -80,6 +90,23 @@ class OrderPieceReassignmentController extends Controller
                 ]);
             }
         });
+
+        if ($totalAdded > 0) {
+            $targetOrder->loadMissing('customer');
+            activity()
+                ->performedOn($targetOrder)
+                ->causedBy(Auth::user())
+                ->event('detail')
+                ->withProperties([
+                    'source_order'   => 'Order #' . $order->order_number . ' (' . ($order->customer?->name ?? $order->submitted_name) . ')',
+                    'target_order'   => 'Order #' . $targetOrder->order_number . ' (' . ($targetOrder->customer?->name ?? $targetOrder->submitted_name) . ')',
+                    'catalogue'      => $targetOrder->catalogue?->name ?? '—',
+                    'total_added'    => 'PKR ' . number_format($totalAdded, 0),
+                    'notes'          => $request->notes ?? '—',
+                    'items'          => $logItems,
+                ])
+                ->log("Pieces reassigned from Order #{$order->order_number} → Order #{$targetOrder->order_number} (PKR " . number_format($totalAdded, 0) . ' added)');
+        }
 
         return redirect()->route('orders.show', $order)
             ->with('success', 'Pieces reassigned successfully.');

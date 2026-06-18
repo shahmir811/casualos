@@ -126,6 +126,11 @@ class ReportController extends Controller
             'orders'              => 'App\Models\Order',
             'payments'            => 'App\Models\Payment',
             'catalogues'          => 'App\Models\Catalogue',
+            'designs'             => 'App\Models\Design',
+            'customers'           => 'App\Models\Customer',
+            'users'               => 'App\Models\User',
+            'bank_accounts'       => 'App\Models\BankAccount',
+            'stitching_units'     => 'App\Models\StitchingUnit',
             'fabric_batches'      => 'App\Models\FabricBatch',
             'outsourced_batches'  => 'App\Models\OutsourcedBatch',
             'press_sends'         => 'App\Models\PressSend',
@@ -138,6 +143,7 @@ class ReportController extends Controller
             'naeem_pakki_returns' => 'App\Models\NaeemPakkiReturn',
             'order_reductions'    => 'App\Models\OrderReduction',
             'wages'               => 'App\Models\Wage',
+            'tarpai_payments'     => 'App\Models\TarpaiPayment',
         ];
 
         $query = Activity::with('causer')->latest();
@@ -164,8 +170,14 @@ class ReportController extends Controller
         $logs = $query->paginate(50)->withQueryString();
 
         $logs->getCollection()->loadMorph('subject', [
-            'App\Models\Order'               => ['catalogue'],
-            'App\Models\Payment'             => ['order.catalogue'],
+            'App\Models\Order'               => ['catalogue', 'customer'],
+            'App\Models\Payment'             => ['order.catalogue', 'bankAccount'],
+            'App\Models\Catalogue'           => [],
+            'App\Models\Design'              => ['catalogue'],
+            'App\Models\Customer'            => [],
+            'App\Models\User'                => [],
+            'App\Models\BankAccount'         => [],
+            'App\Models\StitchingUnit'       => [],
             'App\Models\OutsourcedBatch'     => ['catalogue'],
             'App\Models\FabricBatch'         => ['catalogue'],
             'App\Models\PressSend'           => ['catalogue'],
@@ -176,6 +188,9 @@ class ReportController extends Controller
             'App\Models\ProductionAssignment'=> ['catalogue', 'design'],
             'App\Models\StitchingReturn'     => ['catalogue', 'design'],
             'App\Models\NaeemPakkiReturn'    => ['assignment.catalogue'],
+            'App\Models\OrderReduction'      => ['order.customer'],
+            'App\Models\Wage'                => ['catalogue', 'stitchingUnit'],
+            'App\Models\TarpaiPayment'       => ['catalogue'],
         ]);
 
         $users = \App\Models\User::orderBy('name')->get(['id', 'name']);

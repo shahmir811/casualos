@@ -56,7 +56,15 @@ class UserManagementController extends Controller
         activity()
             ->causedBy(auth()->user())
             ->performedOn($user)
-            ->log("Created {$user->role} account for {$user->name} ({$user->email})");
+            ->event('detail')
+            ->withProperties([
+                'name'       => $user->name,
+                'email'      => $user->email,
+                'role'       => ucwords(str_replace('_', ' ', $user->role)),
+                'status'     => 'Active',
+                'created_by' => auth()->user()->name,
+            ])
+            ->log("User account created: {$user->name} ({$user->role})");
 
         return redirect()->route('users.index')
             ->with('success', "Account created for {$user->name}.");
@@ -69,7 +77,15 @@ class UserManagementController extends Controller
         activity()
             ->causedBy(auth()->user())
             ->performedOn($user)
-            ->log("Re-enabled account for {$user->name} ({$user->email})");
+            ->event('detail')
+            ->withProperties([
+                'name'           => $user->name,
+                'email'          => $user->email,
+                'role'           => ucwords(str_replace('_', ' ', $user->role)),
+                'status_changed' => 'disabled → active',
+                'action_by'      => auth()->user()->name,
+            ])
+            ->log("User account re-enabled: {$user->name}");
 
         return back()->with('success', "{$user->name}'s account has been enabled.");
     }
@@ -86,7 +102,15 @@ class UserManagementController extends Controller
         activity()
             ->causedBy(auth()->user())
             ->performedOn($user)
-            ->log("Disabled account for {$user->name} ({$user->email})");
+            ->event('detail')
+            ->withProperties([
+                'name'           => $user->name,
+                'email'          => $user->email,
+                'role'           => ucwords(str_replace('_', ' ', $user->role)),
+                'status_changed' => 'active → disabled',
+                'action_by'      => auth()->user()->name,
+            ])
+            ->log("User account disabled: {$user->name}");
 
         return back()->with('success', "{$user->name}'s account has been disabled.");
     }
@@ -102,7 +126,14 @@ class UserManagementController extends Controller
         activity()
             ->causedBy(auth()->user())
             ->performedOn($user)
-            ->log("Reset password for {$user->name} ({$user->email})");
+            ->event('detail')
+            ->withProperties([
+                'name'       => $user->name,
+                'email'      => $user->email,
+                'role'       => ucwords(str_replace('_', ' ', $user->role)),
+                'reset_by'   => auth()->user()->name,
+            ])
+            ->log("Password reset for user: {$user->name}");
 
         return back()->with('success', "Password reset for {$user->name}.");
     }

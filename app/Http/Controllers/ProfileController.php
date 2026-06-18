@@ -50,12 +50,30 @@ class ProfileController extends Controller
             $user->password = Hash::make($validated['password']);
         }
 
+        $nameChanged     = $user->isDirty('name');
+        $passwordChanged = $request->filled('password');
+        $oldName         = $user->getOriginal('name');
+
         $user->save();
+
+        $props = [
+            'user'  => $user->name,
+            'email' => $user->email,
+            'role'  => ucwords(str_replace('_', ' ', $user->role)),
+        ];
+        if ($nameChanged) {
+            $props['name_changed'] = $oldName . ' → ' . $user->name;
+        }
+        if ($passwordChanged) {
+            $props['password_changed'] = 'Yes (self-service)';
+        }
 
         activity()
             ->causedBy($user)
             ->performedOn($user)
-            ->log('Updated own profile' . ($request->filled('password') ? ' (password changed)' : ''));
+            ->event('detail')
+            ->withProperties($props)
+            ->log('User "' . $user->name . '" updated own profile' . ($passwordChanged ? ' (including password)' : ''));
 
         return back()->with('success', 'Profile updated successfully.');
     }
