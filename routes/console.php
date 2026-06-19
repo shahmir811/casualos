@@ -47,3 +47,10 @@ Schedule::command('audit-log:prune')
     ->cron('0 0 1-7 * 0')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/audit-log-prune.log'));
+
+// Prune S3 backup files older than 30 days — runs on the first Sunday of every month at 00:05.
+// Offset by 5 minutes from audit-log:prune to avoid overlapping log writes.
+Schedule::command('backups:prune')
+    ->cron('5 0 1-7 * 0')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/backups-prune.log'));

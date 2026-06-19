@@ -17,6 +17,7 @@
                 <option value="wages:calculate-weekly"  {{ request('job_name') === 'wages:calculate-weekly'  ? 'selected' : '' }}>Worker Wages</option>
                 <option value="tarpai:calculate-weekly" {{ request('job_name') === 'tarpai:calculate-weekly' ? 'selected' : '' }}>Tarpai Charges</option>
                 <option value="audit-log:prune"         {{ request('job_name') === 'audit-log:prune'         ? 'selected' : '' }}>Audit Log Pruning</option>
+                <option value="backups:prune"           {{ request('job_name') === 'backups:prune'           ? 'selected' : '' }}>Backup Pruning</option>
             </select>
         </div>
         <div>
@@ -81,6 +82,8 @@
                                 <span class="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0"></span>
                             @elseif($log->job_name === 'audit-log:prune')
                                 <span class="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></span>
+                            @elseif($log->job_name === 'backups:prune')
+                                <span class="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0"></span>
                             @else
                                 <span class="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0"></span>
                             @endif
