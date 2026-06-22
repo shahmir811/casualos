@@ -82,24 +82,30 @@ class PaymentController extends Controller
 
             $customer = $order->customer;
 
-            // Ledger entry for the payment
-            CustomerLedger::create([
-                'customer_id'             => $order->customer_id,
-                'transaction_type'        => 'payment_received',
-                'amount'                  => -$request->amount,
-                'running_advance_balance' => $customer->advance_credit_balance,
-                'reference_type'          => 'App\Models\Payment',
-                'reference_id'            => $payment->id,
-                'notes'                   => "Payment for Order #{$order->order_number} via {$request->payment_type}",
-                'created_by'              => Auth::id(),
-            ]);
+            if ($request->payment_type === 'advance') {
+                // Advance payments consume the existing advance_credit_balance.
+                // No new ledger entry — the credit is already in the ledger via the
+                // prior overpayment's payment_received entry exceeding its order_charged.
+                $customer->decrement('advance_credit_balance', $request->amount);
+            } else {
+                CustomerLedger::create([
+                    'customer_id'             => $order->customer_id,
+                    'transaction_type'        => 'payment_received',
+                    'amount'                  => -$request->amount,
+                    'running_advance_balance' => $customer->advance_credit_balance,
+                    'reference_type'          => 'App\Models\Payment',
+                    'reference_id'            => $payment->id,
+                    'notes'                   => "Payment for Order #{$order->order_number} via {$request->payment_type}",
+                    'created_by'              => Auth::id(),
+                ]);
 
-            // If payment caused an overpayment, park the surplus as advance credit.
-            // No ledger entry is created — the overpayment is already visible in the
-            // ledger via the payment_received entries exceeding the order_charged amount.
-            $surplus = max(0, $newTotalPaid - $order->total_amount);
-            if ($surplus > 0) {
-                $customer->increment('advance_credit_balance', $surplus);
+                // If payment caused an overpayment, park the surplus as advance credit.
+                // No ledger entry is created — the overpayment is already visible in the
+                // ledger via the payment_received entries exceeding the order_charged amount.
+                $surplus = max(0, $newTotalPaid - $order->total_amount);
+                if ($surplus > 0) {
+                    $customer->increment('advance_credit_balance', $surplus);
+                }
             }
         });
 
@@ -171,15 +177,20 @@ class PaymentController extends Controller
 
             $order->update($update);
 
-            // If deletion reduced the overpayment surplus, reverse the advance credit.
-            // No ledger entry needed — the ledger balance corrects itself via the
-            // removed payment_received entry.
-            $newSurplus      = max(0, $newTotalPaid - $order->total_amount);
-            $surplusReversed = $oldSurplus - $newSurplus;
+            if ($payment->payment_type === 'advance') {
+                // Restore the advance credit balance that was consumed when this payment was recorded.
+                $order->customer->fresh()->increment('advance_credit_balance', $payment->amount);
+            } else {
+                // If deletion reduced the overpayment surplus, reverse the advance credit.
+                // No ledger entry needed — the ledger balance corrects itself via the
+                // removed payment_received entry.
+                $newSurplus      = max(0, $newTotalPaid - $order->total_amount);
+                $surplusReversed = $oldSurplus - $newSurplus;
 
-            if ($surplusReversed > 0) {
-                $customer = $order->customer->fresh();
-                $customer->decrement('advance_credit_balance', min($surplusReversed, $customer->advance_credit_balance));
+                if ($surplusReversed > 0) {
+                    $customer = $order->customer->fresh();
+                    $customer->decrement('advance_credit_balance', min($surplusReversed, $customer->advance_credit_balance));
+                }
             }
         });
 

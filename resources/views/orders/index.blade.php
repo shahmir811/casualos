@@ -259,12 +259,11 @@
 
                     @forelse($orderList as $order)
                     @php
-                        $firstItem   = $order->items->first();
-                        $qxs = $firstItem?->qty_xs  ?? 0;
-                        $qs  = $firstItem?->qty_s   ?? 0;
-                        $qm  = $firstItem?->qty_m   ?? 0;
-                        $ql  = $firstItem?->qty_l   ?? 0;
-                        $qxl = $firstItem?->qty_xl  ?? 0;
+                        $qxs = $order->netSizeQty('xs');
+                        $qs  = $order->netSizeQty('s');
+                        $qm  = $order->netSizeQty('m');
+                        $ql  = $order->netSizeQty('l');
+                        $qxl = $order->netSizeQty('xl');
                         $totalPieces = $qxs + $qs + $qm + $ql + $qxl;
                     @endphp
                     <tr class="{{ $order->is_flagged ? 'border-l-4 border-l-[#FF3B30]' : '' }}">

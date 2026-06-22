@@ -3,18 +3,12 @@
 @section('content')
 
 @php
-    // Build a price map for Alpine.js: { design_id: unit_price }
-    $priceMap    = $order->items->mapWithKeys(fn($i) => [$i->design_id => (float) $i->unit_price]);
-    $designsList = $order->items->map(fn($i) => ['id' => (string) $i->design_id, 'name' => $i->design->name ?? '—'])->values()->all();
     $totalPaid    = (float) $order->total_paid;
     $currentTotal = (float) $order->total_amount;
+    $rNumDesigns  = $order->catalogue?->number_of_designs ?? $order->items->count();
 
-    $firstItem   = $order->items->first();
-    $rNumDesigns = $order->catalogue?->number_of_designs ?? $order->items->count();
-
-    // Tally all prior reductions, tracking per-design
-    $reducedBySize    = ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0];
-    $perDesignReduced = [];
+    // Tally all prior reductions, tracking per-design per-size
+    $perDesignReduced    = [];
     $totalAlreadyReduced = 0;
     foreach ($order->reductions as $red) {
         foreach ($red->items as $ri) {
@@ -22,33 +16,46 @@
             if (!isset($perDesignReduced[$did])) {
                 $perDesignReduced[$did] = ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0];
             }
-            if (isset($reducedBySize[$ri->size])) {
-                $reducedBySize[$ri->size]          += $ri->qty_reduced;
+            if (isset($perDesignReduced[$did][$ri->size])) {
                 $perDesignReduced[$did][$ri->size] += $ri->qty_reduced;
             }
             $totalAlreadyReduced += $ri->qty_reduced;
         }
     }
 
-    // Raw per-design qtys from the order
+    $sizes = ['xs', 's', 'm', 'l', 'xl'];
+
+    // Per-design per-size max reducible and Alpine data
+    $alpineVals   = [];
+    $alpineMaxes  = [];
+    $alpinePrices = [];
+    foreach ($order->items as $item) {
+        $did = (string) $item->design_id;
+        $alpinePrices[$did] = (float) $item->unit_price;
+        foreach ($sizes as $size) {
+            $key     = $did . '_' . $size;
+            $ordered = (int) ($item->{'qty_' . $size} ?? 0);
+            $reduced = (int) ($perDesignReduced[$item->design_id][$size] ?? 0);
+            $alpineVals[$key]  = 0;
+            $alpineMaxes[$key] = max(0, $ordered - $reduced);
+        }
+    }
+
+    // Order summary display stats
+    $firstItem = $order->items->first();
+    $rUniformForSize = function(string $sz) use ($rNumDesigns, $perDesignReduced): int {
+        if ($rNumDesigns === 0 || empty($perDesignReduced)) return 0;
+        $amounts = array_column($perDesignReduced, $sz);
+        if (count($perDesignReduced) < $rNumDesigns) $amounts[] = 0;
+        $unique = array_unique($amounts);
+        return count($unique) === 1 ? (int) $unique[0] : 0;
+    };
     $rawXs = $firstItem?->qty_xs ?? 0;
     $rawS  = $firstItem?->qty_s  ?? 0;
     $rawM  = $firstItem?->qty_m  ?? 0;
     $rawL  = $firstItem?->qty_l  ?? 0;
     $rawXl = $firstItem?->qty_xl ?? 0;
     $rawTotalPieces = ($rawXs + $rawS + $rawM + $rawL + $rawXl) * $rNumDesigns;
-
-    // A size column updates only when the reduction is uniform across ALL designs.
-    $rUniformForSize = function(string $sz) use ($rNumDesigns, $perDesignReduced): int {
-        if ($rNumDesigns === 0 || empty($perDesignReduced)) return 0;
-        $amounts = array_column($perDesignReduced, $sz);
-        if (count($perDesignReduced) < $rNumDesigns) {
-            $amounts[] = 0;
-        }
-        $unique = array_unique($amounts);
-        return count($unique) === 1 ? (int) $unique[0] : 0;
-    };
-
     $rqxs = max(0, $rawXs - $rUniformForSize('xs'));
     $rqs  = max(0, $rawS  - $rUniformForSize('s'));
     $rqm  = max(0, $rawM  - $rUniformForSize('m'));
@@ -56,19 +63,6 @@
     $rqxl = max(0, $rawXl - $rUniformForSize('xl'));
     $rQtyPerDesign = $rqxs + $rqs + $rqm + $rql + $rqxl;
     $rTotalPieces  = max(0, $rawTotalPieces - $totalAlreadyReduced);
-
-    // Only expose sizes with remaining pieces (for the reduction form dropdowns)
-    $availableSizes = [];
-    $sizeQtyMap     = [];
-    foreach (['xs' => 'XS', 's' => 'S', 'm' => 'M', 'l' => 'L', 'xl' => 'XL'] as $val => $label) {
-        $rawQty           = $firstItem?->{'qty_' . $val} ?? 0;
-        $remainingForSize = max(0, $rawQty * $rNumDesigns - $reducedBySize[$val]);
-        if ($remainingForSize > 0) {
-            $availableSizes[] = ['value' => $val, 'label' => $label];
-            $sizeQtyMap[$val] = max(0, $rawQty - $rUniformForSize($val));
-        }
-    }
-    $defaultSize = $availableSizes[0]['value'] ?? 'xs';
 @endphp
 
 <div class="flex items-center gap-3 mb-7">
@@ -84,7 +78,7 @@
     Order #{{ $order->order_number }} · {{ $order->customer->name ?? '—' }} · PKR {{ lacs_format($order->total_amount, 0) }}
 </p>
 
-{{-- Order Summary — full width, outside the narrow form wrapper --}}
+{{-- Order Summary — full width --}}
 <div class="card mb-6 overflow-hidden">
     <div class="px-5 py-4 border-b border-[#F2F2F7] flex items-center justify-between">
         <h2 class="text-[#1D1D1F] text-sm font-semibold">Order Summary</h2>
@@ -125,48 +119,42 @@
     </table>
 </div>
 
-<div class="max-w-2xl"
+<div class="max-w-4xl"
      x-data="{
-        items: [],
+        vals:   {{ Js::from($alpineVals) }},
+        maxes:  {{ Js::from($alpineMaxes) }},
+        prices: {{ Js::from($alpinePrices) }},
         surplusAction: 'credit_to_advance',
         refundMethod: 'cash',
-        priceMap: {{ Js::from($priceMap) }},
-        designsList: {{ Js::from($designsList) }},
-        availableSizes: {{ Js::from($availableSizes) }},
-        sizeQtyMap: {{ Js::from($sizeQtyMap) }},
         totalPaid: {{ $totalPaid }},
         currentTotal: {{ $currentTotal }},
 
-        addItem() { this.items.push({ design_id: '', size: '{{ $defaultSize }}', qty: 1 }); },
-        removeItem(i) { this.items.splice(i, 1); },
-        availableDesigns(idx) {
-            const taken = this.items.filter((_, i) => i !== idx).map(i => i.design_id).filter(id => id !== '');
-            return this.designsList.filter(d => !taken.includes(d.id));
+        isOver(key) {
+            return parseInt(this.vals[key] || 0) > (this.maxes[key] ?? 0);
         },
-
-        get reductionAmount() {
-            return this.items.reduce((sum, item) => {
-                const price = this.priceMap[item.design_id] || 0;
-                return sum + (price * (parseInt(item.qty) || 0));
-            }, 0);
+        get hasOverflow() {
+            return Object.keys(this.vals).some(k => this.isOver(k));
         },
-        get newTotal() {
-            return Math.max(0, this.currentTotal - this.reductionAmount);
-        },
-        get surplus() {
-            return Math.max(0, this.totalPaid - this.newTotal);
-        },
-        get hasSurplus() {
-            return this.surplus > 0;
-        },
-        qtyExceeds(item) {
-            const max = this.sizeQtyMap[item.size];
-            return max !== undefined && parseInt(item.qty) > max;
+        get hasAnyQty() {
+            return Object.values(this.vals).some(v => parseInt(v) > 0);
         },
         get canSubmit() {
-            return this.items.length > 0 &&
-                   this.items.every(i => i.design_id !== '' && parseInt(i.qty) >= 1 && !this.qtyExceeds(i));
+            return this.hasAnyQty && !this.hasOverflow;
         },
+        designTotal(designId) {
+            return ['xs','s','m','l','xl'].reduce((sum, s) => {
+                return sum + (parseInt(this.vals[designId + '_' + s]) || 0);
+            }, 0);
+        },
+        get reductionAmount() {
+            return Object.entries(this.vals).reduce((sum, [key, qty]) => {
+                const designId = key.split('_')[0];
+                return sum + (this.prices[designId] || 0) * (parseInt(qty) || 0);
+            }, 0);
+        },
+        get newTotal()   { return Math.max(0, this.currentTotal - this.reductionAmount); },
+        get surplus()    { return Math.max(0, this.totalPaid - this.newTotal); },
+        get hasSurplus() { return this.surplus > 0; },
         formatPkr(n) {
             const neg = n < 0;
             const str = String(Math.round(Math.abs(n)));
@@ -217,60 +205,82 @@
             </div>
         </div>
 
-        {{-- Items to reduce --}}
+        {{-- Items to Reduce — per-design table --}}
         <div class="card overflow-hidden">
-            <div class="px-5 py-4 border-b border-[#F2F2F7] flex items-center justify-between">
-                <div>
-                    <h3 class="text-sm font-semibold text-[#1D1D1F]">Items to Reduce</h3>
-                    <p class="text-xs text-[#6E6E73] mt-0.5">Select which design, size, and quantity to deduct</p>
-                </div>
-                <button type="button" @click="addItem()" class="btn-secondary text-xs">+ Add Item</button>
+            <div class="px-5 py-4 border-b border-[#F2F2F7]">
+                <h3 class="text-sm font-semibold text-[#1D1D1F]">Items to Reduce</h3>
+                <p class="text-xs text-[#6E6E73] mt-0.5">Enter quantities to deduct per design and size. Disabled cells have no remaining pieces.</p>
             </div>
 
-            <div class="divide-y divide-[#F2F2F7]" x-show="items.length > 0">
-                <template x-for="(item, idx) in items" :key="idx">
-                    <div class="px-5 py-3 grid grid-cols-12 gap-3 items-center">
-                        <div class="col-span-5">
-                            <label class="block text-xs text-[#86868B] mb-1">Design</label>
-                            <select :name="`items[${idx}][design_id]`" x-model="item.design_id" class="apple-input" required>
-                                <option value="">— Design —</option>
-                                <template x-for="d in availableDesigns(idx)" :key="d.id">
-                                    <option :value="d.id" x-text="d.name"></option>
-                                </template>
-                            </select>
-                        </div>
-                        <div class="col-span-3">
-                            <label class="block text-xs text-[#86868B] mb-1">Size</label>
-                            <select :name="`items[${idx}][size]`" x-model="item.size" class="apple-input" required>
-                                <template x-for="s in availableSizes" :key="s.value">
-                                    <option :value="s.value" x-text="s.label"></option>
-                                </template>
-                            </select>
-                        </div>
-                        <div class="col-span-3">
-                            <label class="block text-xs text-[#86868B] mb-1">Qty</label>
-                            <input type="number" :name="`items[${idx}][qty]`" x-model="item.qty" min="1"
-                                   class="apple-input text-center"
-                                   :class="qtyExceeds(item) ? 'border border-[#FF3B30] bg-[#FFF0EF] text-[#FF3B30]' : ''"
-                                   required>
-                            <p x-show="qtyExceeds(item)" class="text-[10px] text-[#FF3B30] mt-0.5" x-text="`Max ${sizeQtyMap[item.size]}`"></p>
-                        </div>
-                        <div class="col-span-1 flex justify-end pt-4">
-                            <button type="button" @click="removeItem(idx)" class="text-[#FF3B30] hover:text-red-700 transition-colors">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-                            </button>
-                        </div>
-                    </div>
-                </template>
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[580px]">
+                    <thead>
+                        <tr class="border-b border-[#F2F2F7] bg-[#FAFAFA]">
+                            <th class="text-left text-xs font-semibold text-[#6E6E73] uppercase tracking-widest px-5 py-3">Design</th>
+                            @foreach(['XS', 'S', 'M', 'L', 'XL'] as $sLabel)
+                            <th class="text-center text-xs font-semibold text-[#6E6E73] uppercase tracking-widest px-2 py-3 w-[90px]">{{ $sLabel }}</th>
+                            @endforeach
+                            <th class="text-center text-xs font-semibold text-[#6E6E73] uppercase tracking-widest px-3 py-3 w-16">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#F2F2F7]">
+                        @php $n = 0; @endphp
+                        @foreach($order->items as $item)
+                        @php $did = $item->design_id; @endphp
+                        <tr>
+                            <td class="px-5 py-4">
+                                <p class="text-sm font-semibold text-[#1D1D1F]">{{ $item->design->name ?? '—' }}</p>
+                            </td>
+                            @foreach($sizes as $size)
+                            @php
+                                $key          = $did . '_' . $size;
+                                $maxReducible = $alpineMaxes[$key] ?? 0;
+                            @endphp
+                            <td class="px-2 py-4 text-center">
+                                @if($maxReducible === 0)
+                                    <input type="number" value="0" disabled
+                                           class="w-full apple-input text-center opacity-40 cursor-not-allowed bg-[#F5F5F7]">
+                                    <p class="text-[11px] text-center text-[#C7C7CC] mt-1">Max: 0</p>
+                                @else
+                                    <input type="hidden" name="items[{{ $n }}][design_id]" value="{{ $did }}">
+                                    <input type="hidden" name="items[{{ $n }}][size]" value="{{ $size }}">
+                                    <input type="number"
+                                           name="items[{{ $n }}][qty]"
+                                           min="0"
+                                           max="{{ $maxReducible }}"
+                                           value="0"
+                                           autocomplete="off"
+                                           :class="isOver('{{ $key }}')
+                                               ? 'apple-input text-center w-full ring-2 ring-[#FF3B30] bg-[#FFF0EF] text-[#FF3B30]'
+                                               : 'apple-input text-center w-full'"
+                                           @input="vals['{{ $key }}'] = parseInt($event.target.value) || 0">
+                                    <p class="text-[11px] text-center mt-1"
+                                       :class="isOver('{{ $key }}') ? 'text-[#FF3B30] font-semibold' : 'text-[#86868B]'">
+                                        Max: {{ $maxReducible }}
+                                    </p>
+                                    @php $n++; @endphp
+                                @endif
+                            </td>
+                            @endforeach
+                            <td class="px-3 py-4 text-center">
+                                <span class="text-sm font-semibold text-[#0071E3] tabular-nums"
+                                      x-text="designTotal({{ $did }})"></span>
+                                <p class="text-[11px] text-[#86868B] mt-1">pcs</p>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
 
-            <div x-show="items.length === 0" class="px-5 py-8 text-center text-[#86868B] text-sm">
-                Click <strong>+ Add Item</strong> to specify which pieces are being reduced.
+            {{-- Overflow warning --}}
+            <div x-show="hasOverflow" x-cloak class="px-5 py-3 bg-[#FFF0EF] border-t border-[#FFCDD0]">
+                <p class="text-sm text-[#FF3B30]">One or more quantities exceed the maximum. Please correct the highlighted cells.</p>
             </div>
         </div>
 
-        {{-- Live financial summary (shows once at least one item is added) --}}
-        <div x-show="items.length > 0" class="card p-5 space-y-2 text-sm" x-cloak>
+        {{-- Financial summary — always visible --}}
+        <div class="card p-5 space-y-2 text-sm">
             <h3 class="text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-3">Financial Summary</h3>
             <div class="flex justify-between">
                 <span class="text-[#6E6E73]">Current order total</span>
@@ -278,7 +288,8 @@
             </div>
             <div class="flex justify-between">
                 <span class="text-[#6E6E73]">Reduction amount</span>
-                <span class="font-medium text-[#FF3B30]" x-text="'− ' + formatPkr(reductionAmount)"></span>
+                <span class="font-medium text-[#FF3B30]"
+                      x-text="reductionAmount > 0 ? '− ' + formatPkr(reductionAmount) : '—'"></span>
             </div>
             <div class="flex justify-between border-t border-[#F2F2F7] pt-2 mt-1">
                 <span class="font-semibold text-[#1D1D1F]">New total</span>
@@ -295,7 +306,7 @@
         </div>
 
         {{-- Surplus action — only shown when there is a real surplus --}}
-        <div x-show="items.length > 0 && hasSurplus" x-cloak class="card p-6 space-y-4">
+        <div x-show="hasSurplus" x-cloak class="card p-6 space-y-4">
             <div>
                 <h3 class="text-sm font-semibold text-[#1D1D1F] mb-0.5">Handle Surplus</h3>
                 <p class="text-xs text-[#6E6E73]">The customer has paid more than the new order total. Choose what to do with the surplus.</p>
@@ -362,7 +373,6 @@
                         <input type="file" name="refund_document" accept=".pdf,.jpg,.jpeg,.png"
                                class="hidden" x-ref="refundDocInput" @change="handleChange($event)">
 
-                        {{-- Empty state --}}
                         <template x-if="!fileName">
                             <div class="border-2 border-dashed rounded-xl transition-colors cursor-pointer px-5 py-8 text-center"
                                  :class="isDragging ? 'border-[#0071E3] bg-[#F0F7FF]' : 'border-[#D1D1D6] bg-[#FAFAFA] hover:border-[#0071E3]'"
@@ -378,10 +388,8 @@
                             </div>
                         </template>
 
-                        {{-- File selected --}}
                         <template x-if="fileName">
                             <div class="flex items-center gap-4 p-3 border border-[#E8E8ED] rounded-xl bg-[#FAFAFA]">
-                                {{-- Thumbnail (same 80×80 for both types) --}}
                                 <div class="relative shrink-0 w-20 h-20">
                                     <template x-if="fileType === 'image'">
                                         <img :src="filePreview"
@@ -396,13 +404,11 @@
                                             <span class="text-[10px] font-bold text-[#FF3B30] tracking-wide">PDF</span>
                                         </div>
                                     </template>
-                                    {{-- × remove button --}}
                                     <button type="button" @click.stop="clearFile()"
                                             class="absolute -top-2 -right-2 w-5 h-5 bg-[#FF3B30] text-white rounded-full flex items-center justify-center hover:bg-red-700 transition-colors shadow">
                                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
                                     </button>
                                 </div>
-                                {{-- Filename + hints --}}
                                 <div class="min-w-0 flex-1">
                                     <p class="text-sm text-[#1D1D1F] font-medium truncate" x-text="fileName"></p>
                                     <p x-show="fileType === 'image'" class="text-xs text-[#0066CC] mt-1 cursor-pointer hover:underline" @click="lightboxOpen = true">Click thumbnail to preview</p>
@@ -412,7 +418,6 @@
                             </div>
                         </template>
 
-                        {{-- Image lightbox --}}
                         <div x-show="lightboxOpen" x-cloak
                              class="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
                              @click.self="lightboxOpen = false"
@@ -430,7 +435,7 @@
             </div>
         </div>
 
-        {{-- Single hidden input — Alpine sets it to 'none' when no surplus, otherwise uses the radio selection --}}
+        {{-- Hidden surplus_action — 'none' when no surplus, otherwise the radio value --}}
         <input type="hidden" name="surplus_action" :value="hasSurplus ? surplusAction : 'none'">
 
         {{-- Warning --}}
@@ -439,11 +444,11 @@
             If the new total reaches PKR 0, the order will be marked as <strong>Cancelled</strong>. This cannot be undone.
         </div>
 
-        <div class="flex gap-3">
+        <div class="flex gap-3 items-center">
             <button type="button" class="btn-primary"
                     :style="canSubmit ? 'background:#FF3B30;' : 'background:#FF9896;cursor:not-allowed;'"
                     :disabled="!canSubmit"
-                    @click="$store.confirm.show({
+                    @click="canSubmit && $store.confirm.show({
                         title: 'Apply Reduction',
                         message: 'This will permanently reduce Order #{{ $order->order_number }}\'s value and create a ledger entry. This cannot be undone.',
                         formId: 'form-apply-reduction',
@@ -451,6 +456,8 @@
                         danger: true
                     })">Apply Reduction</button>
             <a href="{{ route('orders.show', $order) }}" class="btn-secondary">Cancel</a>
+            <p x-show="!hasAnyQty" class="text-sm text-[#86868B]">Enter at least one quantity to reduce.</p>
+            <p x-show="hasOverflow" x-cloak class="text-sm text-[#FF3B30]">Fix highlighted cells first.</p>
         </div>
     </form>
 </div>

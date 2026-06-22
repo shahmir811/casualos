@@ -20,7 +20,7 @@ class OrderController extends Controller
         $sort      = $request->input('sort');
         $direction = $request->input('direction', 'asc') === 'desc' ? 'desc' : 'asc';
 
-        $query = Order::with(['customer', 'catalogue', 'items', 'assignedBankAccount']);
+        $query = Order::with(['customer', 'catalogue', 'items', 'reductions.items', 'assignedBankAccount']);
 
         // Always filter by the sidebar-selected catalogue
         $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: null;
@@ -65,15 +65,18 @@ class OrderController extends Controller
 
         $collection = $selectedCatalogueId ? $orders : $orders->getCollection();
         foreach ($collection as $order) {
-            // Use first item only — quantities per design are the same across all designs
-            $item = $order->items->first();
-            if ($item) {
-                $summary['xs']           += $item->qty_xs;
-                $summary['s']            += $item->qty_s;
-                $summary['m']            += $item->qty_m;
-                $summary['l']            += $item->qty_l;
-                $summary['xl']           += $item->qty_xl;
-                $summary['total_pieces'] += $item->qty_xs + $item->qty_s + $item->qty_m + $item->qty_l + $item->qty_xl;
+            if ($order->items->first()) {
+                $xs = $order->netSizeQty('xs');
+                $s  = $order->netSizeQty('s');
+                $m  = $order->netSizeQty('m');
+                $l  = $order->netSizeQty('l');
+                $xl = $order->netSizeQty('xl');
+                $summary['xs']           += $xs;
+                $summary['s']            += $s;
+                $summary['m']            += $m;
+                $summary['l']            += $l;
+                $summary['xl']           += $xl;
+                $summary['total_pieces'] += $xs + $s + $m + $l + $xl;
             }
             $summary['total_bill'] += $order->total_amount;
         }
