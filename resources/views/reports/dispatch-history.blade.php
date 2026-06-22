@@ -10,7 +10,7 @@
 
 <div class="mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Dispatch History</h1>
-    <p class="text-[#6E6E73] text-sm mt-1">All dispatched orders and delivery records</p>
+    <p class="text-[#6E6E73] text-sm mt-1">All dispatched orders and delivery records &mdash; <span class="font-medium text-[#1D1D1F]">{{ $selectedCatalogue->name }}</span></p>
 </div>
 
 @php

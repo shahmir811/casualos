@@ -10,7 +10,7 @@
 
 <div class="mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Damage &amp; Reductions</h1>
-    <p class="text-[#6E6E73] text-sm mt-1">All order reductions due to damage, short delivery, or adjustments</p>
+    <p class="text-[#6E6E73] text-sm mt-1">All order reductions due to damage, short delivery, or adjustments &mdash; <span class="font-medium text-[#1D1D1F]">{{ $selectedCatalogue->name }}</span></p>
 </div>
 
 @php

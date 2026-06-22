@@ -304,6 +304,8 @@
               enctype="multipart/form-data"
               x-data="{
                 paymentType: '{{ old('payment_type', 'cash') }}',
+                amountDisplay: '{{ old('amount') ? number_format((int) old('amount'), 0) : '' }}',
+                amountRaw: '{{ old('amount') ?? '' }}',
                 files: [],
                 isDragging: false,
                 lightboxSrc: '',
@@ -311,6 +313,11 @@
                 get isBankTransfer() { return this.paymentType === 'bank_transfer'; },
                 get isAdvance() { return this.paymentType === 'advance'; },
                 get needsBank() { return this.paymentType === 'cash' || this.paymentType === 'bank_transfer'; },
+                formatAmount(e) {
+                    let raw = e.target.value.replace(/[^0-9]/g, '');
+                    this.amountRaw = raw;
+                    this.amountDisplay = raw ? Number(raw).toLocaleString('en-US') : '';
+                },
                 addFiles(fileList) {
                     Array.from(fileList).forEach(f => {
                         const ext = f.name.split('.').pop().toLowerCase();
@@ -343,9 +350,11 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Amount (PKR) <span class="text-[#FF3B30]">*</span></label>
-                    <input type="number" name="amount" required min="1" step="0.01"
-                        value="{{ old('amount') }}"
-                        class="apple-input" placeholder="e.g. 50000">
+                    <input type="text" inputmode="numeric" required
+                        :value="amountDisplay"
+                        @input="formatAmount($event)"
+                        class="apple-input" placeholder="e.g. 50,000">
+                    <input type="hidden" name="amount" :value="amountRaw">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Payment Method <span class="text-[#FF3B30]">*</span></label>

@@ -10,13 +10,8 @@
 
 <div class="mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Outsourced Designs</h1>
-    <p class="text-[#6E6E73] text-sm mt-1">Designs manufactured externally</p>
+    <p class="text-[#6E6E73] text-sm mt-1">Designs manufactured externally &mdash; <span class="font-medium text-[#1D1D1F]">{{ $selectedCatalogue->name }}</span></p>
 </div>
-
-@php
-    use App\Models\OutsourcedBatch;
-    $batches = OutsourcedBatch::with(['catalogue', 'items.design', 'loggedBy'])->latest()->get();
-@endphp
 
 @if($batches->count())
 <div class="grid grid-cols-2 gap-4 mb-6">
@@ -26,7 +21,7 @@
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Pieces</p>
-        <p class="text-3xl font-light text-[#1D1D1F]">{{ number_format($batches->sum(fn($b) => $b->items->sum('total_pieces'))) }}</p>
+        <p class="text-3xl font-light text-[#1D1D1F]">{{ number_format($batches->sum(fn($b) => $b->items->sum('original_quantity'))) }}</p>
     </div>
 </div>
 @endif
@@ -38,35 +33,65 @@
                 <th class="text-left">Batch #</th>
                 <th class="text-left">Catalogue</th>
                 <th class="text-left">Design</th>
-                <th class="text-right">Pieces</th>
+                <th class="text-right">XS</th>
+                <th class="text-right">S</th>
+                <th class="text-right">M</th>
+                <th class="text-right">L</th>
+                <th class="text-right">XL</th>
+                <th class="text-right">Total</th>
                 <th class="text-left">Received Date</th>
                 <th class="text-left">Notes</th>
             </tr>
         </thead>
         <tbody>
             @forelse($batches as $batch)
-                @forelse($batch->items as $item)
+            @php
+                $badgeColors  = [
+                    'bg-blue-50 text-blue-700',
+                    'bg-violet-50 text-violet-700',
+                    'bg-emerald-50 text-emerald-700',
+                    'bg-rose-50 text-rose-700',
+                    'bg-orange-50 text-orange-700',
+                    'bg-indigo-50 text-indigo-700',
+                    'bg-teal-50 text-teal-700',
+                    'bg-pink-50 text-pink-700',
+                ];
+                $designGroups = $batch->items->groupBy('design_id');
+            @endphp
+                @forelse($designGroups as $designId => $sizeItems)
+                @php
+                    $design    = $sizeItems->first()->design;
+                    $bySize    = $sizeItems->keyBy('size');
+                    $qty       = fn(string $s) => (int) ($bySize[$s]->original_quantity ?? 0);
+                    $rowTotal  = $qty('xs') + $qty('s') + $qty('m') + $qty('l') + $qty('xl');
+                    $color     = $badgeColors[$designId % count($badgeColors)];
+                @endphp
                 <tr>
                     @if($loop->first)
-                    <td class="font-medium text-[#0066CC]" rowspan="{{ $batch->items->count() }}">OB-{{ str_pad($batch->id, 4, '0', STR_PAD_LEFT) }}</td>
-                    <td class="text-[#6E6E73]" rowspan="{{ $batch->items->count() }}">{{ $batch->catalogue->name ?? '—' }}</td>
+                    <td class="font-medium text-[#0066CC]" rowspan="{{ $designGroups->count() }}">OB-{{ str_pad($batch->id, 4, '0', STR_PAD_LEFT) }}</td>
+                    <td class="text-[#6E6E73]" rowspan="{{ $designGroups->count() }}">{{ $batch->catalogue->name ?? '—' }}</td>
                     @endif
-                    <td>{{ $item->design->name ?? '—' }}</td>
-                    <td class="text-right font-medium">{{ number_format($item->total_pieces) }}</td>
+                    <td><span class="inline-flex items-center text-[11px] font-medium {{ $color }} rounded px-2 py-0.5">{{ $design->name ?? '—' }}</span></td>
+                    <td class="text-right text-[#6E6E73]">{{ $qty('xs') ?: '—' }}</td>
+                    <td class="text-right text-[#6E6E73]">{{ $qty('s') ?: '—' }}</td>
+                    <td class="text-right text-[#6E6E73]">{{ $qty('m') ?: '—' }}</td>
+                    <td class="text-right text-[#6E6E73]">{{ $qty('l') ?: '—' }}</td>
+                    <td class="text-right text-[#6E6E73]">{{ $qty('xl') ?: '—' }}</td>
+                    <td class="text-right font-semibold">{{ number_format($rowTotal) }}</td>
                     @if($loop->first)
-                    <td class="text-[#6E6E73] text-xs" rowspan="{{ $batch->items->count() }}">{{ $batch->received_date->format('d M Y') }}</td>
-                    <td class="text-[#6E6E73] text-xs max-w-xs truncate" rowspan="{{ $batch->items->count() }}">{{ $batch->notes ?? '—' }}</td>
+                    <td class="text-[#6E6E73] text-xs" rowspan="{{ $designGroups->count() }}">{{ $batch->received_date->format('d M Y') }}</td>
+                    <td class="text-[#6E6E73] text-xs max-w-xs truncate" rowspan="{{ $designGroups->count() }}">{{ $batch->notes ?? '—' }}</td>
                     @endif
                 </tr>
                 @empty
                 <tr>
                     <td class="font-medium text-[#0066CC]">OB-{{ str_pad($batch->id, 4, '0', STR_PAD_LEFT) }}</td>
                     <td>{{ $batch->catalogue->name ?? '—' }}</td>
-                    <td colspan="4" class="text-[#86868B] text-xs">No items recorded</td>
+                    <td colspan="9" class="text-[#86868B] text-xs">No items recorded</td>
                 </tr>
                 @endforelse
             @empty
-            <tr><td colspan="6" class="text-center text-[#86868B] py-12">No outsourced batches recorded yet.</td></tr>
+            <tr><td colspan="11" class="text-center text-[#86868B] py-12">No outsourced batches recorded yet.</td></tr>
             @endforelse
         </tbody>
     </table>

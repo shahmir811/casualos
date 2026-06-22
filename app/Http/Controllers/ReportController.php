@@ -10,7 +10,10 @@ use App\Models\Catalogue;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\CustomerLedger;
+use App\Models\OutsourcedBatch;
 use App\Models\PressReturnItem;
+use App\Models\ProductionAssignmentNpDesign;
+use App\Models\TarpaiSend;
 use App\Models\Wage;
 use App\Models\Design;
 use App\Models\DispatchBatch;
@@ -74,50 +77,86 @@ class ReportController extends Controller
 
     public function productionStatus(Request $request)
     {
+        $catalogueId       = (int) session('active_catalogue_id');
+        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+
         $orders = Order::with(['customer', 'catalogue'])
             ->whereIn('status', ['confirmed', 'stitching'])
+            ->where('catalogue_id', $catalogueId)
             ->get();
 
-        return view('reports.production-status', compact('orders'));
+        return view('reports.production-status', compact('orders', 'selectedCatalogue'));
     }
 
     public function stitchingReconciliation(Request $request)
     {
-        // Placeholder — will aggregate send vs return data
-        return view('reports.stitching-reconciliation');
+        $catalogueId       = (int) session('active_catalogue_id');
+        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+
+        $npDesignRows = ProductionAssignmentNpDesign::with(['assignment.catalogue', 'design', 'returnItems'])
+            ->whereHas('assignment', fn($q) => $q->where('catalogue_id', $catalogueId))
+            ->latest('id')
+            ->get();
+
+        $tarpaiSends = TarpaiSend::with(['catalogue', 'items.design', 'returns.items'])
+            ->where('catalogue_id', $catalogueId)
+            ->latest()
+            ->get();
+
+        return view('reports.stitching-reconciliation', compact('npDesignRows', 'tarpaiSends', 'selectedCatalogue'));
     }
 
     public function packedInventory()
     {
-        $returnItems = PressReturnItem::with([
-            'pressReturn.send.catalogue',
-            'design',
-        ])->get();
+        $catalogueId       = (int) session('active_catalogue_id');
+        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+
+        $returnItems = PressReturnItem::with(['pressReturn.send.catalogue', 'design'])
+            ->whereHas('pressReturn.send', fn($q) => $q->where('catalogue_id', $catalogueId))
+            ->get();
 
         $grouped = $returnItems->groupBy(fn($item) => $item->pressReturn->send->catalogue_id);
 
-        return view('reports.packed-inventory', compact('grouped'));
+        return view('reports.packed-inventory', compact('grouped', 'selectedCatalogue'));
     }
 
     public function payrollHistory(Request $request)
     {
-        $wages = Wage::with(['catalogue', 'stitchingUnit', 'confirmedBy'])->latest()->get();
-        return view('reports.payroll-history', compact('wages'));
+        $catalogueId       = (int) session('active_catalogue_id');
+        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+
+        $wages = Wage::with(['catalogue', 'stitchingUnit', 'confirmedBy'])
+            ->where('catalogue_id', $catalogueId)
+            ->latest()
+            ->get();
+
+        return view('reports.payroll-history', compact('wages', 'selectedCatalogue'));
     }
 
     public function outsourcedDesigns()
     {
-        $designs = Design::where('manufacturing_type', 'outsourced')
-            ->with(['catalogue', 'productionAssignment'])
+        $catalogueId       = (int) session('active_catalogue_id');
+        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+
+        $batches = OutsourcedBatch::with(['catalogue', 'items.design', 'loggedBy'])
+            ->where('catalogue_id', $catalogueId)
+            ->latest()
             ->get();
 
-        return view('reports.outsourced-designs', compact('designs'));
+        return view('reports.outsourced-designs', compact('batches', 'selectedCatalogue'));
     }
 
     public function dispatchHistory(Request $request)
     {
-        $dispatches = DispatchBatch::with(['order.customer', 'order.catalogue'])->latest()->get();
-        return view('reports.dispatch-history', compact('dispatches'));
+        $catalogueId       = (int) session('active_catalogue_id');
+        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+
+        $dispatches = DispatchBatch::with(['order.customer', 'order.catalogue'])
+            ->whereHas('order', fn($q) => $q->where('catalogue_id', $catalogueId))
+            ->latest()
+            ->get();
+
+        return view('reports.dispatch-history', compact('dispatches', 'selectedCatalogue'));
     }
 
     public function activityLog(Request $request)
@@ -200,11 +239,15 @@ class ReportController extends Controller
 
     public function damageReductions(Request $request)
     {
+        $catalogueId       = (int) session('active_catalogue_id');
+        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+
         $reductions = OrderReduction::with(['order.customer', 'items.design', 'reducedBy'])
+            ->whereHas('order', fn($q) => $q->where('catalogue_id', $catalogueId))
             ->latest()
             ->get();
 
-        return view('reports.damage-reductions', compact('reductions'));
+        return view('reports.damage-reductions', compact('reductions', 'selectedCatalogue'));
     }
 
     // ── Customer Order Bill ───────────────────────────────────────────────────

@@ -10,14 +10,11 @@
 
 <div class="mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Stitching Reconciliation</h1>
-    <p class="text-[#6E6E73] text-sm mt-1">Naeem Pakki and Tarpai — pieces sent vs returned vs outstanding</p>
+    <p class="text-[#6E6E73] text-sm mt-1">Naeem Pakki and Tarpai — pieces sent vs returned vs outstanding &mdash; <span class="font-medium text-[#1D1D1F]">{{ $selectedCatalogue->name }}</span></p>
 </div>
 
 {{-- Naeem Pakki Section --}}
 @php
-    use App\Models\ProductionAssignmentNpDesign;
-    $npDesignRows = ProductionAssignmentNpDesign::with(['assignment.catalogue', 'design', 'returnItems'])
-        ->latest('id')->get();
     $npTotalSent = 0; $npTotalReturned = 0;
 @endphp
 
@@ -81,8 +78,6 @@
 
 {{-- Tarpai Section --}}
 @php
-    use App\Models\TarpaiSend;
-    $tarpaiSends = TarpaiSend::with(['catalogue', 'design', 'items', 'returns.items'])->latest()->get();
     $tpTotalSent = 0; $tpTotalReturned = 0;
 @endphp
 
@@ -114,7 +109,7 @@
                 @endphp
                 <tr>
                     <td class="font-medium">TP-{{ str_pad($send->id, 4, '0', STR_PAD_LEFT) }}</td>
-                    <td>{{ $send->design?->name ?? '—' }}</td>
+                    <td>{{ $send->items->pluck('design.name')->filter()->unique()->implode(', ') ?: '—' }}</td>
                     <td class="text-[#6E6E73] text-xs">{{ $send->catalogue?->name ?? '—' }}</td>
                     <td class="text-right">{{ $s }}</td>
                     <td class="text-right text-green-700">{{ $r }}</td>

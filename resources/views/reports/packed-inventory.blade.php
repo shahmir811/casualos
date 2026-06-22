@@ -10,7 +10,7 @@
 
 <div class="mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Packed Inventory</h1>
-    <p class="text-[#6E6E73] text-sm mt-1">All pressed and packed pieces by catalogue and design</p>
+    <p class="text-[#6E6E73] text-sm mt-1">All pressed and packed pieces by design &mdash; <span class="font-medium text-[#1D1D1F]">{{ $selectedCatalogue->name }}</span></p>
 </div>
 
 @php
