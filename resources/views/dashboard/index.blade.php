@@ -97,7 +97,7 @@
         <a href="{{ route('catalogues.show', $cat) }}"
            class="block border border-[#E8E8ED] rounded-xl p-4 hover:border-[#0071E3] hover:shadow-sm transition-all">
             <p class="text-[#1D1D1F] text-sm font-medium mb-1">{{ $cat->name }}</p>
-            <p class="text-[#6E6E73] text-xs">{{ $cat->designs->count() }} designs · {{ lacs_format($cat->qty_per_design) }} qty/design · {{ lacs_format($cat->qty_per_design * $cat->number_of_designs) }} total pcs</p>
+            <p class="text-[#6E6E73] text-xs">{{ $cat->designs->count() }} designs · {{ number_format($cat->qty_per_design) }} qty/design · {{ number_format($cat->qty_per_design * $cat->number_of_designs) }} total pcs</p>
         </a>
         @empty
         <p class="text-[#86868B] text-sm col-span-3">No open catalogues.</p>

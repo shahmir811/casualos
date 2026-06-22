@@ -87,12 +87,12 @@
 <div class="grid grid-cols-2 gap-4 mb-6">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Confirmed &amp; Paid</p>
-        <p class="text-3xl font-light text-green-600">Rs. {{ lacs_format($totalPaid, 0) }}</p>
+        <p class="text-3xl font-light text-green-600">Rs. {{ number_format($totalPaid, 0) }}</p>
         <p class="text-xs text-[#86868B] mt-1">{{ request()->hasAny(['week_date','tarpai_house','status']) ? 'filtered results' : 'this page' }}</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Pending Confirmation</p>
-        <p class="text-3xl font-light {{ $totalPending > 0 ? 'text-orange-500' : 'text-[#86868B]' }}">Rs. {{ lacs_format($totalPending, 0) }}</p>
+        <p class="text-3xl font-light {{ $totalPending > 0 ? 'text-orange-500' : 'text-[#86868B]' }}">Rs. {{ number_format($totalPending, 0) }}</p>
         <p class="text-xs text-[#86868B] mt-1">{{ request()->hasAny(['week_date','tarpai_house','status']) ? 'filtered results' : 'this page' }}</p>
     </div>
 </div>
@@ -124,8 +124,8 @@
                 <td>
                     <span class="badge {{ $payment->houseBadgeClass() }}">{{ $payment->houseLabel() }}</span>
                 </td>
-                <td class="text-right">{{ lacs_format($payment->total_pieces_sent) }}</td>
-                <td class="text-right font-semibold">Rs. {{ lacs_format($payment->total_amount, 0) }}</td>
+                <td class="text-right">{{ number_format($payment->total_pieces_sent) }}</td>
+                <td class="text-right font-semibold">Rs. {{ number_format($payment->total_amount, 0) }}</td>
                 <td>
                     @if($payment->is_confirmed)
                         <span class="badge bg-green-100 text-green-700">Confirmed</span>

@@ -132,7 +132,7 @@ class PaymentController extends Controller
             ->withProperties($props)
             ->log('Payment of PKR ' . number_format((float) $request->amount, 0) . ' recorded on Order #' . $order->order_number);
 
-        return back()->with('success', 'Payment of PKR ' . lacs_format($request->amount) . ' recorded.');
+        return back()->with('success', 'Payment of PKR ' . number_format($request->amount) . ' recorded.');
     }
 
     public function destroy(Order $order, Payment $payment)
@@ -216,7 +216,7 @@ class PaymentController extends Controller
             ->withProperties($deleteProps)
             ->log('Payment of PKR ' . number_format((float) $amount, 0) . ' DELETED from Order #' . $order->order_number);
 
-        return back()->with('success', 'Payment of PKR ' . lacs_format($amount) . ' has been deleted and the order balance updated.');
+        return back()->with('success', 'Payment of PKR ' . number_format($amount) . ' has been deleted and the order balance updated.');
     }
 
     public function applyCredit(Request $request, Order $order)
@@ -265,6 +265,6 @@ class PaymentController extends Controller
             ->withProperties($creditProps)
             ->log('Advance credit of PKR ' . number_format((float) $validated['credit_amount'], 0) . ' applied to Order #' . $order->order_number);
 
-        return back()->with('success', 'Credit of PKR ' . lacs_format($validated['credit_amount']) . ' applied.');
+        return back()->with('success', 'Credit of PKR ' . number_format($validated['credit_amount']) . ' applied.');
     }
 }

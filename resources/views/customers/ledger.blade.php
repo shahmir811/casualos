@@ -15,7 +15,7 @@
         <div class="stat-card text-right w-full sm:min-w-[180px] sm:w-auto">
             <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Outstanding Balance</p>
             <p class="text-2xl font-light {{ $balance > 0 ? 'text-[#FF3B30]' : 'text-[#30D158]' }}">
-                PKR {{ lacs_format(abs($balance), 0) }}
+                PKR {{ number_format(abs($balance), 0) }}
                 <span class="text-sm">{{ $balance > 0 ? 'Debit' : ($balance < 0 ? 'Credit' : '') }}</span>
             </p>
         </div>
@@ -101,7 +101,7 @@
                 </td>
                 <td class="text-[#6E6E73] text-xs whitespace-nowrap">{{ $entry->createdBy->name ?? '—' }}</td>
                 <td class="text-right font-mono text-sm {{ $amountColor[$entry->transaction_type] ?? 'text-[#1D1D1F]' }}">
-                    {{ $prefix }}PKR {{ lacs_format(abs($entry->amount), 0) }}
+                    {{ $prefix }}PKR {{ number_format(abs($entry->amount), 0) }}
                 </td>
             </tr>
             @empty

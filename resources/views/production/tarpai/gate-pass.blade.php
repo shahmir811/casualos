@@ -183,7 +183,7 @@
     </div>
     <div class="meta-item">
         <label>Per Piece Rate</label>
-        <div class="val">Rs. {{ lacs_format($tarpaiSend->per_piece_price, 0) }} / piece</div>
+        <div class="val">Rs. {{ number_format($tarpaiSend->per_piece_price, 0) }} / piece</div>
     </div>
     <div class="meta-item">
         <label>Issued By</label>
@@ -235,7 +235,7 @@
 <div style="text-align:right; margin-bottom: 32px; font-size:13px;">
     <span style="color:#6E6E73;">Total Pieces: <strong style="color:#1D1D1F;">{{ $grandTotal }}</strong></span>
     &nbsp;&nbsp;|&nbsp;&nbsp;
-    <span style="color:#6E6E73;">Total Value: <strong style="color:#1D1D1F;">Rs. {{ lacs_format($grandTotal * $tarpaiSend->per_piece_price, 0) }}</strong></span>
+    <span style="color:#6E6E73;">Total Value: <strong style="color:#1D1D1F;">Rs. {{ number_format($grandTotal * $tarpaiSend->per_piece_price, 0) }}</strong></span>
 </div>
 
 <!-- Signatures -->

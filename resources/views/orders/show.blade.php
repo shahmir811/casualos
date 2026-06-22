@@ -121,22 +121,22 @@
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Amount</p>
-        <p class="text-[#1D1D1F] text-2xl font-light">PKR {{ lacs_format($order->total_amount, 0) }}</p>
+        <p class="text-[#1D1D1F] text-2xl font-light">PKR {{ number_format($order->total_amount, 0) }}</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Amount Paid</p>
-        <p class="text-[#30D158] text-2xl font-light">PKR {{ lacs_format($order->total_paid, 0) }}</p>
+        <p class="text-[#30D158] text-2xl font-light">PKR {{ number_format($order->total_paid, 0) }}</p>
     </div>
     <div class="stat-card">
         @php $overpaid = max(0, $order->total_paid - $order->total_amount); @endphp
         @if($overpaid > 0)
             <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Overpaid</p>
-            <p class="text-[#30D158] text-2xl font-light">PKR {{ lacs_format($overpaid, 0) }}</p>
+            <p class="text-[#30D158] text-2xl font-light">PKR {{ number_format($overpaid, 0) }}</p>
             <p class="text-[#6E6E73] text-xs mt-1">Added to advance credit</p>
         @else
             <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Outstanding</p>
             <p class="{{ $order->outstanding_balance > 0 ? 'text-[#FF3B30]' : 'text-[#30D158]' }} text-2xl font-light">
-                PKR {{ lacs_format($order->outstanding_balance, 0) }}
+                PKR {{ number_format($order->outstanding_balance, 0) }}
             </p>
         @endif
     </div>
@@ -228,7 +228,7 @@
 <div class="card mb-5">
     <div class="px-6 py-4 border-b border-[#F2F2F7] flex items-center justify-between">
         <h2 class="text-[#1D1D1F] text-sm font-semibold">Order Summary</h2>
-        <span class="text-xs text-[#6E6E73]">{{ $numDesigns }} designs · {{ lacs_format($totalPieces) }} pieces total</span>
+        <span class="text-xs text-[#6E6E73]">{{ $numDesigns }} designs · {{ number_format($totalPieces) }} pieces total</span>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full apple-table whitespace-nowrap">
@@ -258,9 +258,9 @@
                     <td class="text-center tabular-nums px-3 {{ $qm  ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $qm  ?: '—' }}</td>
                     <td class="text-center tabular-nums px-3 {{ $ql  ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $ql  ?: '—' }}</td>
                     <td class="text-center tabular-nums px-3 {{ $qxl ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $qxl ?: '—' }}</td>
-                    <td class="text-center font-semibold text-[#1D1D1F] tabular-nums">{{ lacs_format($qtyPerDesign) }}</td>
-                    <td class="text-center font-semibold text-[#0071E3] tabular-nums">{{ lacs_format($totalPieces) }}</td>
-                    <td class="text-right font-semibold text-[#1D1D1F] tabular-nums">PKR {{ lacs_format($order->total_amount, 0) }}</td>
+                    <td class="text-center font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($qtyPerDesign) }}</td>
+                    <td class="text-center font-semibold text-[#0071E3] tabular-nums">{{ number_format($totalPieces) }}</td>
+                    <td class="text-right font-semibold text-[#1D1D1F] tabular-nums">PKR {{ number_format($order->total_amount, 0) }}</td>
                 </tr>
             </tbody>
         </table>
@@ -274,7 +274,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
     </svg>
     <p class="text-sm text-[#1D1D1F]">
-        This customer has <span class="font-semibold text-[#30D158]">PKR {{ lacs_format($order->customer->advance_credit_balance, 0) }}</span> in advance credit available.
+        This customer has <span class="font-semibold text-[#30D158]">PKR {{ number_format($order->customer->advance_credit_balance, 0) }}</span> in advance credit available.
     </p>
 </div>
 @endif
@@ -352,7 +352,7 @@
                     <select name="payment_type" required class="apple-input" x-model="paymentType">
                         <option value="cash">Cash</option>
                         <option value="bank_transfer">Bank Transfer</option>
-                        <option value="advance">From Advance Credit{{ ($order->customer?->advance_credit_balance ?? 0) > 0 ? ' (PKR ' . lacs_format($order->customer->advance_credit_balance, 0) . ' available)' : '' }}</option>
+                        <option value="advance">From Advance Credit{{ ($order->customer?->advance_credit_balance ?? 0) > 0 ? ' (PKR ' . number_format($order->customer->advance_credit_balance, 0) . ' available)' : '' }}</option>
                     </select>
                 </div>
 
@@ -502,7 +502,7 @@
                     <span class="text-xs text-[#6E6E73]">· {{ $payment->bankAccount->title }}</span>
                     @endif
                 </div>
-                <span class="text-[#30D158] font-mono font-semibold text-sm whitespace-nowrap">PKR {{ lacs_format($payment->amount, 0) }}</span>
+                <span class="text-[#30D158] font-mono font-semibold text-sm whitespace-nowrap">PKR {{ number_format($payment->amount, 0) }}</span>
             </div>
             <div class="flex items-center justify-between gap-3">
                 <span class="text-[#6E6E73] text-xs">{{ $payment->payment_date->format('d M Y') }}</span>
@@ -527,7 +527,7 @@
                     <button type="button" class="text-[#FF3B30] text-xs hover:underline"
                             @click="$store.confirm.show({
                                 title: 'Delete Payment',
-                                message: 'Permanently delete this payment of PKR {{ lacs_format($payment->amount, 0) }}? The order balance will be recalculated.',
+                                message: 'Permanently delete this payment of PKR {{ number_format($payment->amount, 0) }}? The order balance will be recalculated.',
                                 formId: 'form-delete-payment-{{ $payment->id }}',
                                 confirmText: 'Delete Payment',
                                 danger: true
@@ -557,7 +557,7 @@
                     @endif
                 </td>
                 <td class="text-[#6E6E73] text-sm">{{ $payment->notes ?? '—' }}</td>
-                <td class="text-right text-[#30D158] font-mono font-medium">PKR {{ lacs_format($payment->amount, 0) }}</td>
+                <td class="text-right text-[#30D158] font-mono font-medium">PKR {{ number_format($payment->amount, 0) }}</td>
                 <td class="text-right">
                     @if(count($receipts) > 0)
                     <div class="flex items-center justify-end gap-1 flex-wrap">
@@ -595,7 +595,7 @@
                             class="text-[#FF3B30] text-xs hover:underline whitespace-nowrap"
                             @click="$store.confirm.show({
                                 title: 'Delete Payment',
-                                message: 'Permanently delete this payment of PKR {{ lacs_format($payment->amount, 0) }}? The order balance will be recalculated.',
+                                message: 'Permanently delete this payment of PKR {{ number_format($payment->amount, 0) }}? The order balance will be recalculated.',
                                 formId: 'form-delete-payment-{{ $payment->id }}-desktop',
                                 confirmText: 'Delete Payment',
                                 danger: true
@@ -630,7 +630,7 @@
                     @endif
                 </td>
                 <td class="text-[#6E6E73] text-sm">{{ $refund->notes ?? '—' }}</td>
-                <td class="text-right text-[#FF3B30] font-mono font-medium">− PKR {{ lacs_format($refund->amount, 0) }}</td>
+                <td class="text-right text-[#FF3B30] font-mono font-medium">− PKR {{ number_format($refund->amount, 0) }}</td>
                 <td class="text-right">
                     @if($refund->refund_document)
                     @php $docExt = strtolower(pathinfo($refund->refund_document, PATHINFO_EXTENSION)); @endphp
@@ -704,7 +704,7 @@
                         <span class="text-[#C7C7CC] text-xs">—</span>
                     @endif
                 </td>
-                <td class="text-right font-mono font-medium text-[#FF3B30] tabular-nums">− PKR {{ lacs_format($reduction->adjustment_amount, 0) }}</td>
+                <td class="text-right font-mono font-medium text-[#FF3B30] tabular-nums">− PKR {{ number_format($reduction->adjustment_amount, 0) }}</td>
                 <td class="text-right">
                     <button type="button"
                             @click="activeReductionId = {{ $reduction->id }}; reductionModal = true"
@@ -800,15 +800,15 @@
                             <td class="font-medium text-[#1D1D1F]">{{ $item->design->name ?? '—' }}</td>
                             <td class="text-center font-mono text-xs">{{ strtoupper($item->size) }}</td>
                             <td class="text-center tabular-nums">{{ $item->qty_reduced }}</td>
-                            <td class="text-right tabular-nums text-[#6E6E73]">PKR {{ lacs_format($item->unit_price, 0) }}</td>
-                            <td class="text-right tabular-nums font-medium text-[#FF3B30]">PKR {{ lacs_format($item->amount_reduced, 0) }}</td>
+                            <td class="text-right tabular-nums text-[#6E6E73]">PKR {{ number_format($item->unit_price, 0) }}</td>
+                            <td class="text-right tabular-nums font-medium text-[#FF3B30]">PKR {{ number_format($item->amount_reduced, 0) }}</td>
                         </tr>
                         @endforeach
                     </tbody>
                     <tfoot>
                         <tr class="border-t border-[#E8E8ED]">
                             <td colspan="4" class="text-right font-semibold text-[#1D1D1F] py-3 pr-4">Total Reduction</td>
-                            <td class="text-right tabular-nums font-semibold text-[#FF3B30] py-3">PKR {{ lacs_format($reduction->adjustment_amount, 0) }}</td>
+                            <td class="text-right tabular-nums font-semibold text-[#FF3B30] py-3">PKR {{ number_format($reduction->adjustment_amount, 0) }}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -819,15 +819,15 @@
                 <h3 class="text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-3">Financial Impact</h3>
                 <div class="flex justify-between">
                     <span class="text-[#6E6E73]">Original order total</span>
-                    <span class="font-medium tabular-nums text-[#1D1D1F]">PKR {{ lacs_format($reduction->original_total, 0) }}</span>
+                    <span class="font-medium tabular-nums text-[#1D1D1F]">PKR {{ number_format($reduction->original_total, 0) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-[#6E6E73]">Reduction amount</span>
-                    <span class="font-medium tabular-nums text-[#FF3B30]">− PKR {{ lacs_format($reduction->adjustment_amount, 0) }}</span>
+                    <span class="font-medium tabular-nums text-[#FF3B30]">− PKR {{ number_format($reduction->adjustment_amount, 0) }}</span>
                 </div>
                 <div class="flex justify-between border-t border-[#F2F2F7] pt-2">
                     <span class="font-semibold text-[#1D1D1F]">New order total</span>
-                    <span class="font-semibold tabular-nums text-[#1D1D1F]">PKR {{ lacs_format($reduction->new_total, 0) }}</span>
+                    <span class="font-semibold tabular-nums text-[#1D1D1F]">PKR {{ number_format($reduction->new_total, 0) }}</span>
                 </div>
             </div>
 
@@ -863,7 +863,7 @@
                     @endif
                     <div>
                         <p class="text-[#6E6E73] text-xs uppercase tracking-widest mb-0.5">Refund Amount</p>
-                        <p class="text-[#FF3B30] font-semibold tabular-nums">PKR {{ lacs_format($refund->amount, 0) }}</p>
+                        <p class="text-[#FF3B30] font-semibold tabular-nums">PKR {{ number_format($refund->amount, 0) }}</p>
                     </div>
                 </div>
                 @endif

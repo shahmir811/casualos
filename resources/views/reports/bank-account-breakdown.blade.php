@@ -41,11 +41,11 @@
 <div class="grid grid-cols-3 gap-4 mb-6">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Received</p>
-        <p class="text-2xl font-light text-green-600">Rs. {{ lacs_format($grandPaid, 0) }}</p>
+        <p class="text-2xl font-light text-green-600">Rs. {{ number_format($grandPaid, 0) }}</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Outstanding</p>
-        <p class="text-2xl font-light {{ $grandBal > 0 ? 'text-red-500' : 'text-[#86868B]' }}">Rs. {{ lacs_format($grandBal, 0) }}</p>
+        <p class="text-2xl font-light {{ $grandBal > 0 ? 'text-red-500' : 'text-[#86868B]' }}">Rs. {{ number_format($grandBal, 0) }}</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Orders</p>
@@ -81,13 +81,13 @@
                     <td class="text-[#6E6E73]">{{ $order->customer?->city ?? $order->submitted_city }}</td>
                     @foreach($bankAccounts as $ba)
                         <td class="text-right text-sm">
-                            {{ ($order->bank_totals[$ba->id] ?? 0) > 0 ? lacs_format($order->bank_totals[$ba->id], 0) : '—' }}
+                            {{ ($order->bank_totals[$ba->id] ?? 0) > 0 ? number_format($order->bank_totals[$ba->id], 0) : '—' }}
                         </td>
                     @endforeach
-                    <td class="text-right text-sm">{{ $order->misc_total > 0 ? lacs_format($order->misc_total, 0) : '—' }}</td>
-                    <td class="text-right font-medium">{{ lacs_format($order->total_paid, 0) }}</td>
+                    <td class="text-right text-sm">{{ $order->misc_total > 0 ? number_format($order->misc_total, 0) : '—' }}</td>
+                    <td class="text-right font-medium">{{ number_format($order->total_paid, 0) }}</td>
                     <td class="text-right {{ $order->outstanding_balance > 0 ? 'text-red-600 font-medium' : 'text-[#86868B]' }}">
-                        {{ lacs_format($order->outstanding_balance, 0) }}
+                        {{ number_format($order->outstanding_balance, 0) }}
                     </td>
                 </tr>
                 @empty
@@ -100,12 +100,12 @@
                     <td class="px-5 py-3 font-semibold text-sm" colspan="3">Total</td>
                     @foreach($bankAccounts as $ba)
                         <td class="px-5 py-3 text-right font-bold text-sm">
-                            {{ $grandTotals[$ba->id] > 0 ? 'Rs. ' . lacs_format($grandTotals[$ba->id], 0) : '—' }}
+                            {{ $grandTotals[$ba->id] > 0 ? 'Rs. ' . number_format($grandTotals[$ba->id], 0) : '—' }}
                         </td>
                     @endforeach
-                    <td class="px-5 py-3 text-right font-bold text-sm">{{ $grandMisc > 0 ? 'Rs. ' . lacs_format($grandMisc, 0) : '—' }}</td>
-                    <td class="px-5 py-3 text-right font-bold text-sm text-green-700">Rs. {{ lacs_format($grandPaid, 0) }}</td>
-                    <td class="px-5 py-3 text-right font-bold text-sm {{ $grandBal > 0 ? 'text-red-600' : 'text-[#86868B]' }}">Rs. {{ lacs_format($grandBal, 0) }}</td>
+                    <td class="px-5 py-3 text-right font-bold text-sm">{{ $grandMisc > 0 ? 'Rs. ' . number_format($grandMisc, 0) : '—' }}</td>
+                    <td class="px-5 py-3 text-right font-bold text-sm text-green-700">Rs. {{ number_format($grandPaid, 0) }}</td>
+                    <td class="px-5 py-3 text-right font-bold text-sm {{ $grandBal > 0 ? 'text-red-600' : 'text-[#86868B]' }}">Rs. {{ number_format($grandBal, 0) }}</td>
                 </tr>
             </tfoot>
             @endif

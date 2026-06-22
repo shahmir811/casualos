@@ -35,7 +35,7 @@ $badgeColors = [
        class="block px-5 py-4 border-b border-[#F2F2F7] last:border-b-0 hover:bg-[#F9F9F9] transition-colors">
         <div class="flex items-center justify-between gap-3 mb-2">
             <span class="font-semibold text-[#0066CC] text-sm">OB-{{ str_pad($batch->id, 4, '0', STR_PAD_LEFT) }}</span>
-            <span class="text-xs font-semibold text-[#1D1D1F]">{{ lacs_format($batch->items->sum('original_quantity')) }} pcs</span>
+            <span class="text-xs font-semibold text-[#1D1D1F]">{{ number_format($batch->items->sum('original_quantity')) }} pcs</span>
         </div>
         <p class="text-xs text-[#6E6E73] mb-2">{{ $batch->catalogue->name ?? '—' }} · {{ $batch->received_date->format('d M Y') }}</p>
         <div class="flex flex-wrap gap-1">
@@ -88,7 +88,7 @@ $badgeColors = [
                         @endforeach
                     </div>
                 </td>
-                <td>{{ lacs_format($batch->items->sum('original_quantity')) }} pcs</td>
+                <td>{{ number_format($batch->items->sum('original_quantity')) }} pcs</td>
                 <td class="text-[#6E6E73] text-xs max-w-xs truncate">{{ $batch->notes ?? '—' }}</td>
                 <td>
                     <a href="{{ route('outsourced-batches.show', $batch) }}" class="text-[#0066CC] text-sm hover:underline">View →</a>

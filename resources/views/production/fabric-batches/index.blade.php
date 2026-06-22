@@ -57,7 +57,7 @@
         {{-- Catalogue header --}}
         <div class="flex items-center justify-between mb-3 pb-3 border-b border-[#F2F2F7]">
             <p class="text-xs font-semibold text-[#86868B] uppercase tracking-widest">{{ $catName }}</p>
-            <span class="text-xs font-semibold text-[#0071E3]">{{ lacs_format($totalReceived) }} pcs total</span>
+            <span class="text-xs font-semibold text-[#0071E3]">{{ number_format($totalReceived) }} pcs total</span>
         </div>
         {{-- Per-design rows --}}
         <div class="space-y-2">
@@ -69,7 +69,7 @@
                         <span class="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 flex-shrink-0">NP</span>
                     @endif
                 </div>
-                <p class="text-sm font-semibold text-[#0071E3] flex-shrink-0">{{ lacs_format($design->qty) }} pcs</p>
+                <p class="text-sm font-semibold text-[#0071E3] flex-shrink-0">{{ number_format($design->qty) }} pcs</p>
             </div>
             @endforeach
         </div>
@@ -118,12 +118,12 @@
                             @php $color = $badgeColors[($item->design->id ?? $loop->index) % count($badgeColors)]; @endphp
                             <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ $color }} rounded px-2 py-0.5 w-fit">
                                 {{ $item->design->name ?? '—' }}
-                                <span class="opacity-60">· {{ lacs_format($item->quantity) }}</span>
+                                <span class="opacity-60">· {{ number_format($item->quantity) }}</span>
                             </span>
                         @endforeach
                     </div>
                 </td>
-                <td>{{ lacs_format($batch->items->sum('quantity')) }} pcs</td>
+                <td>{{ number_format($batch->items->sum('quantity')) }} pcs</td>
                 <td class="text-[#6E6E73] text-xs">{{ $batch->loggedBy->name ?? '—' }}</td>
                 <td>
                     <a href="{{ route('fabric-batches.show', $batch) }}" class="text-[#0066CC] text-sm hover:underline">View →</a>

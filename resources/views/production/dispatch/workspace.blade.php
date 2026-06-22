@@ -50,7 +50,7 @@
     </div>
     <div class="flex items-center gap-3 text-sm">
         @if($order->outstanding_balance > 0)
-            <span class="badge bg-red-100 text-red-700">PKR {{ lacs_format($order->outstanding_balance, 0) }} outstanding</span>
+            <span class="badge bg-red-100 text-red-700">PKR {{ number_format($order->outstanding_balance, 0) }} outstanding</span>
         @else
             <span class="badge bg-green-100 text-green-700">Fully paid</span>
         @endif

@@ -52,7 +52,7 @@
                 </td>
                 <td class="text-[#6E6E73] text-sm">
                     @if($unit->isPerPiece() && $unit->per_piece_rate)
-                        Rs. {{ lacs_format($unit->per_piece_rate, 0) }}/pc
+                        Rs. {{ number_format($unit->per_piece_rate, 0) }}/pc
                     @else
                         <span class="text-[#D2D2D7]">—</span>
                     @endif

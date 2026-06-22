@@ -28,7 +28,7 @@
     <button type="button" class="btn-primary"
             @click="$store.confirm.show({
                 title: 'Confirm Payment',
-                message: `Mark Rs. {{ lacs_format($wage->total_wages, 0) }} as paid to {{ $wage->stitchingUnit?->name }}? This cannot be undone.`,
+                message: `Mark Rs. {{ number_format($wage->total_wages, 0) }} as paid to {{ $wage->stitchingUnit?->name }}? This cannot be undone.`,
                 formId: 'form-confirm-wage',
                 confirmText: 'Yes, Confirm Payment'
             })">
@@ -49,18 +49,18 @@
 <div class="grid grid-cols-3 gap-4 mb-6">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Kameez</p>
-        <p class="text-3xl font-light text-[#1D1D1F]">{{ lacs_format($wage->total_suits_stitched) }}</p>
+        <p class="text-3xl font-light text-[#1D1D1F]">{{ number_format($wage->total_suits_stitched) }}</p>
         <p class="text-xs text-[#86868B] mt-1">pieces this week</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Rate</p>
-        <p class="text-3xl font-light text-[#1D1D1F]">Rs. {{ lacs_format($wage->wage_rate, 0) }}</p>
+        <p class="text-3xl font-light text-[#1D1D1F]">Rs. {{ number_format($wage->wage_rate, 0) }}</p>
         <p class="text-xs text-[#86868B] mt-1">per kameez</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Wages</p>
         <p class="text-3xl font-light {{ $wage->is_confirmed ? 'text-green-600' : 'text-orange-500' }}">
-            Rs. {{ lacs_format($wage->total_wages, 0) }}
+            Rs. {{ number_format($wage->total_wages, 0) }}
         </p>
         <p class="text-xs text-[#86868B] mt-1">{{ $wage->is_confirmed ? 'paid' : 'pending confirmation' }}</p>
     </div>
@@ -131,8 +131,8 @@
 {{-- Wage formula callout --}}
 <div class="mt-4 px-5 py-4 bg-[#F5F5F7] rounded-xl text-sm text-[#6E6E73]">
     {{ $grandTotal ?? 0 }} kameez
-    &times; Rs. {{ lacs_format($wage->wage_rate, 0) }}/pc
-    = <strong class="text-[#1D1D1F]">Rs. {{ lacs_format($wage->total_wages, 0) }}</strong>
+    &times; Rs. {{ number_format($wage->wage_rate, 0) }}/pc
+    = <strong class="text-[#1D1D1F]">Rs. {{ number_format($wage->total_wages, 0) }}</strong>
 </div>
 
 @endsection

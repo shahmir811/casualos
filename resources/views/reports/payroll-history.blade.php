@@ -22,15 +22,15 @@
 <div class="grid grid-cols-3 gap-4 mb-6">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Paid Out</p>
-        <p class="text-2xl font-light text-green-600">Rs. {{ lacs_format($totalPaid, 0) }}</p>
+        <p class="text-2xl font-light text-green-600">Rs. {{ number_format($totalPaid, 0) }}</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Pending Payment</p>
-        <p class="text-2xl font-light {{ $totalPending > 0 ? 'text-orange-500' : 'text-[#86868B]' }}">Rs. {{ lacs_format($totalPending, 0) }}</p>
+        <p class="text-2xl font-light {{ $totalPending > 0 ? 'text-orange-500' : 'text-[#86868B]' }}">Rs. {{ number_format($totalPending, 0) }}</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Suits</p>
-        <p class="text-2xl font-light text-[#1D1D1F]">{{ lacs_format($totalSuits) }}</p>
+        <p class="text-2xl font-light text-[#1D1D1F]">{{ number_format($totalSuits) }}</p>
     </div>
 </div>
 
@@ -57,9 +57,9 @@
                 </td>
                 <td class="text-[#6E6E73]">{{ $wage->catalogue->name ?? '—' }}</td>
                 <td class="text-[#6E6E73] text-sm">{{ $wage->stitchingUnit ? 'Unit '.$wage->stitchingUnit->number.' — '.$wage->stitchingUnit->name : '—' }}</td>
-                <td class="text-right">{{ lacs_format($wage->total_suits_stitched) }}</td>
-                <td class="text-right text-[#6E6E73] text-xs">Rs. {{ lacs_format($wage->wage_rate, 0) }}</td>
-                <td class="text-right font-semibold">Rs. {{ lacs_format($wage->total_wages, 0) }}</td>
+                <td class="text-right">{{ number_format($wage->total_suits_stitched) }}</td>
+                <td class="text-right text-[#6E6E73] text-xs">Rs. {{ number_format($wage->wage_rate, 0) }}</td>
+                <td class="text-right font-semibold">Rs. {{ number_format($wage->total_wages, 0) }}</td>
                 <td>
                     <span class="badge {{ $wage->is_confirmed ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700' }}">
                         {{ $wage->is_confirmed ? 'Confirmed' : 'Pending' }}
@@ -76,9 +76,9 @@
         <tfoot>
             <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
                 <td class="px-5 py-3 font-semibold text-sm" colspan="3">Total</td>
-                <td class="px-5 py-3 text-right font-bold text-sm">{{ lacs_format($totalSuits) }}</td>
+                <td class="px-5 py-3 text-right font-bold text-sm">{{ number_format($totalSuits) }}</td>
                 <td></td>
-                <td class="px-5 py-3 text-right font-bold text-sm">Rs. {{ lacs_format($totalPaid + $totalPending, 0) }}</td>
+                <td class="px-5 py-3 text-right font-bold text-sm">Rs. {{ number_format($totalPaid + $totalPending, 0) }}</td>
                 <td colspan="3"></td>
             </tr>
         </tfoot>

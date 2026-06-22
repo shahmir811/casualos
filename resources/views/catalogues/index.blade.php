@@ -47,7 +47,7 @@
                 </div>
                 <p class="text-[#6E6E73] text-xs">
                     {{ $catalogue->designs_count }} designs ·
-                    {{ lacs_format($catalogue->qty_per_design) }} qty/design ·
+                    {{ number_format($catalogue->qty_per_design) }} qty/design ·
                     {{ $catalogue->orders_count }} orders
                 </p>
             </div>

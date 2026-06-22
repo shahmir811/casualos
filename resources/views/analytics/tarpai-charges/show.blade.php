@@ -26,7 +26,7 @@
     <button type="button" class="btn-primary"
             @click="$store.confirm.show({
                 title: 'Confirm Payment',
-                message: `Mark Rs. {{ lacs_format($tarpaiPayment->total_amount, 0) }} as paid to {{ $tarpaiPayment->houseLabel() }}? This cannot be undone.`,
+                message: `Mark Rs. {{ number_format($tarpaiPayment->total_amount, 0) }} as paid to {{ $tarpaiPayment->houseLabel() }}? This cannot be undone.`,
                 formId: 'form-confirm',
                 confirmText: 'Yes, Confirm Payment'
             })">
@@ -47,7 +47,7 @@
 <div class="grid grid-cols-3 gap-4 mb-6">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Pieces Sent</p>
-        <p class="text-3xl font-light text-[#1D1D1F]">{{ lacs_format($tarpaiPayment->total_pieces_sent) }}</p>
+        <p class="text-3xl font-light text-[#1D1D1F]">{{ number_format($tarpaiPayment->total_pieces_sent) }}</p>
         <p class="text-xs text-[#86868B] mt-1">pieces this week</p>
     </div>
     <div class="stat-card">
@@ -60,7 +60,7 @@
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Charges</p>
         <p class="text-3xl font-light {{ $tarpaiPayment->is_confirmed ? 'text-green-600' : 'text-orange-500' }}">
-            Rs. {{ lacs_format($tarpaiPayment->total_amount, 0) }}
+            Rs. {{ number_format($tarpaiPayment->total_amount, 0) }}
         </p>
         <p class="text-xs text-[#86868B] mt-1">{{ $tarpaiPayment->is_confirmed ? 'paid' : 'pending confirmation' }}</p>
     </div>
@@ -99,9 +99,9 @@
                         </a>
                     </td>
                     <td class="text-[#6E6E73]">{{ \Carbon\Carbon::parse($send->sent_date)->format('d M Y') }}</td>
-                    <td class="text-right">{{ lacs_format($send->pieces) }} pcs</td>
-                    <td class="text-right text-[#6E6E73] text-xs">Rs. {{ lacs_format($send->per_piece_price, 0) }}/pc</td>
-                    <td class="text-right font-semibold">Rs. {{ lacs_format($send->amount, 0) }}</td>
+                    <td class="text-right">{{ number_format($send->pieces) }} pcs</td>
+                    <td class="text-right text-[#6E6E73] text-xs">Rs. {{ number_format($send->per_piece_price, 0) }}/pc</td>
+                    <td class="text-right font-semibold">Rs. {{ number_format($send->amount, 0) }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -112,9 +112,9 @@
             <tfoot>
                 <tr>
                     <td colspan="2">Total</td>
-                    <td class="text-right">{{ lacs_format($grandPieces) }} pcs</td>
+                    <td class="text-right">{{ number_format($grandPieces) }} pcs</td>
                     <td></td>
-                    <td class="text-right">Rs. {{ lacs_format($grandAmount, 0) }}</td>
+                    <td class="text-right">Rs. {{ number_format($grandAmount, 0) }}</td>
                 </tr>
             </tfoot>
         </table>
@@ -124,14 +124,14 @@
     <div class="px-5 py-4 bg-[#F5F5F7] border-t border-[#E5E5EA] text-sm text-[#6E6E73]">
         @foreach($sends as $send)
         <span class="inline-block mr-4">
-            TP-{{ $send->id }}: {{ lacs_format($send->pieces) }} pcs
-            &times; Rs. {{ lacs_format($send->per_piece_price, 0) }}/pc
-            = <strong class="text-[#1D1D1F]">Rs. {{ lacs_format($send->amount, 0) }}</strong>
+            TP-{{ $send->id }}: {{ number_format($send->pieces) }} pcs
+            &times; Rs. {{ number_format($send->per_piece_price, 0) }}/pc
+            = <strong class="text-[#1D1D1F]">Rs. {{ number_format($send->amount, 0) }}</strong>
         </span>
         @endforeach
         @if($sends->count() > 1)
         <div class="mt-2 pt-2 border-t border-[#D2D2D7] font-medium text-[#1D1D1F]">
-            Total: {{ lacs_format($grandPieces) }} pieces = Rs. {{ lacs_format($grandAmount, 0) }}
+            Total: {{ number_format($grandPieces) }} pieces = Rs. {{ number_format($grandAmount, 0) }}
         </div>
         @endif
     </div>

@@ -90,22 +90,22 @@ $badgeColors = [
             @endphp
             <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ $color }} rounded px-2 py-0.5">
                 {{ $designModel->name ?? '—' }}
-                <span class="opacity-60">· {{ lacs_format($dSent) }} / {{ lacs_format($dReturned) }}</span>
+                <span class="opacity-60">· {{ number_format($dSent) }} / {{ number_format($dReturned) }}</span>
             </span>
             @endforeach
         </div>
         <div class="grid grid-cols-3 gap-2 text-center mb-3">
             <div class="bg-[#F5F5F7] rounded-lg py-2">
                 <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">Sent</p>
-                <p class="text-sm font-semibold tabular-nums text-[#1D1D1F]">{{ lacs_format($totalSent) }}</p>
+                <p class="text-sm font-semibold tabular-nums text-[#1D1D1F]">{{ number_format($totalSent) }}</p>
             </div>
             <div class="bg-green-50 rounded-lg py-2">
                 <p class="text-[10px] text-green-600 uppercase tracking-widest mb-0.5">Returned</p>
-                <p class="text-sm font-semibold tabular-nums text-green-700">{{ lacs_format($totalReturned) }}</p>
+                <p class="text-sm font-semibold tabular-nums text-green-700">{{ number_format($totalReturned) }}</p>
             </div>
             <div class="{{ $outstanding > 0 ? 'bg-orange-50' : 'bg-[#F5F5F7]' }} rounded-lg py-2">
                 <p class="text-[10px] {{ $outstanding > 0 ? 'text-orange-500' : 'text-[#86868B]' }} uppercase tracking-widest mb-0.5">Outstanding</p>
-                <p class="text-sm font-semibold tabular-nums {{ $outstanding > 0 ? 'text-orange-600' : 'text-[#86868B]' }}">{{ lacs_format($outstanding) }}</p>
+                <p class="text-sm font-semibold tabular-nums {{ $outstanding > 0 ? 'text-orange-600' : 'text-[#86868B]' }}">{{ number_format($outstanding) }}</p>
             </div>
         </div>
         <div class="flex items-center justify-between">
@@ -158,14 +158,14 @@ $badgeColors = [
                             @endphp
                             <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ $color }} rounded px-2 py-0.5 w-fit">
                                 {{ $designModel->name ?? '—' }}
-                                <span class="opacity-60">· {{ lacs_format($dSent) }} / {{ lacs_format($dReturned) }}</span>
+                                <span class="opacity-60">· {{ number_format($dSent) }} / {{ number_format($dReturned) }}</span>
                             </span>
                         @endforeach
                     </div>
                 </td>
                 <td>{{ $send->sent_date->format('d M Y') }}</td>
-                <td class="text-right">{{ lacs_format($totalSent) }} pcs</td>
-                <td class="text-right">{{ lacs_format($totalReturned) }} pcs</td>
+                <td class="text-right">{{ number_format($totalSent) }} pcs</td>
+                <td class="text-right">{{ number_format($totalReturned) }} pcs</td>
                 <td class="text-right">
                     @if($totalReturned === 0)
                         <span class="badge bg-[#F5F5F7] text-[#86868B]">Pending</span>

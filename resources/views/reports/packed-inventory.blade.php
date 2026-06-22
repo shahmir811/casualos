@@ -21,7 +21,7 @@
 <div class="grid grid-cols-2 gap-4 mb-6">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Packed</p>
-        <p class="text-3xl font-light text-[#1D1D1F]">{{ lacs_format($grandTotal) }}</p>
+        <p class="text-3xl font-light text-[#1D1D1F]">{{ number_format($grandTotal) }}</p>
         <p class="text-[#86868B] text-xs mt-1">pieces across {{ $grouped->count() }} catalogue(s)</p>
     </div>
     <div class="stat-card">
@@ -40,7 +40,7 @@
     <h2 class="text-sm font-semibold text-[#1D1D1F] mb-3 flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-[#0071E3]"></span>
         {{ $catName }}
-        <span class="text-[#86868B] font-normal">— {{ lacs_format($catTotal) }} pcs total</span>
+        <span class="text-[#86868B] font-normal">— {{ number_format($catTotal) }} pcs total</span>
     </h2>
     <div class="card overflow-hidden">
         <table class="w-full apple-table">
@@ -57,14 +57,14 @@
                 <tr>
                     <td class="font-medium">{{ $designItems->first()->design->name ?? '—' }}</td>
                     @foreach($sizes as $size)
-                    <td class="text-right">{{ lacs_format($designItems->where('size', $size)->sum('quantity')) ?: '—' }}</td>
+                    <td class="text-right">{{ number_format($designItems->where('size', $size)->sum('quantity')) ?: '—' }}</td>
                     @endforeach
-                    <td class="text-right font-bold text-[#0071E3]">{{ lacs_format($designTotal) }}</td>
+                    <td class="text-right font-bold text-[#0071E3]">{{ number_format($designTotal) }}</td>
                 </tr>
                 @endforeach
                 <tr class="border-t border-[#E8E8ED] bg-[#F5F5F7]">
                     <td class="px-5 py-2 font-semibold text-xs text-[#6E6E73]" colspan="{{ count($sizes) + 1 }}">Catalogue Total</td>
-                    <td class="px-5 py-2 text-right font-bold text-sm">{{ lacs_format($catTotal) }}</td>
+                    <td class="px-5 py-2 text-right font-bold text-sm">{{ number_format($catTotal) }}</td>
                 </tr>
             </tbody>
         </table>

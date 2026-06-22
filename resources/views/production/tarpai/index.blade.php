@@ -119,11 +119,11 @@
                 <td class="font-medium text-[#1D1D1F] text-sm">{{ $row['name'] }}</td>
                 @foreach($sizes as $size)
                 <td class="text-right text-sm {{ $row['sizes'][$size] > 0 ? 'font-medium text-[#1D1D1F]' : 'text-[#D2D2D7]' }}">
-                    {{ $row['sizes'][$size] > 0 ? lacs_format($row['sizes'][$size]) : '—' }}
+                    {{ $row['sizes'][$size] > 0 ? number_format($row['sizes'][$size]) : '—' }}
                 </td>
                 @endforeach
                 <td class="text-right font-bold {{ $row['total'] > 0 ? 'text-[#0071E3]' : 'text-[#D2D2D7]' }}">
-                    {{ $row['total'] > 0 ? lacs_format($row['total']) : '—' }}
+                    {{ $row['total'] > 0 ? number_format($row['total']) : '—' }}
                 </td>
             </tr>
             @endforeach
@@ -132,11 +132,11 @@
                 <td class="font-semibold text-xs text-[#6E6E73]">Totals</td>
                 @foreach($sizes as $size)
                 <td class="text-right font-semibold text-sm">
-                    {{ lacs_format($catGroup['designs']->sum(fn($r) => $r['sizes'][$size])) }}
+                    {{ number_format($catGroup['designs']->sum(fn($r) => $r['sizes'][$size])) }}
                 </td>
                 @endforeach
                 <td class="text-right font-bold text-[#0071E3]">
-                    {{ lacs_format($catGroup['designs']->sum('total')) }}
+                    {{ number_format($catGroup['designs']->sum('total')) }}
                 </td>
             </tr>
             @endif
@@ -193,15 +193,15 @@ $palette = [
         <div class="grid grid-cols-3 gap-2 text-center mb-3">
             <div class="bg-[#F5F5F7] rounded-lg py-2">
                 <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">Sent</p>
-                <p class="text-sm font-semibold tabular-nums text-[#1D1D1F]">{{ lacs_format($sent) }}</p>
+                <p class="text-sm font-semibold tabular-nums text-[#1D1D1F]">{{ number_format($sent) }}</p>
             </div>
             <div class="bg-green-50 rounded-lg py-2">
                 <p class="text-[10px] text-green-600 uppercase tracking-widest mb-0.5">Returned</p>
-                <p class="text-sm font-semibold tabular-nums text-green-700">{{ lacs_format($returned) }}</p>
+                <p class="text-sm font-semibold tabular-nums text-green-700">{{ number_format($returned) }}</p>
             </div>
             <div class="bg-[#F5F5F7] rounded-lg py-2">
                 <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">Rate</p>
-                <p class="text-sm font-semibold tabular-nums text-[#6E6E73]">{{ lacs_format($send->per_piece_price, 0) }}/pc</p>
+                <p class="text-sm font-semibold tabular-nums text-[#6E6E73]">{{ number_format($send->per_piece_price, 0) }}/pc</p>
             </div>
         </div>
         <div class="flex items-center justify-between">
@@ -268,9 +268,9 @@ $palette = [
                     </span>
                 </td>
                 <td class="text-[#6E6E73] text-xs">{{ $send->sent_date->format('d M Y') }}</td>
-                <td class="text-right">{{ lacs_format($sent) }}</td>
-                <td class="text-right text-green-700">{{ lacs_format($returned) }}</td>
-                <td class="text-right text-[#6E6E73] text-xs">Rs. {{ lacs_format($send->per_piece_price, 0) }}/pc</td>
+                <td class="text-right">{{ number_format($sent) }}</td>
+                <td class="text-right text-green-700">{{ number_format($returned) }}</td>
+                <td class="text-right text-[#6E6E73] text-xs">Rs. {{ number_format($send->per_piece_price, 0) }}/pc</td>
                 <td>
                     @if($outstanding === 0 && $sent > 0)
                         <span class="badge bg-green-100 text-green-700">Complete</span>

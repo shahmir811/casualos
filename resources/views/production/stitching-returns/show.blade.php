@@ -73,7 +73,7 @@
                     @if($stitchingReturn->items->count())
                     <tr class="border-t-2 border-[#E8E8ED]">
                         <td class="font-semibold" colspan="2">Total</td>
-                        <td class="text-right font-bold text-green-700">{{ lacs_format($stitchingReturn->items->sum('quantity')) }} pcs</td>
+                        <td class="text-right font-bold text-green-700">{{ number_format($stitchingReturn->items->sum('quantity')) }} pcs</td>
                     </tr>
                     @endif
                 </tbody>

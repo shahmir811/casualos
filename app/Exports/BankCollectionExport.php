@@ -47,7 +47,7 @@ class BankCollectionExport
     /** Lacs-format a positive number; blank for zero/empty. */
     private function fmt(float|int $value): string
     {
-        return $value > 0 ? lacs_format($value) : '';
+        return $value > 0 ? number_format($value) : '';
     }
 
     private function build(): Spreadsheet
@@ -133,8 +133,8 @@ class BankCollectionExport
             $sheet->setCellValue($this->ref($col++, $r), $row['qty_xl'] ?: '');
             $sheet->setCellValue($this->ref($col++, $r), $row['total_qty']   ?: '');
             $sheet->setCellValue($this->ref($col++, $r), $row['over_all_qty'] ?: '');
-            $sheet->setCellValue($this->ref($col++, $r), $row['rate'] ? lacs_format($row['rate']) : '');
-            $sheet->setCellValue($this->ref($col++, $r), lacs_format($row['total_bill']));
+            $sheet->setCellValue($this->ref($col++, $r), $row['rate'] ? number_format($row['rate']) : '');
+            $sheet->setCellValue($this->ref($col++, $r), number_format($row['total_bill']));
             $sheet->setCellValue($this->ref($col++, $r), $this->fmt($row['amount_received']));
             $sheet->setCellValue($this->ref($col++, $r), $this->fmt($row['amount_receivable']));
             $sheet->setCellValue($this->ref($col++, $r), $row['title_given']);
@@ -148,7 +148,7 @@ class BankCollectionExport
             $sheet->setCellValue($this->ref($col++, $r), $this->fmt($row['misc']));
             $sheet->setCellValue($this->ref($col++, $r), $this->fmt($row['amount_received']));
             $sheet->setCellValue($this->ref($col++, $r), $this->fmt($row['amount_receivable']));
-            $sheet->setCellValue($this->ref($col++, $r), lacs_format($row['total_bill']));
+            $sheet->setCellValue($this->ref($col++, $r), number_format($row['total_bill']));
 
             $totXs         += $row['qty_xs'];
             $totS          += $row['qty_s'];
@@ -186,10 +186,10 @@ class BankCollectionExport
             $this->ref(8, $totalRow)  => (string) $totXl,
             $this->ref(9, $totalRow)  => (string) $totTotalQty,
             $this->ref(10, $totalRow) => (string) $totOverAllQty,
-            $this->ref(12, $totalRow) => lacs_format($this->grandExpected),
-            $this->ref(13, $totalRow) => lacs_format($this->grandCollected),
-            $this->ref(14, $totalRow) => lacs_format($this->grandReceivable),
-        ], $bankTotals, $totalRow, $this->fmt($totMisc), lacs_format($this->grandCollected), lacs_format($this->grandReceivable), lacs_format($this->grandExpected));
+            $this->ref(12, $totalRow) => number_format($this->grandExpected),
+            $this->ref(13, $totalRow) => number_format($this->grandCollected),
+            $this->ref(14, $totalRow) => number_format($this->grandReceivable),
+        ], $bankTotals, $totalRow, $this->fmt($totMisc), number_format($this->grandCollected), number_format($this->grandReceivable), number_format($this->grandExpected));
 
         $sheet->getStyle("A{$totalRow}:{$lastColLetter}{$totalRow}")->applyFromArray([
             'font'    => ['bold' => true, 'size' => 9],
@@ -206,7 +206,7 @@ class BankCollectionExport
         $col   = 2;
         $sheet->setCellValue($this->ref($col++, $tpRow), 'Total Payment');
         $col = 12;
-        $sheet->setCellValue($this->ref($col++, $tpRow), lacs_format($this->grandExpected));
+        $sheet->setCellValue($this->ref($col++, $tpRow), number_format($this->grandExpected));
         $col = 16;
         foreach ($this->banks as $bank) {
             $sheet->setCellValue($this->ref($col++, $tpRow), $this->fmt($this->expected[$bank->id] ?? 0));
@@ -225,14 +225,14 @@ class BankCollectionExport
         $col    = 2;
         $sheet->setCellValue($this->ref($col++, $rcvRow), 'Receivable');
         $col = 14;
-        $sheet->setCellValue($this->ref($col++, $rcvRow), lacs_format($this->grandReceivable));
+        $sheet->setCellValue($this->ref($col++, $rcvRow), number_format($this->grandReceivable));
         $col = 16;
         foreach ($this->banks as $bank) {
             $sheet->setCellValue($this->ref($col++, $rcvRow), $this->fmt($this->receivable[$bank->id] ?? 0));
         }
         // right-side summary: skip misc, skip received, write receivable, skip total bill
         $miscColNum = 16 + $bankCount;
-        $sheet->setCellValue($this->ref($miscColNum + 2, $rcvRow), lacs_format($this->grandReceivable));
+        $sheet->setCellValue($this->ref($miscColNum + 2, $rcvRow), number_format($this->grandReceivable));
 
         $sheet->getStyle("A{$rcvRow}:{$lastColLetter}{$rcvRow}")->applyFromArray([
             'font'    => ['bold' => true, 'size' => 9, 'color' => ['argb' => 'FF92400E']],
@@ -305,7 +305,7 @@ class BankCollectionExport
         $bankColStart = 16;
         foreach ($this->banks as $idx => $bank) {
             $colNum = $bankColStart + $idx;
-            $sheet->setCellValue($this->ref($colNum, $row), $bankTotals[$bank->id] > 0 ? lacs_format($bankTotals[$bank->id]) : '');
+            $sheet->setCellValue($this->ref($colNum, $row), $bankTotals[$bank->id] > 0 ? number_format($bankTotals[$bank->id]) : '');
         }
 
         $miscColNum = 16 + $this->banks->count();

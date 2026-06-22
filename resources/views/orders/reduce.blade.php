@@ -75,14 +75,14 @@
 
 <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F] mb-1">Order Reduction</h1>
 <p class="text-[#6E6E73] text-sm mb-6">
-    Order #{{ $order->order_number }} · {{ $order->customer->name ?? '—' }} · PKR {{ lacs_format($order->total_amount, 0) }}
+    Order #{{ $order->order_number }} · {{ $order->customer->name ?? '—' }} · PKR {{ number_format($order->total_amount, 0) }}
 </p>
 
 {{-- Order Summary — full width --}}
 <div class="card mb-6 overflow-hidden">
     <div class="px-5 py-4 border-b border-[#F2F2F7] flex items-center justify-between">
         <h2 class="text-[#1D1D1F] text-sm font-semibold">Order Summary</h2>
-        <span class="text-xs text-[#6E6E73]">{{ $rNumDesigns }} designs · {{ lacs_format($rTotalPieces) }} pieces total</span>
+        <span class="text-xs text-[#6E6E73]">{{ $rNumDesigns }} designs · {{ number_format($rTotalPieces) }} pieces total</span>
     </div>
     <table class="w-full apple-table">
         <thead>
@@ -111,9 +111,9 @@
                 <td class="text-center tabular-nums px-3 {{ $rqm  ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $rqm  ?: '—' }}</td>
                 <td class="text-center tabular-nums px-3 {{ $rql  ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $rql  ?: '—' }}</td>
                 <td class="text-center tabular-nums px-3 {{ $rqxl ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $rqxl ?: '—' }}</td>
-                <td class="text-center font-semibold text-[#1D1D1F] tabular-nums">{{ lacs_format($rQtyPerDesign) }}</td>
-                <td class="text-center font-semibold text-[#0071E3] tabular-nums">{{ lacs_format($rTotalPieces) }}</td>
-                <td class="text-right font-semibold text-[#1D1D1F] tabular-nums">PKR {{ lacs_format($order->total_amount, 0) }}</td>
+                <td class="text-center font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($rQtyPerDesign) }}</td>
+                <td class="text-center font-semibold text-[#0071E3] tabular-nums">{{ number_format($rTotalPieces) }}</td>
+                <td class="text-right font-semibold text-[#1D1D1F] tabular-nums">PKR {{ number_format($order->total_amount, 0) }}</td>
             </tr>
         </tbody>
     </table>

@@ -58,15 +58,15 @@
 <div class="stats">
     <div class="stat-box">
         <div class="stat-label">Total Bill</div>
-        <div class="stat-value">Rs. {{ lacs_format($totBill, 0) }}</div>
+        <div class="stat-value">Rs. {{ number_format($totBill, 0) }}</div>
     </div>
     <div class="stat-box" style="border-left:none;">
         <div class="stat-label">Amount Received</div>
-        <div class="stat-value green">Rs. {{ lacs_format($totPaid, 0) }}</div>
+        <div class="stat-value green">Rs. {{ number_format($totPaid, 0) }}</div>
     </div>
     <div class="stat-box" style="border-left:none;">
         <div class="stat-label">Outstanding</div>
-        <div class="stat-value {{ $totBalance > 0 ? 'red' : 'muted' }}">Rs. {{ lacs_format($totBalance, 0) }}</div>
+        <div class="stat-value {{ $totBalance > 0 ? 'red' : 'muted' }}">Rs. {{ number_format($totBalance, 0) }}</div>
     </div>
 </div>
 
@@ -100,12 +100,12 @@
             <td class="right">{{ $order->agg_m ?: '—' }}</td>
             <td class="right">{{ $order->agg_l ?: '—' }}</td>
             <td class="right">{{ $order->agg_xl ?: '—' }}</td>
-            <td class="right" style="font-weight:600">{{ lacs_format($order->agg_total) }}</td>
-            <td class="right muted">{{ lacs_format($order->agg_rate) }}</td>
-            <td class="right">{{ lacs_format($order->total_amount, 0) }}</td>
-            <td class="right green">{{ lacs_format($order->total_paid, 0) }}</td>
+            <td class="right" style="font-weight:600">{{ number_format($order->agg_total) }}</td>
+            <td class="right muted">{{ number_format($order->agg_rate) }}</td>
+            <td class="right">{{ number_format($order->total_amount, 0) }}</td>
+            <td class="right green">{{ number_format($order->total_paid, 0) }}</td>
             <td class="right {{ $order->outstanding_balance > 0 ? 'red' : 'muted' }}" style="{{ $order->outstanding_balance > 0 ? 'font-weight:600' : '' }}">
-                {{ lacs_format($order->outstanding_balance, 0) }}
+                {{ number_format($order->outstanding_balance, 0) }}
             </td>
             <td class="muted">{{ $order->title_given_label }}</td>
         </tr>
@@ -119,11 +119,11 @@
             <td class="right">{{ $totM ?: '—' }}</td>
             <td class="right">{{ $totL ?: '—' }}</td>
             <td class="right">{{ $totXl ?: '—' }}</td>
-            <td class="right">{{ lacs_format($totQty) }}</td>
+            <td class="right">{{ number_format($totQty) }}</td>
             <td></td>
-            <td class="right">Rs. {{ lacs_format($totBill, 0) }}</td>
-            <td class="right green">Rs. {{ lacs_format($totPaid, 0) }}</td>
-            <td class="right {{ $totBalance > 0 ? 'red' : 'muted' }}">Rs. {{ lacs_format($totBalance, 0) }}</td>
+            <td class="right">Rs. {{ number_format($totBill, 0) }}</td>
+            <td class="right green">Rs. {{ number_format($totPaid, 0) }}</td>
+            <td class="right {{ $totBalance > 0 ? 'red' : 'muted' }}">Rs. {{ number_format($totBalance, 0) }}</td>
             <td></td>
         </tr>
     </tfoot>

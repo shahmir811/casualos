@@ -76,12 +76,12 @@
         {{-- Summary stat card --}}
         <div class="stat-card text-center">
             <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Assigned</p>
-            <p class="text-3xl font-light text-[#1D1D1F]">{{ lacs_format($totalPcs) }}</p>
+            <p class="text-3xl font-light text-[#1D1D1F]">{{ number_format($totalPcs) }}</p>
             <p class="text-[#86868B] text-xs mt-1">pieces</p>
             @if($totalCost !== null && $totalCost > 0)
             <div class="mt-3 pt-3 border-t border-[#E8E8ED]">
                 <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Payable</p>
-                <p class="text-lg font-semibold text-[#FF9500]">Rs. {{ lacs_format($totalCost) }}</p>
+                <p class="text-lg font-semibold text-[#FF9500]">Rs. {{ number_format($totalCost) }}</p>
             </div>
             @endif
         </div>
@@ -120,10 +120,10 @@
                     @endphp
                     <tr x-data="{ editing: false, rate: {{ (float) $npDesign->per_piece_price }} }">
                         <td class="font-medium text-[#1D1D1F] whitespace-nowrap">{{ $npDesign->design->name ?? '—' }}</td>
-                        <td class="text-right tabular-nums whitespace-nowrap">{{ lacs_format($npDesign->quantity) }} pcs</td>
-                        <td class="text-right tabular-nums whitespace-nowrap text-green-700">{{ lacs_format($npReturned) }} pcs</td>
+                        <td class="text-right tabular-nums whitespace-nowrap">{{ number_format($npDesign->quantity) }} pcs</td>
+                        <td class="text-right tabular-nums whitespace-nowrap text-green-700">{{ number_format($npReturned) }} pcs</td>
                         <td class="text-right tabular-nums whitespace-nowrap {{ $npOutstanding > 0 ? 'text-orange-600 font-semibold' : 'text-[#86868B]' }}">
-                            {{ lacs_format($npOutstanding) }} pcs
+                            {{ number_format($npOutstanding) }} pcs
                         </td>
 
                         {{-- Rate — display or inline edit --}}
@@ -168,7 +168,7 @@
                         </td>
                         <td class="whitespace-nowrap">
                             @if($npOutstanding > 0)
-                                <span class="text-orange-500 text-xs">{{ lacs_format($npOutstanding) }} pending</span>
+                                <span class="text-orange-500 text-xs">{{ number_format($npOutstanding) }} pending</span>
                             @else
                                 <span class="text-green-600 text-xs">✓ Done</span>
                             @endif
@@ -179,16 +179,16 @@
                 <tfoot>
                     <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
                         <td class="font-semibold text-[#1D1D1F] text-xs uppercase tracking-wide">Total</td>
-                        <td class="text-right font-bold text-[#1D1D1F]">{{ lacs_format($totalPcs) }} pcs</td>
+                        <td class="text-right font-bold text-[#1D1D1F]">{{ number_format($totalPcs) }} pcs</td>
                         <td class="text-right font-bold text-green-700">
-                            {{ lacs_format($productionAssignment->npDesigns->sum(fn($d) => $d->totalReturned())) }} pcs
+                            {{ number_format($productionAssignment->npDesigns->sum(fn($d) => $d->totalReturned())) }} pcs
                         </td>
                         <td class="text-right font-bold text-orange-600">
-                            {{ lacs_format($productionAssignment->npDesigns->sum(fn($d) => $d->outstandingPieces())) }} pcs
+                            {{ number_format($productionAssignment->npDesigns->sum(fn($d) => $d->outstandingPieces())) }} pcs
                         </td>
                         <td class="text-right text-[#D2D2D7]">—</td>
                         <td class="text-right font-bold text-base" style="color:#FF9500">
-                            Rs. {{ lacs_format($totalCost) }}
+                            Rs. {{ number_format($totalCost) }}
                         </td>
                         <td></td>
                     </tr>
@@ -234,7 +234,7 @@
                     @forelse($productionAssignment->items as $item)
                     <tr>
                         <td class="font-medium uppercase">{{ $item->size === 'np' ? 'Total' : $item->size }}</td>
-                        <td class="text-right">{{ lacs_format($item->quantity) }} pcs</td>
+                        <td class="text-right">{{ number_format($item->quantity) }} pcs</td>
                     </tr>
                     @empty
                     <tr>
@@ -244,7 +244,7 @@
                     @if($productionAssignment->items->count())
                     <tr class="border-t-2 border-[#E8E8ED]">
                         <td class="font-semibold">Total</td>
-                        <td class="text-right font-bold">{{ lacs_format($totalPcs) }} pcs</td>
+                        <td class="text-right font-bold">{{ number_format($totalPcs) }} pcs</td>
                     </tr>
                     @endif
                 </tbody>

@@ -35,11 +35,11 @@
     $netBalance = $balance; // signed balance from controller
 @endphp
 <div class="grid grid-cols-3 gap-4 mb-6">
-    <div class="stat-card"><p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Charged</p><p class="text-2xl font-light text-[#1D1D1F]">PKR {{ lacs_format($debits, 0) }}</p></div>
-    <div class="stat-card"><p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Paid</p><p class="text-2xl font-light text-green-600">PKR {{ lacs_format($credits, 0) }}</p></div>
+    <div class="stat-card"><p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Charged</p><p class="text-2xl font-light text-[#1D1D1F]">PKR {{ number_format($debits, 0) }}</p></div>
+    <div class="stat-card"><p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Paid</p><p class="text-2xl font-light text-green-600">PKR {{ number_format($credits, 0) }}</p></div>
     <div class="stat-card"><p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Net Balance</p>
         <p class="text-2xl font-light {{ $netBalance < 0 ? 'text-[#FF3B30]' : 'text-green-600' }}">
-            PKR {{ lacs_format(abs($netBalance), 0) }}
+            PKR {{ number_format(abs($netBalance), 0) }}
             <span class="text-sm font-normal">{{ $netBalance < 0 ? '(owed)' : '(credit)' }}</span>
         </p>
     </div>
@@ -84,7 +84,7 @@
                 <td><span class="badge {{ $typeColors[$entry->entry_type] ?? 'bg-[#F5F5F7] text-[#6E6E73]' }}">{{ $typeLabels[$entry->entry_type] ?? $entry->entry_type }}</span></td>
                 <td class="text-[#6E6E73] text-xs">{{ $entry->notes ?? '—' }}</td>
                 <td class="text-right font-medium {{ $entry->amount < 0 ? 'text-[#FF3B30]' : 'text-green-600' }}">
-                    {{ $entry->amount < 0 ? '-' : '+' }}PKR {{ lacs_format(abs($entry->amount), 0) }}
+                    {{ $entry->amount < 0 ? '-' : '+' }}PKR {{ number_format(abs($entry->amount), 0) }}
                 </td>
             </tr>
             @empty

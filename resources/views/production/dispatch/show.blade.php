@@ -46,12 +46,12 @@
             </div>
             <div>
                 <p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Order Amount</p>
-                <p class="font-semibold text-[#1D1D1F]">PKR {{ lacs_format($order->total_amount, 0) }}</p>
+                <p class="font-semibold text-[#1D1D1F]">PKR {{ number_format($order->total_amount, 0) }}</p>
             </div>
             <div>
                 <p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Outstanding</p>
                 @if($order->outstanding_balance > 0)
-                    <p class="font-semibold text-red-600">PKR {{ lacs_format($order->outstanding_balance, 0) }}</p>
+                    <p class="font-semibold text-red-600">PKR {{ number_format($order->outstanding_balance, 0) }}</p>
                 @else
                     <p class="font-semibold text-green-600">Fully Paid</p>
                 @endif

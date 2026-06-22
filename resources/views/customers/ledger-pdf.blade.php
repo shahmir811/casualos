@@ -177,7 +177,7 @@
             $balanceLabel = $balance > 0 ? 'Debit' : ($balance < 0 ? 'Credit' : '');
         @endphp
         <div class="amount {{ $balanceClass }}">
-            PKR {{ lacs_format(abs($balance), 0) }}
+            PKR {{ number_format(abs($balance), 0) }}
             @if($balanceLabel) <span style="font-size:13px;">{{ $balanceLabel }}</span> @endif
         </div>
     </div>
@@ -234,7 +234,7 @@
                 @endif
             </td>
             <td style="color:#6E6E73; white-space:nowrap;">{{ $entry->createdBy->name ?? '—' }}</td>
-            <td class="right {{ $amtClass }}">{{ $prefix }}PKR {{ lacs_format(abs($entry->amount), 0) }}</td>
+            <td class="right {{ $amtClass }}">{{ $prefix }}PKR {{ number_format(abs($entry->amount), 0) }}</td>
         </tr>
         @empty
         <tr>

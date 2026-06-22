@@ -92,14 +92,14 @@
         <div class="space-y-1.5">
             <div class="flex items-center justify-between">
                 <span class="text-xs text-[#86868B]">Assigned</span>
-                <span class="text-sm font-semibold text-[#0066CC]">{{ lacs_format($assigned) }} pcs</span>
+                <span class="text-sm font-semibold text-[#0066CC]">{{ number_format($assigned) }} pcs</span>
             </div>
             <div class="pt-1.5 border-t border-[#F2F2F7] space-y-1">
                 @foreach(['kameez' => $kRet, 'shalwar' => $sRet, 'dupatta' => $dRet] as $comp => $ret)
                 <div class="flex items-center justify-between">
                     <span class="text-[11px] text-[#86868B] capitalize">{{ $comp }}</span>
                     <span class="text-[11px] font-semibold {{ $ret >= $assigned ? 'text-[#34C759]' : ($ret > 0 ? 'text-[#FF9500]' : 'text-[#D2D2D7]') }}">
-                        {{ $ret > 0 ? lacs_format($ret) . ' pcs' : '—' }}
+                        {{ $ret > 0 ? number_format($ret) . ' pcs' : '—' }}
                     </span>
                 </div>
                 @endforeach
@@ -159,7 +159,7 @@
             <div class="grid grid-cols-4 gap-2 text-center">
                 <div class="bg-[#F5F5F7] rounded-lg py-2">
                     <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">Assigned</p>
-                    <p class="text-sm font-semibold tabular-nums text-[#1D1D1F]">{{ lacs_format($row->assigned) }}</p>
+                    <p class="text-sm font-semibold tabular-nums text-[#1D1D1F]">{{ number_format($row->assigned) }}</p>
                 </div>
                 @foreach(['Kameez' => $row->kameez, 'Shalwar' => $row->shalwar, 'Dupatta' => $row->dupatta] as $label => $val)
                 @php
@@ -170,7 +170,7 @@
                 @endphp
                 <div class="{{ $bg }} rounded-lg py-2">
                     <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">{{ $label }}</p>
-                    <p class="text-sm tabular-nums {{ $cls }}">{{ lacs_format($val) }}</p>
+                    <p class="text-sm tabular-nums {{ $cls }}">{{ number_format($val) }}</p>
                 </div>
                 @endforeach
             </div>
@@ -207,10 +207,10 @@
             <tr>
                 <td class="font-medium text-[#1D1D1F]">{{ $row->design_name }}</td>
                 <td class="text-[#6E6E73] text-xs">{{ $row->catalogue_name }}</td>
-                <td class="text-right tabular-nums">{{ lacs_format($row->assigned) }}</td>
-                <td class="text-right tabular-nums {{ $colFn($row->kameez, $row->assigned) }}">{{ lacs_format($row->kameez) }}</td>
-                <td class="text-right tabular-nums {{ $colFn($row->shalwar, $row->assigned) }}">{{ lacs_format($row->shalwar) }}</td>
-                <td class="text-right tabular-nums {{ $colFn($row->dupatta, $row->assigned) }}">{{ lacs_format($row->dupatta) }}</td>
+                <td class="text-right tabular-nums">{{ number_format($row->assigned) }}</td>
+                <td class="text-right tabular-nums {{ $colFn($row->kameez, $row->assigned) }}">{{ number_format($row->kameez) }}</td>
+                <td class="text-right tabular-nums {{ $colFn($row->shalwar, $row->assigned) }}">{{ number_format($row->shalwar) }}</td>
+                <td class="text-right tabular-nums {{ $colFn($row->dupatta, $row->assigned) }}">{{ number_format($row->dupatta) }}</td>
                 <td class="text-center">
                     @if($allDone)
                         <span class="badge bg-green-100 text-green-700">Complete</span>
@@ -303,7 +303,7 @@
                     @endif
                 </td>
                 <td>{{ $a->assignment_date->format('d M Y') }}</td>
-                <td class="text-right font-medium tabular-nums">{{ lacs_format($a->total_assigned) }} pcs</td>
+                <td class="text-right font-medium tabular-nums">{{ number_format($a->total_assigned) }} pcs</td>
                 <td>
                     {{-- Component indicators: K / S / D --}}
                     <div class="flex items-center justify-center gap-1">

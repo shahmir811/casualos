@@ -130,7 +130,7 @@ $bankColors = [
 
             <td class="right highlight-rcv">
                 @if($row['receivable'] > 0)
-                    <span class="red" style="font-weight:600;">{{ lacs_format($row['receivable']) }}</span>
+                    <span class="red" style="font-weight:600;">{{ number_format($row['receivable']) }}</span>
                 @endif
             </td>
 
@@ -150,14 +150,14 @@ $bankColors = [
             @foreach($banks as $bank)
             <td class="right">
                 @if(($row['bank_rcv'][$bank->id] ?? 0) > 0)
-                    <span class="red" style="font-weight:600;">{{ lacs_format($row['bank_rcv'][$bank->id]) }}</span>
+                    <span class="red" style="font-weight:600;">{{ number_format($row['bank_rcv'][$bank->id]) }}</span>
                 @endif
             </td>
             @endforeach
 
             <td class="right">
                 @if($row['misc'] > 0)
-                    <span class="red" style="font-weight:600;">{{ lacs_format($row['misc']) }}</span>
+                    <span class="red" style="font-weight:600;">{{ number_format($row['misc']) }}</span>
                 @endif
             </td>
         </tr>
@@ -168,14 +168,14 @@ $bankColors = [
             <td class="center">{{ count($rows) }}</td>
             <td class="left">Total</td>
             <td></td>
-            <td class="right red">{{ lacs_format($grandReceivable) }}</td>
+            <td class="right red">{{ number_format($grandReceivable) }}</td>
             <td></td>
             @foreach($banks as $bank)
             <td class="right red">
-                {{ ($bankReceivables[$bank->id] ?? 0) > 0 ? lacs_format($bankReceivables[$bank->id]) : '' }}
+                {{ ($bankReceivables[$bank->id] ?? 0) > 0 ? number_format($bankReceivables[$bank->id]) : '' }}
             </td>
             @endforeach
-            <td class="right red">{{ $miscReceivable > 0 ? lacs_format($miscReceivable) : '' }}</td>
+            <td class="right red">{{ $miscReceivable > 0 ? number_format($miscReceivable) : '' }}</td>
         </tr>
     </tfoot>
 </table>

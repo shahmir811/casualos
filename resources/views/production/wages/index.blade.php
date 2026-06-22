@@ -90,12 +90,12 @@
 <div class="grid grid-cols-2 gap-4 mb-6">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Confirmed &amp; Paid</p>
-        <p class="text-3xl font-light text-green-600">Rs. {{ lacs_format($totalPaid, 0) }}</p>
+        <p class="text-3xl font-light text-green-600">Rs. {{ number_format($totalPaid, 0) }}</p>
         <p class="text-xs text-[#86868B] mt-1">{{ request()->hasAny(['week_date','stitching_unit_id','status']) ? 'filtered results' : 'this page' }}</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Pending Confirmation</p>
-        <p class="text-3xl font-light {{ $totalPending > 0 ? 'text-orange-500' : 'text-[#86868B]' }}">Rs. {{ lacs_format($totalPending, 0) }}</p>
+        <p class="text-3xl font-light {{ $totalPending > 0 ? 'text-orange-500' : 'text-[#86868B]' }}">Rs. {{ number_format($totalPending, 0) }}</p>
         <p class="text-xs text-[#86868B] mt-1">{{ request()->hasAny(['week_date','stitching_unit_id','status']) ? 'filtered results' : 'this page' }}</p>
     </div>
 </div>
@@ -126,9 +126,9 @@
                 </td>
                 <td>{{ $wage->catalogue->name ?? '—' }}</td>
                 <td class="text-[#6E6E73] text-sm">{{ $wage->stitchingUnit ? 'Unit '.$wage->stitchingUnit->number.' — '.$wage->stitchingUnit->name : '—' }}</td>
-                <td class="text-right">{{ lacs_format($wage->total_suits_stitched) }}</td>
-                <td class="text-right text-[#6E6E73] text-xs">Rs. {{ lacs_format($wage->wage_rate, 0) }}/pc</td>
-                <td class="text-right font-semibold">Rs. {{ lacs_format($wage->total_wages, 0) }}</td>
+                <td class="text-right">{{ number_format($wage->total_suits_stitched) }}</td>
+                <td class="text-right text-[#6E6E73] text-xs">Rs. {{ number_format($wage->wage_rate, 0) }}/pc</td>
+                <td class="text-right font-semibold">Rs. {{ number_format($wage->total_wages, 0) }}</td>
                 <td>
                     @if($wage->is_confirmed)
                         <span class="badge bg-green-100 text-green-700">Confirmed</span>
