@@ -361,7 +361,9 @@
                     <select name="payment_type" required class="apple-input" x-model="paymentType">
                         <option value="cash">Cash</option>
                         <option value="bank_transfer">Bank Transfer</option>
-                        <option value="advance">From Advance Credit{{ ($order->customer?->advance_credit_balance ?? 0) > 0 ? ' (PKR ' . number_format($order->customer->advance_credit_balance, 0) . ' available)' : '' }}</option>
+                        @if(($order->customer?->advance_credit_balance ?? 0) > 0)
+                        <option value="advance">From Advance Credit (PKR {{ number_format($order->customer->advance_credit_balance, 0) }} available)</option>
+                        @endif
                     </select>
                 </div>
 

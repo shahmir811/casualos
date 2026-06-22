@@ -24,17 +24,18 @@ class PruneBackups extends Command
         $deleted = 0;
 
         try {
-            $files = Storage::files($backupDir);
+            $disk  = Storage::disk('s3');
+            $files = $disk->files($backupDir);
 
             foreach ($files as $filePath) {
                 if (!str_ends_with($filePath, '.sql')) {
                     continue;
                 }
 
-                $modified = Carbon::createFromTimestamp(Storage::lastModified($filePath));
+                $modified = Carbon::createFromTimestamp($disk->lastModified($filePath));
 
                 if ($modified->lt($cutoff)) {
-                    Storage::delete($filePath);
+                    $disk->delete($filePath);
                     $deleted++;
                     $this->line('  Deleted: ' . basename($filePath));
                 }

@@ -82,7 +82,7 @@
                 <div class="text-[#86868B] text-xs mb-0.5">Orders</div>
                 <div class="text-[#1D1D1F]">{{ $customer->orders_count ?? '—' }}</div>
             </div>
-            @if(round((float) $customer->advance_credit_balance) > 0)
+            @if($customer->advance_credit_balance > 0)
             <div class="col-span-2">
                 <div class="text-[#86868B] text-xs mb-0.5">Advance Credit</div>
                 <div class="text-[#30D158] font-medium">PKR {{ number_format($customer->advance_credit_balance, 0) }}</div>
@@ -119,7 +119,7 @@
                 <td class="text-[#6E6E73]">{{ $customer->city }}</td>
                 <td class="text-[#6E6E73]">{{ $customer->orders_count ?? '—' }}</td>
                 <td>
-                    @if(round((float) $customer->advance_credit_balance) > 0)
+                    @if($customer->advance_credit_balance > 0)
                         <span class="text-[#30D158] text-sm font-medium">PKR {{ number_format($customer->advance_credit_balance, 0) }}</span>
                     @else
                         <span class="text-[#86868B]">—</span>
