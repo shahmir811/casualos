@@ -218,7 +218,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('packed-inventory',      [ReportController::class, 'packedInventory'])->name('packed-inventory');
         Route::get('payroll-history',       [ReportController::class, 'payrollHistory'])->name('payroll-history');
         Route::get('outsourced-designs',    [ReportController::class, 'outsourcedDesigns'])->name('outsourced-designs');
-        Route::get('dispatch-history',      [ReportController::class, 'dispatchHistory'])->name('dispatch-history');
+        Route::get('dispatch-history',       [ReportController::class, 'dispatchHistory'])->name('dispatch-history');
+        Route::get('dispatch-history/pdf',   [ReportController::class, 'dispatchHistoryPdf'])->name('dispatch-history.pdf');
+        Route::get('dispatch-history/excel', [ReportController::class, 'dispatchHistoryExcel'])->name('dispatch-history.excel');
         Route::get('activity-log',          [ReportController::class, 'activityLog'])->name('activity-log');
         Route::get('damage-reductions',     [ReportController::class, 'damageReductions'])->name('damage-reductions');
         Route::get('bank-collection',       [BankCollectionReportController::class, 'index'])->name('bank-collection');

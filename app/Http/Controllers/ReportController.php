@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exports\BankAccountBreakdownExport;
 use App\Exports\CustomerOrderBillExport;
+use App\Exports\DispatchHistoryExport;
 use App\Exports\ReceivablesByBankExport;
 use App\Models\BankAccount;
 use App\Models\Catalogue;
@@ -150,13 +151,48 @@ class ReportController extends Controller
     {
         $catalogueId       = (int) session('active_catalogue_id');
         $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $orders            = $this->loadDispatchHistoryData($catalogueId);
 
-        $dispatches = DispatchBatch::with(['order.customer', 'order.catalogue'])
-            ->whereHas('order', fn($q) => $q->where('catalogue_id', $catalogueId))
-            ->latest()
-            ->get();
+        return view('reports.dispatch-history', compact('orders', 'selectedCatalogue'));
+    }
 
-        return view('reports.dispatch-history', compact('dispatches', 'selectedCatalogue'));
+    public function dispatchHistoryPdf(Request $request)
+    {
+        $catalogueId       = (int) session('active_catalogue_id');
+        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $orders            = $this->loadDispatchHistoryData($catalogueId);
+        $logoDataUri       = pdf_logo_data_uri();
+
+        return Pdf::loadView('reports.dispatch-history-pdf', compact('selectedCatalogue', 'orders', 'logoDataUri'))
+            ->setPaper('a4', 'landscape')
+            ->download('dispatch-history-' . str($selectedCatalogue->name)->slug() . '.pdf');
+    }
+
+    public function dispatchHistoryExcel(Request $request)
+    {
+        $catalogueId       = (int) session('active_catalogue_id');
+        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $orders            = $this->loadDispatchHistoryData($catalogueId);
+
+        return (new DispatchHistoryExport($orders, $selectedCatalogue))
+            ->download('dispatch-history-' . str($selectedCatalogue->name)->slug() . '.xlsx');
+    }
+
+    private function loadDispatchHistoryData(int $catalogueId): \Illuminate\Support\Collection
+    {
+        return Order::with(['customer', 'items', 'dispatchBatches.items'])
+            ->where('catalogue_id', $catalogueId)
+            ->whereNotIn('status', ['cancelled', 'received'])
+            ->get()
+            ->map(function (Order $order) {
+                $order->total_ordered    = $order->items->sum('total_qty');
+                $order->total_dispatched = $order->dispatchBatches->flatMap->items->sum('quantity');
+                $order->total_remaining  = max(0, $order->total_ordered - $order->total_dispatched);
+                $order->first_dispatch   = $order->dispatchBatches->sortBy('dispatch_date')->first()?->dispatch_date;
+                return $order;
+            })
+            ->sortBy(fn($o) => $o->first_dispatch?->timestamp ?? PHP_INT_MAX)
+            ->values();
     }
 
     public function activityLog(Request $request)
