@@ -235,7 +235,7 @@
     </div>
     <div class="info-item">
         <label>Total Assigned</label>
-        <span>{{ lacs_format($totalAssigned) }} pieces</span>
+        <span>{{ number_format($totalAssigned) }} pieces</span>
     </div>
 </div>
 
@@ -327,7 +327,7 @@
             <span class="comp-label">{{ $comp }}</span>
             @endforeach
         </div>
-        <span class="batch-total">{{ lacs_format($batchTotal) }} pcs total</span>
+        <span class="batch-total">{{ number_format($batchTotal) }} pcs total</span>
     </div>
 
     @foreach($batchComponents as $comp)

@@ -60,16 +60,16 @@
                     ×
                     <strong>{{ $inHouseCount }} in-house designs</strong>
                     =
-                    <strong class="text-[#0071E3]">{{ lacs_format($expectedTotal) }} pieces</strong>
+                    <strong class="text-[#0071E3]">{{ number_format($expectedTotal) }} pieces</strong>
                 </div>
                 <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#6E6E73]">
-                    <span>Received: <strong class="text-[#0071E3]">{{ lacs_format($totalReceivedAllBatches) }}</strong></span>
+                    <span>Received: <strong class="text-[#0071E3]">{{ number_format($totalReceivedAllBatches) }}</strong></span>
                     <span class="text-[#D2D2D7]">|</span>
-                    <span>→ Naeem Pakki: <strong style="color:#FF9500">{{ lacs_format($totalToNaeemPakki) }}</strong></span>
+                    <span>→ Naeem Pakki: <strong style="color:#FF9500">{{ number_format($totalToNaeemPakki) }}</strong></span>
                     <span class="text-[#D2D2D7]">|</span>
-                    <span>→ Stitching: <strong style="color:#AF52DE">{{ lacs_format($totalToStitching) }}</strong></span>
+                    <span>→ Stitching: <strong style="color:#AF52DE">{{ number_format($totalToStitching) }}</strong></span>
                     <span class="text-[#D2D2D7]">|</span>
-                    <span>Available: <strong class="{{ $availableInFactory > 0 ? 'text-[#34C759]' : 'text-[#FF3B30]' }}">{{ lacs_format($availableInFactory) }}</strong></span>
+                    <span>Available: <strong class="{{ $availableInFactory > 0 ? 'text-[#34C759]' : 'text-[#FF3B30]' }}">{{ number_format($availableInFactory) }}</strong></span>
                 </div>
             </div>
         </div>
@@ -103,16 +103,16 @@
                     @endphp
                     <tr>
                         <td>{{ $item->design->name ?? '—' }}</td>
-                        <td class="text-right font-medium">{{ lacs_format($item->quantity) }}</td>
-                        <td class="text-right font-medium text-[#0071E3]">{{ lacs_format($totalRec) }}</td>
+                        <td class="text-right font-medium">{{ number_format($item->quantity) }}</td>
+                        <td class="text-right font-medium text-[#0071E3]">{{ number_format($totalRec) }}</td>
                         <td class="text-right font-medium {{ $toNP > 0 ? '' : 'text-[#D2D2D7]' }}" style="{{ $toNP > 0 ? 'color:#FF9500' : '' }}">
-                            {{ $toNP > 0 ? lacs_format($toNP) : '—' }}
+                            {{ $toNP > 0 ? number_format($toNP) : '—' }}
                         </td>
                         <td class="text-right font-medium {{ $toStitch > 0 ? '' : 'text-[#D2D2D7]' }}" style="{{ $toStitch > 0 ? 'color:#AF52DE' : '' }}">
-                            {{ $toStitch > 0 ? lacs_format($toStitch) : '—' }}
+                            {{ $toStitch > 0 ? number_format($toStitch) : '—' }}
                         </td>
                         <td class="text-right font-semibold {{ $designAvailable > 0 ? 'text-[#34C759]' : 'text-[#D2D2D7]' }}">
-                            {{ lacs_format($designAvailable) }}
+                            {{ number_format($designAvailable) }}
                         </td>
                     </tr>
                     @empty
@@ -123,11 +123,11 @@
                     @if($fabricBatch->items->count())
                     <tr class="border-t-2 border-[#E8E8ED]">
                         <td class="font-semibold text-[#1D1D1F]">Total</td>
-                        <td class="text-right font-bold text-[#1D1D1F]">{{ lacs_format($fabricBatch->items->sum('quantity')) }}</td>
-                        <td class="text-right font-bold text-[#0071E3]">{{ lacs_format($totalReceivedAllBatches) }}</td>
-                        <td class="text-right font-bold" style="color:#FF9500">{{ lacs_format($totalToNaeemPakki) }}</td>
-                        <td class="text-right font-bold" style="color:#AF52DE">{{ lacs_format($totalToStitching) }}</td>
-                        <td class="text-right font-bold {{ $availableInFactory > 0 ? 'text-[#34C759]' : 'text-[#FF3B30]' }}">{{ lacs_format($availableInFactory) }}</td>
+                        <td class="text-right font-bold text-[#1D1D1F]">{{ number_format($fabricBatch->items->sum('quantity')) }}</td>
+                        <td class="text-right font-bold text-[#0071E3]">{{ number_format($totalReceivedAllBatches) }}</td>
+                        <td class="text-right font-bold" style="color:#FF9500">{{ number_format($totalToNaeemPakki) }}</td>
+                        <td class="text-right font-bold" style="color:#AF52DE">{{ number_format($totalToStitching) }}</td>
+                        <td class="text-right font-bold {{ $availableInFactory > 0 ? 'text-[#34C759]' : 'text-[#FF3B30]' }}">{{ number_format($availableInFactory) }}</td>
                     </tr>
                     @endif
                 </tbody>
@@ -166,12 +166,12 @@
                         <td class="font-medium text-[#1D1D1F]">{{ $np['design'] }}</td>
                         <td class="text-right text-[#6E6E73] text-xs">
                             @if($np['rate'])
-                                Rs. {{ lacs_format($np['rate'], 0) }}/pc
+                                Rs. {{ number_format($np['rate'], 0) }}/pc
                             @else
                                 <span class="text-[#FF3B30]">— not set</span>
                             @endif
                         </td>
-                        <td class="text-center tabular-nums text-[#FF9500]">{{ lacs_format($np['assigned_qty']) }}</td>
+                        <td class="text-center tabular-nums text-[#FF9500]">{{ number_format($np['assigned_qty']) }}</td>
                         <td class="text-center tabular-nums {{ $np['returned_qty'] > 0 ? 'text-[#30D158]' : 'text-[#D1D1D6]' }}">
                             {{ $np['returned_qty'] ?: '—' }}
                         </td>
@@ -188,10 +188,10 @@
                 <tfoot>
                     <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
                         <td colspan="2" class="font-semibold text-[#1D1D1F] text-xs uppercase tracking-wide">Totals</td>
-                        <td class="text-center font-semibold text-[#FF9500]">{{ lacs_format($naeemPakkiAssignments->sum('assigned_qty')) }}</td>
-                        <td class="text-center font-semibold text-[#30D158]">{{ lacs_format($naeemPakkiAssignments->sum('returned_qty')) }}</td>
+                        <td class="text-center font-semibold text-[#FF9500]">{{ number_format($naeemPakkiAssignments->sum('assigned_qty')) }}</td>
+                        <td class="text-center font-semibold text-[#30D158]">{{ number_format($naeemPakkiAssignments->sum('returned_qty')) }}</td>
                         <td class="text-center font-bold {{ $totalPending > 0 ? 'text-orange-600' : 'text-[#30D158]' }}">
-                            {{ $totalPending > 0 ? lacs_format($totalPending) : '✓' }}
+                            {{ $totalPending > 0 ? number_format($totalPending) : '✓' }}
                         </td>
                     </tr>
                 </tfoot>

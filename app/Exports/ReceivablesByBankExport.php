@@ -92,15 +92,15 @@ class ReceivablesByBankExport
             $sheet->setCellValue($this->ref($col++, $r), $i + 1);
             $sheet->setCellValue($this->ref($col++, $r), $row['name']);
             $sheet->setCellValue($this->ref($col++, $r), $row['city']);
-            $sheet->setCellValue($this->ref($col++, $r), $row['receivable'] > 0 ? lacs_format($row['receivable']) : '');
+            $sheet->setCellValue($this->ref($col++, $r), $row['receivable'] > 0 ? number_format($row['receivable']) : '');
             $sheet->setCellValue($this->ref($col++, $r), $row['title_given']);
 
             foreach ($this->banks as $bank) {
                 $amt = $row['bank_rcv'][$bank->id] ?? 0.0;
-                $sheet->setCellValue($this->ref($col++, $r), $amt > 0 ? lacs_format($amt) : '');
+                $sheet->setCellValue($this->ref($col++, $r), $amt > 0 ? number_format($amt) : '');
             }
 
-            $sheet->setCellValue($this->ref($col++, $r), $row['misc'] > 0 ? lacs_format($row['misc']) : '');
+            $sheet->setCellValue($this->ref($col++, $r), $row['misc'] > 0 ? number_format($row['misc']) : '');
 
             $bgColor = ($i % 2 === 0) ? 'FFFFFFFF' : 'FFF9F9F9';
             $sheet->getStyle("A{$r}:{$lastColLetter}{$r}")->applyFromArray([
@@ -118,14 +118,14 @@ class ReceivablesByBankExport
         $sheet->setCellValue($this->ref($col++, $totalRow), count($this->rows));
         $sheet->setCellValue($this->ref($col++, $totalRow), 'Total');
         $col++; // city blank
-        $sheet->setCellValue($this->ref($col++, $totalRow), lacs_format($this->grandReceivable));
+        $sheet->setCellValue($this->ref($col++, $totalRow), number_format($this->grandReceivable));
         $col++; // title blank
 
         foreach ($this->banks as $bank) {
             $amt = $this->bankReceivables[$bank->id] ?? 0.0;
-            $sheet->setCellValue($this->ref($col++, $totalRow), $amt > 0 ? lacs_format($amt) : '');
+            $sheet->setCellValue($this->ref($col++, $totalRow), $amt > 0 ? number_format($amt) : '');
         }
-        $sheet->setCellValue($this->ref($col++, $totalRow), $this->miscReceivable > 0 ? lacs_format($this->miscReceivable) : '');
+        $sheet->setCellValue($this->ref($col++, $totalRow), $this->miscReceivable > 0 ? number_format($this->miscReceivable) : '');
 
         $sheet->getStyle("A{$totalRow}:{$lastColLetter}{$totalRow}")->applyFromArray([
             'font'    => ['bold' => true, 'size' => 9],

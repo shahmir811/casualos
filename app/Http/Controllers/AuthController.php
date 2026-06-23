@@ -38,6 +38,19 @@ class AuthController extends Controller
             // Update last_login_at
             Auth::user()->update(['last_login_at' => now()]);
 
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn(Auth::user())
+                ->event('detail')
+                ->withProperties([
+                    'name'       => Auth::user()->name,
+                    'email'      => Auth::user()->email,
+                    'role'       => ucwords(str_replace('_', ' ', Auth::user()->role)),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ])
+                ->log('User "' . Auth::user()->name . '" logged in');
+
             return redirect()->intended(route('dashboard'));
         }
 

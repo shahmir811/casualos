@@ -386,7 +386,7 @@
                         @endif
                     </div>
                     <p style="font-size:0.7rem;color:#1D1D1F;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $design->name }}</p>
-                    <p style="font-size:0.65rem;color:#86868B;">PKR {{ lacs_format($design->selling_price, 0) }}</p>
+                    <p style="font-size:0.65rem;color:#86868B;">PKR {{ number_format($design->selling_price, 0) }}</p>
                 </div>
                 @endforeach
             </div>

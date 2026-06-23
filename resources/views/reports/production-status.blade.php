@@ -10,7 +10,7 @@
 
 <div class="mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Production Status</h1>
-    <p class="text-[#6E6E73] text-sm mt-1">Orders currently in confirmed or stitching stage</p>
+    <p class="text-[#6E6E73] text-sm mt-1">Orders currently in confirmed or stitching stage &mdash; <span class="font-medium text-[#1D1D1F]">{{ $selectedCatalogue->name }}</span></p>
 </div>
 
 @php
@@ -42,7 +42,7 @@
                 <td class="font-medium">#{{ $order->order_number }}</td>
                 <td>{{ $order->customer->name ?? '—' }}</td>
                 <td>{{ $order->catalogue->name ?? '—' }}</td>
-                <td class="text-right">PKR {{ lacs_format($order->total_amount, 0) }}</td>
+                <td class="text-right">PKR {{ number_format($order->total_amount, 0) }}</td>
                 <td>
                     @php
                         $prodStatusBadge = [

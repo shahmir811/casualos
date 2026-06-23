@@ -58,7 +58,7 @@
         </div>
         <p class="text-sm text-[#6E6E73] mb-1">{{ $order->customer->name ?? '—' }}</p>
         <div class="flex items-center justify-between mt-2">
-            <span class="text-sm font-semibold text-[#1D1D1F]">PKR {{ lacs_format($order->total_amount, 0) }}</span>
+            <span class="text-sm font-semibold text-[#1D1D1F]">PKR {{ number_format($order->total_amount, 0) }}</span>
             <a href="{{ route('dispatch.show', $order) }}" class="btn-primary text-xs">View →</a>
         </div>
     </div>
@@ -97,7 +97,7 @@
             <tr>
                 <td class="font-medium">#{{ $order->order_number }}</td>
                 <td>{{ $order->customer->name ?? '—' }}</td>
-                <td>PKR {{ lacs_format($order->total_amount, 0) }}</td>
+                <td>PKR {{ number_format($order->total_amount, 0) }}</td>
                 <td>
                     @if($totalPaid <= 0)
                         <span class="badge bg-[#F5F5F7] text-[#86868B]">Not Paid</span>

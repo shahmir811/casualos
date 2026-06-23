@@ -154,6 +154,16 @@ class CatalogueController extends Controller
             $validated['cover_photo_og'] = $this->generateOgImage($file);
         }
 
+        $changed = [];
+        foreach (['name', 'qty_per_design', 'number_of_designs', 'quantity_benchmark', 'notes'] as $field) {
+            $old = $catalogue->getOriginal($field);
+            $new = $validated[$field] ?? null;
+            if ((string) $old !== (string) $new) {
+                $changed[$field] = ['from' => $old ?? '—', 'to' => $new ?? '—'];
+            }
+        }
+        $coverChanged = isset($validated['cover_photo']);
+
         $catalogue->update($validated);
 
         return redirect()->route('catalogues.show', $catalogue)

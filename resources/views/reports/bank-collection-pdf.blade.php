@@ -185,13 +185,13 @@ $bankCount = $banks->count();
 
             <td class="center bold">{{ $row['total_qty'] ?: '' }}</td>
             <td class="center bold">{{ $row['over_all_qty'] ?: '' }}</td>
-            <td class="right">{{ $row['rate'] ? lacs_format($row['rate']) : '' }}</td>
+            <td class="right">{{ $row['rate'] ? number_format($row['rate']) : '' }}</td>
 
-            <td class="right bold highlight-bill">{{ lacs_format($row['total_bill']) }}</td>
-            <td class="right bold highlight-recv">{{ $row['amount_received'] > 0 ? lacs_format($row['amount_received']) : '' }}</td>
+            <td class="right bold highlight-bill">{{ number_format($row['total_bill']) }}</td>
+            <td class="right bold highlight-recv">{{ $row['amount_received'] > 0 ? number_format($row['amount_received']) : '' }}</td>
             <td class="right bold highlight-bill">
                 @if($row['amount_receivable'] > 0)
-                    <span class="red">{{ lacs_format($row['amount_receivable']) }}</span>
+                    <span class="red">{{ number_format($row['amount_receivable']) }}</span>
                 @endif
             </td>
 
@@ -211,19 +211,19 @@ $bankCount = $banks->count();
             @foreach($banks as $bank)
             <td class="right">
                 @if(($row['bank_payments'][$bank->id] ?? 0) > 0)
-                    {{ lacs_format($row['bank_payments'][$bank->id]) }}
+                    {{ number_format($row['bank_payments'][$bank->id]) }}
                 @endif
             </td>
             @endforeach
 
-            <td class="right divider">{{ $row['misc'] > 0 ? lacs_format($row['misc']) : '' }}</td>
-            <td class="right bold">{{ $row['amount_received'] > 0 ? lacs_format($row['amount_received']) : '' }}</td>
+            <td class="right divider">{{ $row['misc'] > 0 ? number_format($row['misc']) : '' }}</td>
+            <td class="right bold">{{ $row['amount_received'] > 0 ? number_format($row['amount_received']) : '' }}</td>
             <td class="right">
                 @if($row['amount_receivable'] > 0)
-                    <span class="red">{{ lacs_format($row['amount_receivable']) }}</span>
+                    <span class="red">{{ number_format($row['amount_receivable']) }}</span>
                 @endif
             </td>
-            <td class="right bold">{{ lacs_format($row['total_bill']) }}</td>
+            <td class="right bold">{{ number_format($row['total_bill']) }}</td>
         </tr>
         @endforeach
     </tbody>
@@ -241,32 +241,32 @@ $bankCount = $banks->count();
             <td class="center">{{ $totTotalQty }}</td>
             <td class="center">{{ $totOverAllQty }}</td>
             <td></td>
-            <td class="right">{{ lacs_format($grandExpected) }}</td>
-            <td class="right green-text">{{ lacs_format($grandCollected) }}</td>
-            <td class="right red">{{ lacs_format($grandReceivable) }}</td>
+            <td class="right">{{ number_format($grandExpected) }}</td>
+            <td class="right green-text">{{ number_format($grandCollected) }}</td>
+            <td class="right red">{{ number_format($grandReceivable) }}</td>
             <td></td>
             @foreach($banks as $bank)
             <td class="right">
                 @if(($totBankPayments[$bank->id] ?? 0) > 0)
-                    {{ lacs_format($totBankPayments[$bank->id]) }}
+                    {{ number_format($totBankPayments[$bank->id]) }}
                 @endif
             </td>
             @endforeach
-            <td class="right divider">{{ $totMisc > 0 ? lacs_format($totMisc) : '' }}</td>
-            <td class="right green-text">{{ lacs_format($grandCollected) }}</td>
-            <td class="right red">{{ lacs_format($grandReceivable) }}</td>
-            <td class="right">{{ lacs_format($grandExpected) }}</td>
+            <td class="right divider">{{ $totMisc > 0 ? number_format($totMisc) : '' }}</td>
+            <td class="right green-text">{{ number_format($grandCollected) }}</td>
+            <td class="right red">{{ number_format($grandReceivable) }}</td>
+            <td class="right">{{ number_format($grandExpected) }}</td>
         </tr>
         {{-- Row 2: Total Payment (per-bank expected) --}}
         <tr style="background:#DBEAFE;">
             <td></td>
             <td class="left" style="color:#1D4ED8; font-weight:700;">Total Payment</td>
             <td colspan="9"></td>
-            <td class="right" style="color:#1D4ED8;">{{ lacs_format($grandExpected) }}</td>
+            <td class="right" style="color:#1D4ED8;">{{ number_format($grandExpected) }}</td>
             <td></td><td></td><td></td>
             @foreach($banks as $bank)
             <td class="right" style="color:#1D4ED8;">
-                @if(($expected[$bank->id] ?? 0) > 0){{ lacs_format($expected[$bank->id]) }}@endif
+                @if(($expected[$bank->id] ?? 0) > 0){{ number_format($expected[$bank->id]) }}@endif
             </td>
             @endforeach
             <td class="divider"></td>
@@ -278,16 +278,16 @@ $bankCount = $banks->count();
             <td class="left" style="color:#92400E; font-weight:700;">Receivable</td>
             <td colspan="9"></td>
             <td></td><td></td>
-            <td class="right red">{{ lacs_format($grandReceivable) }}</td>
+            <td class="right red">{{ number_format($grandReceivable) }}</td>
             <td></td>
             @foreach($banks as $bank)
             <td class="right" style="color:#B45309;">
-                @if(($receivable[$bank->id] ?? 0) > 0){{ lacs_format($receivable[$bank->id]) }}@endif
+                @if(($receivable[$bank->id] ?? 0) > 0){{ number_format($receivable[$bank->id]) }}@endif
             </td>
             @endforeach
             <td class="divider"></td>
             <td></td>
-            <td class="right red">{{ lacs_format($grandReceivable) }}</td>
+            <td class="right red">{{ number_format($grandReceivable) }}</td>
             <td></td>
         </tr>
     </tfoot>

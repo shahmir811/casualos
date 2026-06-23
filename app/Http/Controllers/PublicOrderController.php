@@ -31,7 +31,7 @@ class PublicOrderController extends Controller
 
         // Guard: reject submission if catalogue has been closed by admin
         if ($catalogue->status !== 'open') {
-            return redirect()->route('order.show', $token);
+            return redirect()->route('order.public', $token);
         }
 
         // Validate customer details + collective size quantities
@@ -114,6 +114,7 @@ class PublicOrderController extends Controller
             ]);
 
             // Create one OrderItem per design — same sizes for every design
+            $designItems = [];
             foreach ($catalogue->designs as $design) {
                 $unitPrice  = (int) round(($useDiscount && $design->discount_price !== null)
                     ? (float) $design->discount_price
@@ -130,6 +131,17 @@ class PublicOrderController extends Controller
                     'unit_price'   => $unitPrice,
                     'total_amount' => $lineAmount,
                 ]);
+
+                $designItems[] = [
+                    'design'     => $design->name,
+                    'unit_price' => 'PKR ' . number_format($unitPrice, 0),
+                    'xs'         => $qtyXS,
+                    's'          => $qtyS,
+                    'm'          => $qtyM,
+                    'l'          => $qtyL,
+                    'xl'         => $qtyXL,
+                    'line_total' => 'PKR ' . number_format($lineAmount, 0),
+                ];
             }
 
             // Customer ledger entry — debit the order amount

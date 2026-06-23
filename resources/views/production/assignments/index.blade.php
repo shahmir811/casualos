@@ -139,9 +139,9 @@
                     </td>
                     <td class="text-[#6E6E73] text-xs whitespace-nowrap">{{ $a->assignment_date->format('d M Y') }}</td>
                     <td class="text-right">
-                        <span class="font-medium">{{ lacs_format($totalPcs) }} pcs</span>
+                        <span class="font-medium">{{ number_format($totalPcs) }} pcs</span>
                         @if($npTotalCost !== null)
-                        <br><span class="text-[10px] text-[#FF9500] font-semibold">Rs. {{ lacs_format($npTotalCost) }}</span>
+                        <br><span class="text-[10px] text-[#FF9500] font-semibold">Rs. {{ number_format($npTotalCost) }}</span>
                         @endif
                     </td>
                     <td>
@@ -214,9 +214,9 @@
         {{-- Footer row --}}
         <div class="flex items-center justify-between">
             <div>
-                <span class="text-[#1D1D1F] text-sm font-semibold">{{ lacs_format($totalPcs) }} pcs</span>
+                <span class="text-[#1D1D1F] text-sm font-semibold">{{ number_format($totalPcs) }} pcs</span>
                 @if($npTotalCost !== null)
-                <span class="ml-2 text-xs text-[#FF9500] font-semibold">Rs. {{ lacs_format($npTotalCost) }}</span>
+                <span class="ml-2 text-xs text-[#FF9500] font-semibold">Rs. {{ number_format($npTotalCost) }}</span>
                 @endif
             </div>
             <a href="{{ route('production-assignments.show', $a) }}" class="text-[#0066CC] text-sm font-medium hover:underline">View →</a>

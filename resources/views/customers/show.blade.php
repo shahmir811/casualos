@@ -28,8 +28,8 @@
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Advance Credit</p>
-        <p class="text-2xl font-light {{ $customer->advance_credit_balance > 0 ? 'text-[#30D158]' : 'text-[#1D1D1F]' }}">
-            PKR {{ lacs_format($customer->advance_credit_balance, 0) }}
+        <p class="text-2xl font-light {{ round((float) $customer->advance_credit_balance) > 0 ? 'text-[#30D158]' : 'text-[#1D1D1F]' }}">
+            PKR {{ number_format($customer->advance_credit_balance, 0) }}
         </p>
     </div>
     <div class="stat-card">
@@ -71,7 +71,7 @@
                 <tr>
                     <td class="font-medium">#{{ $order->order_number }}</td>
                     <td class="text-[#6E6E73]">{{ $order->catalogue->name ?? '—' }}</td>
-                    <td>PKR {{ lacs_format($order->total_amount, 0) }}</td>
+                    <td>PKR {{ number_format($order->total_amount, 0) }}</td>
                     <td>
                         <span class="{{ $statusBadge[$order->status] ?? 'badge bg-[#F5F5F7] text-[#6E6E73]' }}">{{ $order->status }}</span>
                     </td>

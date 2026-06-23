@@ -48,7 +48,13 @@
                 @foreach([
                     'orders'              => 'Orders',
                     'payments'            => 'Payments',
+                    'order_reductions'    => 'Order Reductions',
                     'catalogues'          => 'Catalogues',
+                    'designs'             => 'Designs',
+                    'customers'           => 'Customers',
+                    'users'               => 'Users',
+                    'bank_accounts'       => 'Bank Accounts',
+                    'stitching_units'     => 'Stitching Units',
                     'fabric_batches'      => 'Fabric Batches',
                     'outsourced_batches'  => 'Outsourced Batches',
                     'press_sends'         => 'Press Sends',
@@ -59,8 +65,8 @@
                     'assignments'         => 'Production Assignments',
                     'stitching_returns'   => 'Stitching Returns',
                     'naeem_pakki_returns' => 'Naeem Pakki Returns',
-                    'order_reductions'    => 'Order Reductions',
                     'wages'               => 'Wages',
+                    'tarpai_payments'     => 'Tarpai Payments',
                 ] as $key => $label)
                     <option value="{{ $key }}" @selected(request('model') === $key)>{{ $label }}</option>
                 @endforeach
@@ -119,6 +125,24 @@
                 'App\Models\Payment' => $log->subject
                     ? 'Payment #' . $log->subject_id . ($log->subject->order ? ' · Order #' . $log->subject->order->order_number : '')
                     : "Payment #{$log->subject_id} (deleted)",
+                'App\Models\Catalogue' => $log->subject
+                    ? 'Catalogue · ' . $log->subject->name
+                    : "Catalogue #{$log->subject_id} (deleted)",
+                'App\Models\Design' => $log->subject
+                    ? 'Design · ' . $log->subject->name . ($log->subject->catalogue ? ' (' . $log->subject->catalogue->name . ')' : '')
+                    : "Design #{$log->subject_id} (deleted)",
+                'App\Models\Customer' => $log->subject
+                    ? 'Customer · ' . $log->subject->name
+                    : "Customer #{$log->subject_id} (deleted)",
+                'App\Models\User' => $log->subject
+                    ? 'User · ' . $log->subject->name . ' (' . ucwords(str_replace('_', ' ', $log->subject->role ?? '')) . ')'
+                    : "User #{$log->subject_id} (deleted)",
+                'App\Models\BankAccount' => $log->subject
+                    ? 'Bank Account · ' . $log->subject->title
+                    : "BankAccount #{$log->subject_id} (deleted)",
+                'App\Models\StitchingUnit' => $log->subject
+                    ? 'Stitching Unit · ' . $log->subject->number . ' — ' . $log->subject->name
+                    : "StitchingUnit #{$log->subject_id} (deleted)",
                 'App\Models\OutsourcedBatch' => 'OB-' . str_pad($log->subject_id, 4, '0', STR_PAD_LEFT)
                     . ($log->subject?->catalogue ? ' · ' . $log->subject->catalogue->name : ''),
                 'App\Models\FabricBatch' => 'FB-' . str_pad($log->subject_id, 4, '0', STR_PAD_LEFT)
@@ -143,6 +167,14 @@
                     . ($log->subject?->design ? ' · ' . $log->subject->design->name : ''),
                 'App\Models\NaeemPakkiReturn' => 'NP Return #' . $log->subject_id
                     . ($log->subject?->assignment?->catalogue ? ' · ' . $log->subject->assignment->catalogue->name : ''),
+                'App\Models\OrderReduction' => 'Reduction #' . $log->subject_id
+                    . ($log->subject?->order ? ' · Order #' . $log->subject->order->order_number . ($log->subject->order->customer ? ' (' . $log->subject->order->customer->name . ')' : '') : ''),
+                'App\Models\Wage' => 'Wage · ' . ($log->subject?->stitchingUnit?->name ?? '#' . $log->subject_id)
+                    . ($log->subject?->catalogue ? ' — ' . $log->subject->catalogue->name : '')
+                    . ($log->subject?->week_start ? ' · ' . $log->subject->week_start->format('d M Y') : ''),
+                'App\Models\TarpaiPayment' => 'Tarpai Payment · ' . ($log->subject ? $log->subject->houseLabel() : '#' . $log->subject_id)
+                    . ($log->subject?->catalogue ? ' — ' . $log->subject->catalogue->name : '')
+                    . ($log->subject?->week_start ? ' · ' . $log->subject->week_start->format('d M Y') : ''),
                 default => $modelShort . ' #' . $log->subject_id,
             };
         @endphp

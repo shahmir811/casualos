@@ -33,19 +33,8 @@
 <body class="min-h-screen pb-12">
 
 @php
-    // Pakistani lakhs format: 1,87,500 instead of 187,500
     function formatPKR(float|int $amount): string {
-        $n = (int) abs($amount);
-        $s = (string) $n;
-        if (strlen($s) <= 3) return 'Rs ' . $s;
-        $last3 = substr($s, -3);
-        $rest   = substr($s, 0, -3);
-        $parts  = [];
-        while ($rest !== '') {
-            $parts[] = substr($rest, -2);
-            $rest = strlen($rest) > 2 ? substr($rest, 0, -2) : '';
-        }
-        return 'Rs ' . implode(',', array_reverse($parts)) . ',' . $last3;
+        return 'Rs ' . number_format((int) abs($amount), 0);
     }
 
     $totalOutstanding = $customer->orders->sum('outstanding_balance');

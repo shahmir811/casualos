@@ -10,7 +10,7 @@
 
 <div class="mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Damage &amp; Reductions</h1>
-    <p class="text-[#6E6E73] text-sm mt-1">All order reductions due to damage, short delivery, or adjustments</p>
+    <p class="text-[#6E6E73] text-sm mt-1">All order reductions due to damage, short delivery, or adjustments &mdash; <span class="font-medium text-[#1D1D1F]">{{ $selectedCatalogue->name }}</span></p>
 </div>
 
 @php
@@ -26,7 +26,7 @@
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Amount Reduced</p>
-        <p class="text-3xl font-light text-[#FF3B30]">PKR {{ lacs_format($totalReduced, 0) }}</p>
+        <p class="text-3xl font-light text-[#FF3B30]">PKR {{ number_format($totalReduced, 0) }}</p>
     </div>
 </div>
 
@@ -64,7 +64,7 @@
                         @endforeach
                     </div>
                 </td>
-                <td class="text-right font-semibold text-[#FF3B30]">PKR {{ lacs_format($reduction->items->sum('reduction_amount'), 0) }}</td>
+                <td class="text-right font-semibold text-[#FF3B30]">PKR {{ number_format($reduction->items->sum('reduction_amount'), 0) }}</td>
                 <td class="text-[#6E6E73] text-xs">{{ $reduction->reducedBy->name ?? '—' }}</td>
                 <td class="text-[#6E6E73] text-xs">{{ $reduction->created_at->format('d M Y') }}</td>
             </tr>
@@ -76,7 +76,7 @@
         <tfoot>
             <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
                 <td class="px-5 py-3 font-semibold text-sm" colspan="5">Total</td>
-                <td class="px-5 py-3 text-right font-bold text-sm text-[#FF3B30]">PKR {{ lacs_format($totalReduced, 0) }}</td>
+                <td class="px-5 py-3 text-right font-bold text-sm text-[#FF3B30]">PKR {{ number_format($totalReduced, 0) }}</td>
                 <td colspan="2"></td>
             </tr>
         </tfoot>

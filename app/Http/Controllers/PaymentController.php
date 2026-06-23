@@ -44,7 +44,11 @@ class PaymentController extends Controller
             default         => null,
         };
 
-        DB::transaction(function () use ($request, $receiptPaths, $titleGiven, $order) {
+        $payment          = null;
+        $wasAutoConfirmed = false;
+        $surplus          = 0;
+
+        DB::transaction(function () use ($request, $receiptPaths, $titleGiven, $order, &$payment, &$wasAutoConfirmed, &$surplus) {
             $payment = Payment::create([
                 'order_id'        => $order->id,
                 'customer_id'     => $order->customer_id,
@@ -58,6 +62,9 @@ class PaymentController extends Controller
                 'logged_by'       => Auth::id(),
             ]);
 
+            // Capture surplus that existed BEFORE this payment so we only increment the delta
+            $oldSurplus = max(0, $order->total_paid - $order->total_amount);
+
             // Update order financials
             $newTotalPaid   = $order->total_paid + $request->amount;
             $newOutstanding = max(0, $order->total_amount - $newTotalPaid);
@@ -66,6 +73,7 @@ class PaymentController extends Controller
             // Auto-confirm on first payment
             if ($order->status === 'received') {
                 $statusUpdate['status'] = 'confirmed';
+                $wasAutoConfirmed       = true;
             }
 
             // Unflag if fully paid
@@ -77,28 +85,57 @@ class PaymentController extends Controller
 
             $customer = $order->customer;
 
-            // Ledger entry for the payment
-            CustomerLedger::create([
-                'customer_id'             => $order->customer_id,
-                'transaction_type'        => 'payment_received',
-                'amount'                  => -$request->amount,
-                'running_advance_balance' => $customer->advance_credit_balance,
-                'reference_type'          => 'App\Models\Payment',
-                'reference_id'            => $payment->id,
-                'notes'                   => "Payment for Order #{$order->order_number} via {$request->payment_type}",
-                'created_by'              => Auth::id(),
-            ]);
+            if ($request->payment_type === 'advance') {
+                // Advance payments consume the existing advance_credit_balance.
+                // No new ledger entry — the credit is already in the ledger via the
+                // prior overpayment's payment_received entry exceeding its order_charged.
+                $customer->decrement('advance_credit_balance', $request->amount);
+            } else {
+                CustomerLedger::create([
+                    'customer_id'             => $order->customer_id,
+                    'transaction_type'        => 'payment_received',
+                    'amount'                  => -$request->amount,
+                    'running_advance_balance' => $customer->advance_credit_balance,
+                    'reference_type'          => 'App\Models\Payment',
+                    'reference_id'            => $payment->id,
+                    'notes'                   => "Payment for Order #{$order->order_number} via {$request->payment_type}",
+                    'created_by'              => Auth::id(),
+                ]);
 
-            // If payment caused an overpayment, park the surplus as advance credit.
-            // No ledger entry is created — the overpayment is already visible in the
-            // ledger via the payment_received entries exceeding the order_charged amount.
-            $surplus = max(0, $newTotalPaid - $order->total_amount);
-            if ($surplus > 0) {
-                $customer->increment('advance_credit_balance', $surplus);
+                // Only increment advance credit by the ADDITIONAL surplus from this payment,
+                // not the total surplus — prevents double-counting on repeated overpayments.
+                $newSurplus = max(0, $newTotalPaid - $order->total_amount);
+                $surplus    = $newSurplus - $oldSurplus;
+                if ($surplus > 0) {
+                    $customer->increment('advance_credit_balance', $surplus);
+                }
             }
         });
 
-        return back()->with('success', 'Payment of PKR ' . lacs_format($request->amount) . ' recorded.');
+        $order->loadMissing('customer');
+        $props = [
+            'order'          => 'Order #' . $order->order_number,
+            'customer'       => $order->customer?->name ?? $order->submitted_name,
+            'payment_type'   => ucfirst(str_replace('_', ' ', $request->payment_type)),
+            'amount'         => 'PKR ' . number_format((float) $request->amount, 0),
+            'payment_date'   => \Carbon\Carbon::parse($request->payment_date)->format('d M Y'),
+            'bank_account'   => $bankAccount?->title ?? '—',
+            'receipt_attached' => $receiptPaths ? 'Yes (' . count((array) $receiptPaths) . ' file(s))' : 'No',
+        ];
+        if ($wasAutoConfirmed) {
+            $props['order_status_changed'] = 'received → confirmed (auto)';
+        }
+        if ($surplus > 0) {
+            $props['overpayment_surplus'] = 'PKR ' . number_format($surplus, 0) . ' added to advance credit';
+        }
+        activity()
+            ->performedOn($order)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties($props)
+            ->log('Payment of PKR ' . number_format((float) $request->amount, 0) . ' recorded on Order #' . $order->order_number);
+
+        return back()->with('success', 'Payment of PKR ' . number_format($request->amount) . ' recorded.');
     }
 
     public function destroy(Order $order, Payment $payment)
@@ -107,9 +144,14 @@ class PaymentController extends Controller
             abort(404);
         }
 
-        $amount = $payment->amount;
+        $amount      = $payment->amount;
+        $paymentType = $payment->payment_type;
+        $paymentDate = $payment->payment_date?->format('d M Y') ?? '—';
+        $bankTitle   = $payment->bankAccount?->title ?? '—';
 
-        DB::transaction(function () use ($order, $payment) {
+        $statusReverted = false;
+
+        DB::transaction(function () use ($order, $payment, &$statusReverted) {
             // Surplus that existed before deletion
             $oldSurplus = max(0, $order->total_paid - $order->total_amount);
 
@@ -132,49 +174,99 @@ class PaymentController extends Controller
 
             // Revert to received if no payments remain and order is confirmed
             if ($newTotalPaid == 0 && $order->status === 'confirmed') {
-                $update['status'] = 'received';
+                $update['status']  = 'received';
+                $statusReverted    = true;
             }
 
             $order->update($update);
 
-            // If deletion reduced the overpayment surplus, reverse the advance credit.
-            // No ledger entry needed — the ledger balance corrects itself via the
-            // removed payment_received entry.
-            $newSurplus      = max(0, $newTotalPaid - $order->total_amount);
-            $surplusReversed = $oldSurplus - $newSurplus;
+            if ($payment->payment_type === 'advance') {
+                // Restore the advance credit balance that was consumed when this payment was recorded.
+                $order->customer->fresh()->increment('advance_credit_balance', $payment->amount);
+            } else {
+                // If deletion reduced the overpayment surplus, reverse the advance credit.
+                // No ledger entry needed — the ledger balance corrects itself via the
+                // removed payment_received entry.
+                $newSurplus      = max(0, $newTotalPaid - $order->total_amount);
+                $surplusReversed = $oldSurplus - $newSurplus;
 
-            if ($surplusReversed > 0) {
-                $customer = $order->customer->fresh();
-                $customer->decrement('advance_credit_balance', min($surplusReversed, $customer->advance_credit_balance));
+                if ($surplusReversed > 0) {
+                    $customer = $order->customer->fresh();
+                    $customer->decrement('advance_credit_balance', min($surplusReversed, $customer->advance_credit_balance));
+                }
             }
         });
 
-        return back()->with('success', 'Payment of PKR ' . lacs_format($amount) . ' has been deleted and the order balance updated.');
+        $order->loadMissing('customer');
+        $order->refresh();
+        $deleteProps = [
+            'order'              => 'Order #' . $order->order_number,
+            'customer'           => $order->customer?->name ?? $order->submitted_name,
+            'deleted_payment_type' => ucfirst(str_replace('_', ' ', $paymentType)),
+            'deleted_amount'     => 'PKR ' . number_format((float) $amount, 0),
+            'original_date'      => $paymentDate,
+            'bank_account'       => $bankTitle,
+            'new_total_paid'     => 'PKR ' . number_format((float) $order->total_paid, 0),
+            'new_outstanding'    => 'PKR ' . number_format((float) $order->outstanding_balance, 0),
+        ];
+        if ($statusReverted) {
+            $deleteProps['order_status_changed'] = 'confirmed → received (no payments remain)';
+        }
+        activity()
+            ->performedOn($order)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties($deleteProps)
+            ->log('Payment of PKR ' . number_format((float) $amount, 0) . ' DELETED from Order #' . $order->order_number);
+
+        return back()->with('success', 'Payment of PKR ' . number_format($amount) . ' has been deleted and the order balance updated.');
     }
 
     public function applyCredit(Request $request, Order $order)
     {
+        $order->loadMissing('customer');
+        $customer  = $order->customer;
+        $maxCredit = min((float) $customer->advance_credit_balance, (float) $order->outstanding_balance);
+
         $validated = $request->validate([
-            'credit_amount' => 'required|numeric|min:1',
+            'credit_amount' => ['required', 'numeric', 'min:1', 'max:' . $maxCredit],
             'notes'         => 'nullable|string',
         ]);
 
-        CustomerLedger::create([
-            'customer_id'             => $order->customer_id,
-            'transaction_type'        => 'credit_applied',
-            'amount'                  => -$validated['credit_amount'],
-            'running_advance_balance' => 0,
-            'reference_type'          => 'App\Models\Order',
-            'reference_id'            => $order->id,
-            'notes'                   => 'Credit: ' . ($validated['notes'] ?? 'Manual credit adjustment'),
-            'created_by'              => Auth::id(),
-        ]);
+        $balanceBefore    = (float) $customer->advance_credit_balance;
+        $wasAutoConfirmed = false;
 
-        // Auto-confirm on first credit application
-        if ($order->status === 'received') {
-            $order->update(['status' => 'confirmed']);
-        }
+        DB::transaction(function () use ($validated, $order, $customer, $balanceBefore, &$wasAutoConfirmed) {
+            $creditAmount   = (float) $validated['credit_amount'];
+            $newTotalPaid   = $order->total_paid + $creditAmount;
+            $newOutstanding = max(0, $order->total_amount - $newTotalPaid);
 
-        return back()->with('success', 'Credit of PKR ' . lacs_format($validated['credit_amount']) . ' applied.');
+            CustomerLedger::create([
+                'customer_id'             => $order->customer_id,
+                'transaction_type'        => 'credit_applied',
+                'amount'                  => -$creditAmount,
+                'running_advance_balance' => $balanceBefore,
+                'reference_type'          => 'App\Models\Order',
+                'reference_id'            => $order->id,
+                'notes'                   => 'Credit: ' . ($validated['notes'] ?? 'Manual credit adjustment'),
+                'created_by'              => Auth::id(),
+            ]);
+
+            $customer->decrement('advance_credit_balance', $creditAmount);
+
+            $statusUpdate = [
+                'total_paid'          => $newTotalPaid,
+                'outstanding_balance' => $newOutstanding,
+            ];
+
+            if ($order->status === 'received') {
+                $statusUpdate['status'] = 'confirmed';
+                $wasAutoConfirmed       = true;
+            }
+
+            $order->update($statusUpdate);
+        });
+
+        return back()->with('success', 'Credit of PKR ' . number_format($validated['credit_amount']) . ' applied.');
     }
 }

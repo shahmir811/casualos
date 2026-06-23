@@ -40,3 +40,20 @@ Schedule::command('tarpai:calculate-weekly')
     ->weeklyOn(5, '23:50')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/tarpai-charges.log'));
+
+// Prune audit log entries older than 45 days — runs on the first Sunday of every month at 00:00.
+Schedule::command('audit-log:prune')
+    ->sundays()
+    ->at('00:00')
+    ->when(fn () => now()->day <= 7)
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/audit-log-prune.log'));
+
+// Prune S3 backup files older than 30 days — runs on the first Sunday of every month at 00:05.
+// Offset by 5 minutes from audit-log:prune to avoid overlapping log writes.
+Schedule::command('backups:prune')
+    ->sundays()
+    ->at('00:05')
+    ->when(fn () => now()->day <= 7)
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/backups-prune.log'));

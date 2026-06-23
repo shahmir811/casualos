@@ -115,6 +115,41 @@ class Order extends Model
 
     public function isCancelled(): bool { return $this->status === 'cancelled'; }
 
+    /**
+     * Net quantity for a size after applying reductions.
+     * A size column only decreases when the reduction is uniform across ALL designs
+     * (same amount reduced per design). Partial-design reductions only remove pieces,
+     * not the displayed size quantity. Requires reductions.items to be loaded.
+     */
+    public function netSizeQty(string $size): int
+    {
+        $firstItem = $this->items->first();
+        $rawQty    = $firstItem ? (int) $firstItem->{'qty_' . $size} : 0;
+        if ($rawQty === 0) return 0;
+
+        $numDesigns = $this->catalogue?->number_of_designs ?? $this->items->count();
+
+        $perDesignReduced = [];
+        foreach ($this->reductions as $red) {
+            foreach ($red->items as $ri) {
+                $did = $ri->design_id;
+                if (!isset($perDesignReduced[$did])) {
+                    $perDesignReduced[$did] = ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0];
+                }
+                $perDesignReduced[$did][$ri->size] += $ri->qty_reduced;
+            }
+        }
+
+        if (empty($perDesignReduced)) return $rawQty;
+
+        $amounts = array_column($perDesignReduced, $size);
+        if (count($perDesignReduced) < $numDesigns) $amounts[] = 0;
+        $unique = array_unique($amounts);
+        $uniformReduction = count($unique) === 1 ? (int) $unique[0] : 0;
+
+        return max(0, $rawQty - $uniformReduction);
+    }
+
     public function assignedBankAccount(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(BankAccount::class, 'assigned_bank_account_id');

@@ -41,9 +41,11 @@ class OrderPieceReassignmentController extends Controller
             return back()->withErrors(['target_order_id' => 'Target order must be from the same catalogue.']);
         }
 
-        DB::transaction(function () use ($request, $order, $targetOrder) {
+        $logItems   = [];
+        $totalAdded = 0;
+
+        DB::transaction(function () use ($request, $order, $targetOrder, &$logItems, &$totalAdded) {
             $targetItemsByDesign = $targetOrder->items->keyBy('design_id');
-            $totalAdded          = 0;
 
             foreach ($request->items as $item) {
                 $designId  = $item['design_id'];
@@ -58,7 +60,15 @@ class OrderPieceReassignmentController extends Controller
                     // Re-save to trigger auto-total computation
                     $targetItem->refresh();
                     $targetItem->save();
-                    $totalAdded += $targetItem->unit_price * $qty;
+                    $lineAmount  = $targetItem->unit_price * $qty;
+                    $totalAdded += $lineAmount;
+                    $logItems[] = [
+                        'design'     => $targetItem->design?->name ?? "Design #{$designId}",
+                        'size'       => strtoupper($size),
+                        'qty_moved'  => $qty,
+                        'unit_price' => 'PKR ' . number_format((float) $targetItem->unit_price, 0),
+                        'amount'     => 'PKR ' . number_format($lineAmount, 0),
+                    ];
                 }
             }
 

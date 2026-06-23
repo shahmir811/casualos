@@ -154,18 +154,18 @@ $bankColors = [
 
                     <td class="px-2 py-1.5 text-center font-medium border border-[#E8E8ED]">{{ $row['total_qty'] ?: '—' }}</td>
                     <td class="px-2 py-1.5 text-center font-medium border border-[#E8E8ED]">{{ $row['over_all_qty'] ?: '—' }}</td>
-                    <td class="px-2 py-1.5 text-right tabular-nums border border-[#E8E8ED]">{{ $row['rate'] ? lacs_format($row['rate']) : '—' }}</td>
+                    <td class="px-2 py-1.5 text-right tabular-nums border border-[#E8E8ED]">{{ $row['rate'] ? number_format($row['rate']) : '—' }}</td>
 
                     {{-- Highlighted financial cells --}}
                     <td class="px-2 py-1.5 text-right tabular-nums font-semibold border border-[#E8E8ED]" style="background:#FFFBEB;">
-                        {{ lacs_format($row['total_bill']) }}
+                        {{ number_format($row['total_bill']) }}
                     </td>
                     <td class="px-2 py-1.5 text-right tabular-nums font-semibold border border-[#E8E8ED]" style="background:#F0FDF4;">
-                        {{ $row['amount_received'] > 0 ? lacs_format($row['amount_received']) : '—' }}
+                        {{ $row['amount_received'] > 0 ? number_format($row['amount_received']) : '—' }}
                     </td>
                     <td class="px-2 py-1.5 text-right tabular-nums font-semibold border border-[#E8E8ED]" style="background:#FFFBEB;">
                         @if($row['amount_receivable'] > 0)
-                            <span style="color:#DC2626;">{{ lacs_format($row['amount_receivable']) }}</span>
+                            <span style="color:#DC2626;">{{ number_format($row['amount_receivable']) }}</span>
                         @else
                             <span class="text-[#C7C7CC]">—</span>
                         @endif
@@ -191,7 +191,7 @@ $bankColors = [
                     @foreach($banks as $bank)
                     <td class="px-2 py-1.5 text-right tabular-nums border border-[#E8E8ED]">
                         @if(($row['bank_payments'][$bank->id] ?? 0) > 0)
-                            {{ lacs_format($row['bank_payments'][$bank->id]) }}
+                            {{ number_format($row['bank_payments'][$bank->id]) }}
                         @else
                             <span class="text-[#C7C7CC]">—</span>
                         @endif
@@ -201,23 +201,23 @@ $bankColors = [
                     {{-- Right-side summary --}}
                     <td class="px-2 py-1.5 text-right tabular-nums border border-[#E8E8ED]" style="border-left:2px solid #0071E3 !important;">
                         @if($row['misc'] > 0)
-                            {{ lacs_format($row['misc']) }}
+                            {{ number_format($row['misc']) }}
                         @else
                             <span class="text-[#C7C7CC]">—</span>
                         @endif
                     </td>
                     <td class="px-2 py-1.5 text-right tabular-nums font-semibold border border-[#E8E8ED]">
-                        {{ $row['amount_received'] > 0 ? lacs_format($row['amount_received']) : '—' }}
+                        {{ $row['amount_received'] > 0 ? number_format($row['amount_received']) : '—' }}
                     </td>
                     <td class="px-2 py-1.5 text-right tabular-nums border border-[#E8E8ED]">
                         @if($row['amount_receivable'] > 0)
-                            <span style="color:#DC2626;">{{ lacs_format($row['amount_receivable']) }}</span>
+                            <span style="color:#DC2626;">{{ number_format($row['amount_receivable']) }}</span>
                         @else
                             <span class="text-[#C7C7CC]">—</span>
                         @endif
                     </td>
                     <td class="px-2 py-1.5 text-right tabular-nums font-semibold border border-[#E8E8ED]">
-                        {{ lacs_format($row['total_bill']) }}
+                        {{ number_format($row['total_bill']) }}
                     </td>
                 </tr>
                 @endforeach
@@ -242,13 +242,13 @@ $bankColors = [
                     <td class="px-2 py-2 border border-[#C7C7CC]"></td>
 
                     <td class="px-2 py-2 text-right tabular-nums font-bold border border-[#C7C7CC]" style="background:#FEF3C7;">
-                        {{ lacs_format($grandExpected) }}
+                        {{ number_format($grandExpected) }}
                     </td>
                     <td class="px-2 py-2 text-right tabular-nums font-bold border border-[#C7C7CC]" style="background:#DCFCE7; color:#15803D;">
-                        {{ lacs_format($grandCollected) }}
+                        {{ number_format($grandCollected) }}
                     </td>
                     <td class="px-2 py-2 text-right tabular-nums font-bold border border-[#C7C7CC]" style="background:#FEF3C7; color:#DC2626;">
-                        {{ lacs_format($grandReceivable) }}
+                        {{ number_format($grandReceivable) }}
                     </td>
 
                     <td class="px-2 py-2 border border-[#C7C7CC]"></td>
@@ -256,7 +256,7 @@ $bankColors = [
                     @foreach($banks as $bank)
                     <td class="px-2 py-2 text-right tabular-nums font-bold border border-[#C7C7CC]">
                         @if(($totBankPayments[$bank->id] ?? 0) > 0)
-                            {{ lacs_format($totBankPayments[$bank->id]) }}
+                            {{ number_format($totBankPayments[$bank->id]) }}
                         @else
                             <span class="text-[#C7C7CC]">—</span>
                         @endif
@@ -264,16 +264,16 @@ $bankColors = [
                     @endforeach
 
                     <td class="px-2 py-2 text-right tabular-nums font-bold border border-[#C7C7CC]" style="border-left:2px solid #0071E3 !important;">
-                        {{ $totMisc > 0 ? lacs_format($totMisc) : '—' }}
+                        {{ $totMisc > 0 ? number_format($totMisc) : '—' }}
                     </td>
                     <td class="px-2 py-2 text-right tabular-nums font-bold border border-[#C7C7CC]" style="color:#15803D;">
-                        {{ lacs_format($grandCollected) }}
+                        {{ number_format($grandCollected) }}
                     </td>
                     <td class="px-2 py-2 text-right tabular-nums font-bold border border-[#C7C7CC]" style="color:#DC2626;">
-                        {{ lacs_format($grandReceivable) }}
+                        {{ number_format($grandReceivable) }}
                     </td>
                     <td class="px-2 py-2 text-right tabular-nums font-bold border border-[#C7C7CC]">
-                        {{ lacs_format($grandExpected) }}
+                        {{ number_format($grandExpected) }}
                     </td>
                 </tr>
 
@@ -284,7 +284,7 @@ $bankColors = [
                     <td colspan="9" class="px-2 py-2 border border-[#BFDBFE]"></td>
 
                     <td class="px-2 py-2 text-right tabular-nums font-bold text-[#1D4ED8] border border-[#BFDBFE]">
-                        {{ lacs_format($grandExpected) }}
+                        {{ number_format($grandExpected) }}
                     </td>
                     <td class="px-2 py-2 border border-[#BFDBFE]"></td>
                     <td class="px-2 py-2 border border-[#BFDBFE]"></td>
@@ -293,7 +293,7 @@ $bankColors = [
                     @foreach($banks as $bank)
                     <td class="px-2 py-2 text-right tabular-nums font-bold text-[#1D4ED8] border border-[#BFDBFE]">
                         @if(($expected[$bank->id] ?? 0) > 0)
-                            {{ lacs_format($expected[$bank->id]) }}
+                            {{ number_format($expected[$bank->id]) }}
                         @else
                             <span class="text-[#93C5FD]">—</span>
                         @endif
@@ -315,14 +315,14 @@ $bankColors = [
                     <td class="px-2 py-2 border border-[#FDE68A]"></td>
                     <td class="px-2 py-2 border border-[#FDE68A]"></td>
                     <td class="px-2 py-2 text-right tabular-nums font-bold border border-[#FDE68A]" style="color:#DC2626;">
-                        {{ lacs_format($grandReceivable) }}
+                        {{ number_format($grandReceivable) }}
                     </td>
                     <td class="px-2 py-2 border border-[#FDE68A]"></td>
 
                     @foreach($banks as $bank)
                     <td class="px-2 py-2 text-right tabular-nums font-bold border border-[#FDE68A]" style="color:#B45309;">
                         @if(($receivable[$bank->id] ?? 0) > 0)
-                            {{ lacs_format($receivable[$bank->id]) }}
+                            {{ number_format($receivable[$bank->id]) }}
                         @else
                             <span class="text-[#D97706]" style="opacity:0.4;">—</span>
                         @endif
@@ -332,7 +332,7 @@ $bankColors = [
                     <td class="px-2 py-2 border border-[#FDE68A]" style="border-left:2px solid #0071E3 !important;"></td>
                     <td class="px-2 py-2 border border-[#FDE68A]"></td>
                     <td class="px-2 py-2 text-right tabular-nums font-bold border border-[#FDE68A]" style="color:#DC2626;">
-                        {{ lacs_format($grandReceivable) }}
+                        {{ number_format($grandReceivable) }}
                     </td>
                     <td class="px-2 py-2 border border-[#FDE68A]"></td>
                 </tr>

@@ -58,10 +58,10 @@
 @endphp
 
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div class="stat-card"><p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Pieces Sent</p><p class="text-3xl font-light text-[#1D1D1F]">{{ lacs_format($totalSent) }}</p></div>
-    <div class="stat-card"><p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Returned</p><p class="text-3xl font-light text-green-600">{{ lacs_format($totalReturned) }}</p></div>
-    <div class="stat-card"><p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Outstanding</p><p class="text-3xl font-light {{ $outstanding > 0 ? 'text-orange-500' : 'text-[#86868B]' }}">{{ lacs_format($outstanding) }}</p></div>
-    <div class="stat-card"><p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Cost</p><p class="text-3xl font-light text-[#1D1D1F]">Rs. {{ lacs_format($totalCost, 0) }}</p></div>
+    <div class="stat-card"><p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Pieces Sent</p><p class="text-3xl font-light text-[#1D1D1F]">{{ number_format($totalSent) }}</p></div>
+    <div class="stat-card"><p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Returned</p><p class="text-3xl font-light text-green-600">{{ number_format($totalReturned) }}</p></div>
+    <div class="stat-card"><p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Outstanding</p><p class="text-3xl font-light {{ $outstanding > 0 ? 'text-orange-500' : 'text-[#86868B]' }}">{{ number_format($outstanding) }}</p></div>
+    <div class="stat-card"><p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Cost</p><p class="text-3xl font-light text-[#1D1D1F]">Rs. {{ number_format($totalCost, 0) }}</p></div>
 </div>
 
 <div class="space-y-5">
@@ -77,7 +77,7 @@
                 </span>
             </div>
             <div><p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Send Date</p><p class="text-[#1D1D1F]">{{ $tarpaiSend->sent_date->format('d M Y') }}</p></div>
-            <div><p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Rate</p><p class="text-[#1D1D1F]">Rs. {{ lacs_format($tarpaiSend->per_piece_price, 0) }} / piece</p></div>
+            <div><p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Rate</p><p class="text-[#1D1D1F]">Rs. {{ number_format($tarpaiSend->per_piece_price, 0) }} / piece</p></div>
             <div><p class="text-[#86868B] text-xs uppercase tracking-widest mb-1">Logged By</p><p class="text-[#1D1D1F]">{{ $tarpaiSend->loggedBy->name ?? '—' }}</p></div>
         </div>
     </div>

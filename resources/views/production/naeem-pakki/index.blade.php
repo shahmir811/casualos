@@ -87,22 +87,22 @@ $badgeColors = [
                 @php $color = $badgeColors[($npDesign->design->id ?? $loop->index) % count($badgeColors)]; @endphp
                 <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ $color }} rounded px-2 py-0.5">
                     {{ $npDesign->design->name ?? '—' }}
-                    <span class="opacity-60">· {{ lacs_format($npDesign->quantity) }}</span>
+                    <span class="opacity-60">· {{ number_format($npDesign->quantity) }}</span>
                 </span>
             @endforeach
         </div>
         <div class="grid grid-cols-3 gap-2 text-center">
             <div class="bg-[#F5F5F7] rounded-lg py-2 px-1">
                 <p class="text-[10px] text-[#86868B] uppercase tracking-widest mb-0.5">Sent</p>
-                <p class="text-sm font-semibold tabular-nums text-[#1D1D1F]">{{ lacs_format($totalSent) }}</p>
+                <p class="text-sm font-semibold tabular-nums text-[#1D1D1F]">{{ number_format($totalSent) }}</p>
             </div>
             <div class="bg-green-50 rounded-lg py-2 px-1">
                 <p class="text-[10px] text-green-600 uppercase tracking-widest mb-0.5">Returned</p>
-                <p class="text-sm font-semibold tabular-nums text-green-700">{{ lacs_format($totalReturned) }}</p>
+                <p class="text-sm font-semibold tabular-nums text-green-700">{{ number_format($totalReturned) }}</p>
             </div>
             <div class="{{ $totalOutstanding > 0 ? 'bg-orange-50' : 'bg-[#F5F5F7]' }} rounded-lg py-2 px-1">
                 <p class="text-[10px] {{ $totalOutstanding > 0 ? 'text-orange-500' : 'text-[#86868B]' }} uppercase tracking-widest mb-0.5">Outstanding</p>
-                <p class="text-sm font-semibold tabular-nums {{ $totalOutstanding > 0 ? 'text-orange-600' : 'text-[#86868B]' }}">{{ lacs_format($totalOutstanding) }}</p>
+                <p class="text-sm font-semibold tabular-nums {{ $totalOutstanding > 0 ? 'text-orange-600' : 'text-[#86868B]' }}">{{ number_format($totalOutstanding) }}</p>
             </div>
         </div>
         <p class="text-[#C7C7CC] text-[10px] mt-2">{{ $assignment->assignment_date->format('d M Y') }}</p>
@@ -150,16 +150,16 @@ $badgeColors = [
                             @php $color = $badgeColors[($npDesign->design->id ?? $loop->index) % count($badgeColors)]; @endphp
                             <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ $color }} rounded px-2 py-0.5 w-fit">
                                 {{ $npDesign->design->name ?? '—' }}
-                                <span class="opacity-60">· {{ lacs_format($npDesign->quantity) }}</span>
+                                <span class="opacity-60">· {{ number_format($npDesign->quantity) }}</span>
                             </span>
                         @endforeach
                     </div>
                 </td>
                 <td class="text-[#6E6E73] text-xs">{{ $assignment->assignment_date->format('d M Y') }}</td>
-                <td class="text-right tabular-nums">{{ lacs_format($totalSent) }} pcs</td>
-                <td class="text-right tabular-nums text-green-700">{{ lacs_format($totalReturned) }} pcs</td>
+                <td class="text-right tabular-nums">{{ number_format($totalSent) }} pcs</td>
+                <td class="text-right tabular-nums text-green-700">{{ number_format($totalReturned) }} pcs</td>
                 <td class="text-right tabular-nums {{ $totalOutstanding > 0 ? 'text-orange-600 font-semibold' : 'text-[#86868B]' }}">
-                    {{ lacs_format($totalOutstanding) }} pcs
+                    {{ number_format($totalOutstanding) }} pcs
                 </td>
                 <td>
                     @if($done)

@@ -30,22 +30,22 @@
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Assigned</p>
-        <p class="text-3xl font-light text-[#1D1D1F]">{{ lacs_format($totalAssigned) }}</p>
+        <p class="text-3xl font-light text-[#1D1D1F]">{{ number_format($totalAssigned) }}</p>
         <p class="text-[#86868B] text-xs mt-1">pieces</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Kameez</p>
-        <p class="text-3xl font-light {{ $kTotal >= $totalAssigned ? 'text-[#34C759]' : 'text-[#FF9500]' }}">{{ lacs_format($kTotal) }}</p>
+        <p class="text-3xl font-light {{ $kTotal >= $totalAssigned ? 'text-[#34C759]' : 'text-[#FF9500]' }}">{{ number_format($kTotal) }}</p>
         <p class="text-[#86868B] text-xs mt-1">/ {{ $totalAssigned }} pcs</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Shalwar</p>
-        <p class="text-3xl font-light {{ $sTotal >= $totalAssigned ? 'text-[#34C759]' : 'text-[#FF9500]' }}">{{ lacs_format($sTotal) }}</p>
+        <p class="text-3xl font-light {{ $sTotal >= $totalAssigned ? 'text-[#34C759]' : 'text-[#FF9500]' }}">{{ number_format($sTotal) }}</p>
         <p class="text-[#86868B] text-xs mt-1">/ {{ $totalAssigned }} pcs</p>
     </div>
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Dupatta</p>
-        <p class="text-3xl font-light {{ $dTotal >= $totalAssigned ? 'text-[#34C759]' : 'text-[#FF9500]' }}">{{ lacs_format($dTotal) }}</p>
+        <p class="text-3xl font-light {{ $dTotal >= $totalAssigned ? 'text-[#34C759]' : 'text-[#FF9500]' }}">{{ number_format($dTotal) }}</p>
         <p class="text-[#86868B] text-xs mt-1">/ {{ $totalAssigned }} pcs</p>
     </div>
 </div>
@@ -375,7 +375,7 @@
                         </div>
                     </div>
                     <div class="text-right">
-                        <span class="text-sm font-semibold text-green-700">{{ lacs_format((int)$batchTotal) }} pcs</span>
+                        <span class="text-sm font-semibold text-green-700">{{ number_format((int)$batchTotal) }} pcs</span>
                         <span class="text-xs text-[#86868B] ml-1">total</span>
                     </div>
                 </div>

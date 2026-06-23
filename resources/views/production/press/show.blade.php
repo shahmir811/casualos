@@ -40,7 +40,7 @@
     <div class="text-right">
         <p class="text-xs text-[#6E6E73] uppercase tracking-widest">Outstanding</p>
         <p class="text-2xl font-light {{ $outstanding > 0 ? 'text-[#FF9500]' : 'text-[#34C759]' }}">
-            {{ lacs_format($outstanding) }} pcs
+            {{ number_format($outstanding) }} pcs
         </p>
     </div>
 </div>
@@ -73,9 +73,9 @@
                 @foreach($sizes as $size)
                 <td class="text-right">{{ $sentItems->where('size', $size)->sum('quantity') ?: '—' }}</td>
                 @endforeach
-                <td class="text-right text-[#34C759] font-medium">{{ lacs_format($designReturned) }}</td>
+                <td class="text-right text-[#34C759] font-medium">{{ number_format($designReturned) }}</td>
                 <td class="text-right {{ $designOutstanding > 0 ? 'text-[#FF9500]' : 'text-[#86868B]' }} font-medium">
-                    {{ $designOutstanding > 0 ? lacs_format($designOutstanding) : '—' }}
+                    {{ $designOutstanding > 0 ? number_format($designOutstanding) : '—' }}
                 </td>
             </tr>
             @endforeach
@@ -115,7 +115,7 @@
                 @foreach($sizes as $size)
                 <td class="text-right">{{ $retItems->where('size', $size)->sum('original_quantity') ?: '—' }}</td>
                 @endforeach
-                <td class="text-right font-bold text-[#0071E3]">{{ lacs_format($retItems->sum('original_quantity')) }}</td>
+                <td class="text-right font-bold text-[#0071E3]">{{ number_format($retItems->sum('original_quantity')) }}</td>
             </tr>
             @endforeach
             @endforeach

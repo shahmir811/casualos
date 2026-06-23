@@ -69,11 +69,26 @@ class TarpaiPaymentController extends Controller
     public function confirm(TarpaiPayment $tarpaiPayment)
     {
         $this->denyCreativeHead();
+        $tarpaiPayment->loadMissing('catalogue');
         $tarpaiPayment->update([
             'is_confirmed' => true,
             'confirmed_by' => Auth::id(),
             'confirmed_at' => now(),
         ]);
+
+        activity()
+            ->performedOn($tarpaiPayment)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'catalogue'      => $tarpaiPayment->catalogue?->name ?? '—',
+                'tarpai_house'   => $tarpaiPayment->houseLabel(),
+                'week'           => $tarpaiPayment->week_start->format('d M Y') . ' – ' . $tarpaiPayment->week_end->format('d M Y'),
+                'total_pieces'   => $tarpaiPayment->total_pieces_sent,
+                'total_amount'   => 'PKR ' . number_format((float) $tarpaiPayment->total_amount, 0),
+                'confirmed_by'   => Auth::user()->name,
+            ])
+            ->log('Tarpai payment confirmed for ' . $tarpaiPayment->houseLabel() . ' — week of ' . $tarpaiPayment->week_start->format('d M Y'));
 
         return back()->with('success', 'Payment confirmed for ' . $tarpaiPayment->houseLabel() . ' — week of ' . $tarpaiPayment->week_start->format('d M') . '.');
     }

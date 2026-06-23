@@ -26,14 +26,20 @@ class OrderReductionController extends Controller
             'items'                  => 'required|array|min:1',
             'items.*.design_id'      => 'required|exists:designs,id',
             'items.*.size'           => 'required|in:xs,s,m,l,xl',
-            'items.*.qty'            => 'required|integer|min:1',
+            'items.*.qty'            => 'required|integer|min:0',
             'surplus_action'   => 'required|in:none,credit_to_advance,refund',
             'refund_method'    => 'required_if:surplus_action,refund|nullable|in:cash,bank_transfer',
             'refund_reference' => 'nullable|string|max:255',
             'refund_document'  => 'nullable|file|mimes:pdf,jpeg,jpg,png|max:10240',
         ]);
 
-        DB::transaction(function () use ($request, $order) {
+        // Filter out zero-qty rows (table always submits all cells, most will be 0)
+        $nonZeroItems = array_values(array_filter($request->items ?? [], fn($i) => (int) ($i['qty'] ?? 0) > 0));
+        if (empty($nonZeroItems)) {
+            return back()->withErrors(['items' => 'Please enter at least one quantity to reduce.'])->withInput();
+        }
+
+        DB::transaction(function () use ($request, $order, $nonZeroItems) {
             $order->loadMissing(['items.design', 'customer']);
 
             // Calculate reduction amount from order item unit prices
@@ -42,7 +48,7 @@ class OrderReductionController extends Controller
             $itemData           = [];
             $itemLines          = [];
 
-            foreach ($request->items as $item) {
+            foreach ($nonZeroItems as $item) {
                 $orderItem = $orderItemsByDesign->get($item['design_id']);
                 $unitPrice = $orderItem ? (float) $orderItem->unit_price : 0;
                 $amount    = $unitPrice * $item['qty'];
@@ -149,6 +155,39 @@ class OrderReductionController extends Controller
             if ($newTotal == 0 && $order->status !== 'dispatched') {
                 $order->update(['status' => 'cancelled']);
             }
+
+            // Granular audit log
+            $reductionItems = collect($itemData)->map(fn($i) => [
+                'design'      => $i['design_id'] ? ($orderItemsByDesign->get($i['design_id'])?->design?->name ?? "Design #{$i['design_id']}") : '—',
+                'size'        => strtoupper($i['size']),
+                'qty_reduced' => $i['qty_reduced'],
+                'unit_price'  => 'PKR ' . number_format($i['unit_price'], 0),
+                'amount'      => 'PKR ' . number_format($i['amount_reduced'], 0),
+            ])->toArray();
+            $logProps = [
+                'order'           => 'Order #' . $order->order_number,
+                'customer'        => $customer->name,
+                'adjustment_type' => $adjustmentLabel,
+                'original_total'  => 'PKR ' . number_format($originalTotal, 0),
+                'amount_reduced'  => 'PKR ' . number_format($totalReduced, 0),
+                'new_total'       => 'PKR ' . number_format($newTotal, 0),
+                'surplus_action'  => $surplusAction === 'none' ? 'None' : ucwords(str_replace('_', ' ', $surplusAction)),
+            ];
+            if ($surplus > 0) {
+                $logProps['surplus_amount'] = 'PKR ' . number_format($surplus, 0);
+            }
+            if ($newTotal == 0) {
+                $logProps['order_cancelled'] = 'Yes — new total is zero';
+            }
+            if ($request->notes) {
+                $logProps['notes'] = $request->notes;
+            }
+            activity()
+                ->performedOn($reduction)
+                ->causedBy(Auth::user())
+                ->event('detail')
+                ->withProperties(array_merge($logProps, ['items' => $reductionItems]))
+                ->log("Order #{$order->order_number} reduced by PKR " . number_format($totalReduced, 0) . " ({$adjustmentLabel})");
         });
 
         return redirect()->route('orders.show', $order)

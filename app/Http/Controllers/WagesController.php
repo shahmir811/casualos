@@ -76,11 +76,25 @@ class WagesController extends Controller
     public function confirm(Wage $wage)
     {
         $this->denyCreativeHead();
+        $wage->loadMissing(['catalogue', 'stitchingUnit']);
         $wage->update([
             'is_confirmed' => true,
             'confirmed_by' => Auth::id(),
             'confirmed_at' => now(),
         ]);
+
+        activity()
+            ->performedOn($wage)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'catalogue'      => $wage->catalogue?->name ?? '—',
+                'stitching_unit' => $wage->stitchingUnit?->name ?? '—',
+                'week'           => $wage->week_start->format('d M Y') . ' – ' . $wage->week_end->format('d M Y'),
+                'total_amount'   => 'PKR ' . number_format((float) $wage->total_amount, 0),
+                'confirmed_by'   => Auth::user()->name,
+            ])
+            ->log('Wage payment confirmed for ' . ($wage->stitchingUnit?->name ?? 'unit') . ' — week of ' . $wage->week_start->format('d M Y'));
 
         return back()->with('success', 'Wage payment confirmed for week of ' . $wage->week_start->format('d M') . '.');
     }

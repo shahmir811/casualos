@@ -71,6 +71,21 @@ class DesignController extends Controller
 
         $design = Design::create($validated);
 
+        activity()
+            ->performedOn($design)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'catalogue'          => $catalogue->name,
+                'design'             => $design->name,
+                'manufacturing_type' => ucfirst(str_replace('_', ' ', $design->manufacturing_type)),
+                'selling_price'      => 'PKR ' . number_format((float) $design->selling_price, 0),
+                'discount_price'     => $design->discount_price ? 'PKR ' . number_format((float) $design->discount_price, 0) : 'None',
+                'needs_naeem_pakki'  => $design->needs_naeem_pakki ? 'Yes' : 'No',
+                'sort_order'         => $design->sort_order,
+            ])
+            ->log('Design "' . $design->name . '" added to catalogue "' . $catalogue->name . '"');
+
         return redirect()->route('catalogues.show', $catalogue)
             ->with('success', 'Design "' . $design->name . '" added to catalogue.');
     }
@@ -122,7 +137,34 @@ class DesignController extends Controller
             $validated['photo'] = $request->file('photo')->store('designs');
         }
 
+        $logProps = ['catalogue' => $design->catalogue?->name ?? '—', 'design' => $validated['name']];
+        foreach (['name', 'selling_price', 'discount_price', 'manufacturing_type', 'needs_naeem_pakki', 'sort_order'] as $field) {
+            if ($field === 'needs_naeem_pakki') {
+                $old = (int) (bool) $design->getOriginal($field);
+                $new = (int) (bool) ($validated[$field] ?? false);
+                if ($old !== $new) {
+                    $logProps[$field] = ($old ? 'Yes' : 'No') . ' → ' . ($new ? 'Yes' : 'No');
+                }
+            } else {
+                $old = (string) ($design->getOriginal($field) ?? '');
+                $new = (string) ($validated[$field] ?? '');
+                if ($old !== $new) {
+                    $logProps[$field] = ($old ?: '—') . ' → ' . ($new ?: '—');
+                }
+            }
+        }
+        if (isset($validated['photo'])) {
+            $logProps['photo'] = 'Replaced';
+        }
+
         $design->update($validated);
+
+        activity()
+            ->performedOn($design)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties($logProps)
+            ->log('Design "' . $design->name . '" updated');
 
         return redirect()->route('catalogues.show', $design->catalogue)
             ->with('success', 'Design updated successfully.');
@@ -139,11 +181,31 @@ class DesignController extends Controller
             return back()->with('error', 'Cannot delete a design that has been ordered.');
         }
 
+        $design->loadMissing('catalogue');
+        $designName    = $design->name;
+        $catalogueName = $design->catalogue?->name ?? '—';
+        $catalogueId   = $design->catalogue_id;
+
+        // Log before delete — Design has no LogsActivity, so without this there is zero audit trail
+        activity()
+            ->performedOn($design)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->withProperties([
+                'design'             => $designName,
+                'catalogue'          => $catalogueName,
+                'manufacturing_type' => ucfirst(str_replace('_', ' ', $design->manufacturing_type)),
+                'selling_price'      => 'PKR ' . number_format((float) $design->selling_price, 0),
+                'discount_price'     => $design->discount_price ? 'PKR ' . number_format((float) $design->discount_price, 0) : 'None',
+                'needs_naeem_pakki'  => $design->needs_naeem_pakki ? 'Yes' : 'No',
+                'deleted_by'         => Auth::user()->name,
+            ])
+            ->log('Design "' . $designName . '" PERMANENTLY DELETED from catalogue "' . $catalogueName . '"');
+
         if ($design->photo) {
             Storage::delete($design->photo);
         }
 
-        $catalogueId = $design->catalogue_id;
         $design->delete();
 
         return redirect()->route('catalogues.show', $catalogueId)

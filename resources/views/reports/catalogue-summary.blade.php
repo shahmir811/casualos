@@ -42,8 +42,8 @@
                 </td>
                 <td class="text-right">{{ $cat->designs_count }}</td>
                 <td class="text-right">{{ $orderCount }}</td>
-                <td class="text-right font-semibold">PKR {{ lacs_format($revenue, 0) }}</td>
-                <td class="text-right text-[#6E6E73] text-xs">PKR {{ lacs_format($avg, 0) }}</td>
+                <td class="text-right font-semibold">PKR {{ number_format($revenue, 0) }}</td>
+                <td class="text-right text-[#6E6E73] text-xs">PKR {{ number_format($avg, 0) }}</td>
                 <td class="text-[#6E6E73] text-xs">{{ $cat->created_at->format('d M Y') }}</td>
             </tr>
             @empty
@@ -54,7 +54,7 @@
         <tfoot>
             <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
                 <td class="px-5 py-3 font-semibold text-sm" colspan="4">Total</td>
-                <td class="px-5 py-3 text-right font-bold text-sm">PKR {{ lacs_format($catalogues->sum(fn($c) => $c->orders->sum('total_amount')), 0) }}</td>
+                <td class="px-5 py-3 text-right font-bold text-sm">PKR {{ number_format($catalogues->sum(fn($c) => $c->orders->sum('total_amount')), 0) }}</td>
                 <td colspan="2"></td>
             </tr>
         </tfoot>
