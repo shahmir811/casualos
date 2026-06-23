@@ -139,10 +139,18 @@ class DesignController extends Controller
 
         $logProps = ['catalogue' => $design->catalogue?->name ?? '—', 'design' => $validated['name']];
         foreach (['name', 'selling_price', 'discount_price', 'manufacturing_type', 'needs_naeem_pakki', 'sort_order'] as $field) {
-            $old = (string) ($design->getOriginal($field) ?? '');
-            $new = (string) ($validated[$field] ?? '');
-            if ($old !== $new) {
-                $logProps[$field] = ($old ?: '—') . ' → ' . ($new ?: '—');
+            if ($field === 'needs_naeem_pakki') {
+                $old = (int) (bool) $design->getOriginal($field);
+                $new = (int) (bool) ($validated[$field] ?? false);
+                if ($old !== $new) {
+                    $logProps[$field] = ($old ? 'Yes' : 'No') . ' → ' . ($new ? 'Yes' : 'No');
+                }
+            } else {
+                $old = (string) ($design->getOriginal($field) ?? '');
+                $new = (string) ($validated[$field] ?? '');
+                if ($old !== $new) {
+                    $logProps[$field] = ($old ?: '—') . ' → ' . ($new ?: '—');
+                }
             }
         }
         if (isset($validated['photo'])) {

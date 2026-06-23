@@ -76,10 +76,10 @@ class ReportController extends Controller
         return view('reports.customer-ledger', compact('customers', 'selectedCustomer', 'entries', 'balance'));
     }
 
-    public function productionStatus(Request $request)
+    public function productionStatus()
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
 
         $orders = Order::with(['customer', 'catalogue'])
             ->whereIn('status', ['confirmed', 'stitching'])
@@ -89,10 +89,10 @@ class ReportController extends Controller
         return view('reports.production-status', compact('orders', 'selectedCatalogue'));
     }
 
-    public function stitchingReconciliation(Request $request)
+    public function stitchingReconciliation()
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
 
         $npDesignRows = ProductionAssignmentNpDesign::with(['assignment.catalogue', 'design', 'returnItems'])
             ->whereHas('assignment', fn($q) => $q->where('catalogue_id', $catalogueId))
@@ -109,8 +109,8 @@ class ReportController extends Controller
 
     public function packedInventory()
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
 
         $returnItems = PressReturnItem::with(['pressReturn.send.catalogue', 'design'])
             ->whereHas('pressReturn.send', fn($q) => $q->where('catalogue_id', $catalogueId))
@@ -121,10 +121,10 @@ class ReportController extends Controller
         return view('reports.packed-inventory', compact('grouped', 'selectedCatalogue'));
     }
 
-    public function payrollHistory(Request $request)
+    public function payrollHistory()
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
 
         $wages = Wage::with(['catalogue', 'stitchingUnit', 'confirmedBy'])
             ->where('catalogue_id', $catalogueId)
@@ -136,8 +136,8 @@ class ReportController extends Controller
 
     public function outsourcedDesigns()
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
 
         $batches = OutsourcedBatch::with(['catalogue', 'items.design', 'loggedBy'])
             ->where('catalogue_id', $catalogueId)
@@ -147,10 +147,10 @@ class ReportController extends Controller
         return view('reports.outsourced-designs', compact('batches', 'selectedCatalogue'));
     }
 
-    public function dispatchHistory(Request $request)
+    public function dispatchHistory()
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
         $orders            = $this->loadDispatchHistoryData($catalogueId);
 
         return view('reports.dispatch-history', compact('orders', 'selectedCatalogue'));
@@ -158,8 +158,8 @@ class ReportController extends Controller
 
     public function dispatchHistoryPdf(Request $request)
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
         $orders            = $this->loadDispatchHistoryData($catalogueId);
         $logoDataUri       = pdf_logo_data_uri();
 
@@ -170,8 +170,8 @@ class ReportController extends Controller
 
     public function dispatchHistoryExcel(Request $request)
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
         $orders            = $this->loadDispatchHistoryData($catalogueId);
 
         return (new DispatchHistoryExport($orders, $selectedCatalogue))
@@ -275,8 +275,8 @@ class ReportController extends Controller
 
     public function damageReductions(Request $request)
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
 
         $reductions = OrderReduction::with(['order.customer', 'items.design', 'reducedBy'])
             ->whereHas('order', fn($q) => $q->where('catalogue_id', $catalogueId))
@@ -290,8 +290,8 @@ class ReportController extends Controller
 
     public function customerOrderBill(Request $request)
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
         $orders            = $this->loadOrderBillData($catalogueId);
 
         return view('reports.customer-order-bill', compact('selectedCatalogue', 'orders'));
@@ -299,8 +299,8 @@ class ReportController extends Controller
 
     public function customerOrderBillPdf(Request $request)
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
         $orders            = $this->loadOrderBillData($catalogueId);
 
         $logoDataUri = pdf_logo_data_uri();
@@ -312,8 +312,8 @@ class ReportController extends Controller
 
     public function customerOrderBillExcel(Request $request)
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
         $orders            = $this->loadOrderBillData($catalogueId);
 
         return (new CustomerOrderBillExport($orders, $selectedCatalogue))
@@ -324,8 +324,8 @@ class ReportController extends Controller
 
     public function bankAccountBreakdown(Request $request)
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
         $bankAccounts      = BankAccount::orderBy('title')->get();
         $orders            = $this->loadBankBreakdownData($catalogueId, $bankAccounts);
 
@@ -334,8 +334,8 @@ class ReportController extends Controller
 
     public function bankAccountBreakdownPdf(Request $request)
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
         $bankAccounts      = BankAccount::orderBy('title')->get();
         $orders            = $this->loadBankBreakdownData($catalogueId, $bankAccounts);
 
@@ -348,8 +348,8 @@ class ReportController extends Controller
 
     public function bankAccountBreakdownExcel(Request $request)
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
         $bankAccounts      = BankAccount::orderBy('title')->get();
         $orders            = $this->loadBankBreakdownData($catalogueId, $bankAccounts);
 
@@ -361,8 +361,8 @@ class ReportController extends Controller
 
     public function receivablesByBank(Request $request)
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
         $banks             = BankAccount::orderBy('id')->get();
         $data              = $this->loadReceivablesByBankData($catalogueId, $banks);
 
@@ -374,8 +374,8 @@ class ReportController extends Controller
 
     public function receivablesByBankPdf(Request $request)
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
         $banks             = BankAccount::orderBy('id')->get();
         $data              = $this->loadReceivablesByBankData($catalogueId, $banks);
         $logoDataUri       = pdf_logo_data_uri();
@@ -390,8 +390,8 @@ class ReportController extends Controller
 
     public function receivablesByBankExcel(Request $request)
     {
-        $catalogueId       = (int) session('active_catalogue_id');
-        $selectedCatalogue = Catalogue::findOrFail($catalogueId);
+        $selectedCatalogue = $this->activeCatalogue();
+        $catalogueId       = $selectedCatalogue->id;
         $banks             = BankAccount::orderBy('id')->get();
         $data              = $this->loadReceivablesByBankData($catalogueId, $banks);
 
@@ -406,6 +406,15 @@ class ReportController extends Controller
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    private function activeCatalogue(): Catalogue
+    {
+        $id = (int) session('active_catalogue_id', 0);
+        if (!$id) {
+            abort(redirect()->route('reports.index')->with('error', 'No active catalogue selected. Please select one from the sidebar.'));
+        }
+        return Catalogue::findOrFail($id);
+    }
 
     private function loadOrderBillData(int $catalogueId): \Illuminate\Support\Collection
     {

@@ -31,7 +31,7 @@ class PublicOrderController extends Controller
 
         // Guard: reject submission if catalogue has been closed by admin
         if ($catalogue->status !== 'open') {
-            return redirect()->route('order.show', $token);
+            return redirect()->route('order.public', $token);
         }
 
         // Validate customer details + collective size quantities
@@ -94,10 +94,9 @@ class PublicOrderController extends Controller
                 ->with('duplicate_order', true);
         }
 
-        $orderId    = null;
-        $orderRef   = null;
+        $orderId = null;
 
-        DB::transaction(function () use ($request, $catalogue, $customer, $qtyXS, $qtyS, $qtyM, $qtyL, $qtyXL, $piecesPerDesign, $totalAmount, $useDiscount, &$orderId, &$orderRef) {
+        DB::transaction(function () use ($request, $catalogue, $customer, $qtyXS, $qtyS, $qtyM, $qtyL, $qtyXL, $piecesPerDesign, $totalAmount, $useDiscount, &$orderId) {
 
             // Create the order
             $order = Order::create([
@@ -158,26 +157,7 @@ class PublicOrderController extends Controller
                 'created_by'              => null, // nullable — see migration
             ]);
 
-            // Granular audit log (no authenticated user — public form)
-            activity()
-                ->performedOn($order)
-                ->causedBy(null)
-                ->event('detail')
-                ->withProperties([
-                    'order_number'  => 'Order #' . $order->order_number,
-                    'customer'      => $customer->name,
-                    'city'          => $request->input('city'),
-                    'email'         => $request->input('submitted_email'),
-                    'catalogue'     => $catalogue->name,
-                    'price_tier'    => $useDiscount ? 'Discount (qty ' . $piecesPerDesign . ' ≥ benchmark ' . $catalogue->quantity_benchmark . ')' : 'Standard',
-                    'total_amount'  => 'PKR ' . number_format($totalAmount, 0),
-                    'notes'         => $request->input('notes') ?? '—',
-                    'items'         => $designItems,
-                ])
-                ->log("Order #{$order->order_number} placed by {$customer->name} for {$catalogue->name}");
-
-            $orderId  = $order->id;
-            $orderRef = $order;
+            $orderId = $order->id;
         });
 
         // Store order ID in session for the thank-you page

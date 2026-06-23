@@ -673,7 +673,7 @@ returns that cause discrepancies — it flags them for review.
 
 ### Known Bugs / Incomplete Features (must fix)
 
-1. **`order.show` route name used in controller** — should be `order.public`
+1. **`order.show` route name used in controller** — ✅ Fixed (2026-06-23): `PublicOrderController::submit()` now redirects to `order.public` instead of the non-existent `order.show`
 2. **Dispatch payment check missing** — `DispatchController::store()` has no outstanding balance guard
 4. **Cargo document is text, not file** — must be a file upload stored on disk
 5. **Packed inventory not deducted after dispatch** — `DispatchController::store()` must decrement `press_return_items` quantities (old `press_pack_records` table has been removed)

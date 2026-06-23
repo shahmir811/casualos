@@ -48,7 +48,7 @@ class StitchingUnitController extends Controller
                 'unit_number'    => $unit->number,
                 'name'           => $unit->name,
                 'payment_type'   => ucfirst(str_replace('_', ' ', $unit->payment_type)),
-                'per_piece_rate' => $unit->per_piece_rate ? 'PKR ' . number_format((float) $unit->per_piece_rate, 0) : '—',
+                'per_piece_rate' => $unit->per_piece_rate !== null ? 'PKR ' . number_format((float) $unit->per_piece_rate, 0) : '—',
                 'status'         => 'Active',
                 'created_by'     => Auth::user()->name,
             ])

@@ -91,23 +91,6 @@ class OrderPieceReassignmentController extends Controller
             }
         });
 
-        if ($totalAdded > 0) {
-            $targetOrder->loadMissing('customer');
-            activity()
-                ->performedOn($targetOrder)
-                ->causedBy(Auth::user())
-                ->event('detail')
-                ->withProperties([
-                    'source_order'   => 'Order #' . $order->order_number . ' (' . ($order->customer?->name ?? $order->submitted_name) . ')',
-                    'target_order'   => 'Order #' . $targetOrder->order_number . ' (' . ($targetOrder->customer?->name ?? $targetOrder->submitted_name) . ')',
-                    'catalogue'      => $targetOrder->catalogue?->name ?? '—',
-                    'total_added'    => 'PKR ' . number_format($totalAdded, 0),
-                    'notes'          => $request->notes ?? '—',
-                    'items'          => $logItems,
-                ])
-                ->log("Pieces reassigned from Order #{$order->order_number} → Order #{$targetOrder->order_number} (PKR " . number_format($totalAdded, 0) . ' added)');
-        }
-
         return redirect()->route('orders.show', $order)
             ->with('success', 'Pieces reassigned successfully.');
     }
