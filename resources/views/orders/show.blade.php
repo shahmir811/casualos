@@ -66,6 +66,9 @@
         @endif
 
         @if(in_array(Auth::user()->role, ['admin', 'accountant']) && !in_array($order->status, ['cancelled', 'dispatched']))
+        <a href="{{ route('orders.adjust', $order) }}" class="btn-secondary">
+            Adjust Order
+        </a>
         <a href="{{ route('orders.reduce', $order) }}" class="btn-secondary">
             Log Reduction
         </a>

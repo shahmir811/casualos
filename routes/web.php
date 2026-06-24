@@ -35,6 +35,7 @@ use App\Http\Controllers\TarpaiPaymentController;
 use App\Http\Controllers\CronLogController;
 use App\Http\Controllers\OrderBankAssignmentController;
 use App\Http\Controllers\BankCollectionReportController;
+use App\Http\Controllers\OrderAdjustController;
 
 /*
 |--------------------------------------------------------------------------
@@ -126,6 +127,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('orders/{order}/reduce',  [OrderReductionController::class, 'create'])->name('orders.reduce');
         Route::post('orders/{order}/reduce', [OrderReductionController::class, 'store'])->name('orders.reduce.store');
         Route::get('orders/{order}/reductions/{reduction}', [OrderReductionController::class, 'show'])->name('orders.reductions.show');
+
+        // Adjust Order (admin + accountant — change size quantities before dispatch)
+        Route::get('orders/{order}/adjust',  [OrderAdjustController::class, 'create'])->name('orders.adjust');
+        Route::post('orders/{order}/adjust', [OrderAdjustController::class, 'store'])->name('orders.adjust.store');
     });
 
     // Piece Reassignment (admin only)

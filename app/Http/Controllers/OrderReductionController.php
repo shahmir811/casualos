@@ -156,6 +156,26 @@ class OrderReductionController extends Controller
                 $order->update(['status' => 'cancelled']);
             }
 
+            // Decrement order_items quantities for each reduced item so that
+            // isFullyDispatched() compares against the updated ordered totals.
+            foreach ($nonZeroItems as $item) {
+                $orderItem = $order->items->firstWhere('design_id', $item['design_id']);
+                if ($orderItem) {
+                    $col = 'qty_' . $item['size'];
+                    $orderItem->{$col} = max(0, (int) $orderItem->{$col} - (int) $item['qty']);
+                    $orderItem->save(); // booted() recomputes total_qty and total_amount
+                }
+            }
+
+            // If the order was partially dispatched, check whether the reduction
+            // has brought ordered quantities in line with what was dispatched.
+            if ($order->status === 'partially_dispatched') {
+                $order->unsetRelation('items')->load('items');
+                if ($order->isFullyDispatched()) {
+                    $order->update(['status' => 'dispatched']);
+                }
+            }
+
             // Granular audit log
             $reductionItems = collect($itemData)->map(fn($i) => [
                 'design'      => $i['design_id'] ? ($orderItemsByDesign->get($i['design_id'])?->design?->name ?? "Design #{$i['design_id']}") : '—',

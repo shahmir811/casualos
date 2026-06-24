@@ -146,6 +146,14 @@
                 return sum + (parseInt(this.vals[designId + '_' + s]) || 0);
             }, 0);
         },
+        sizeTotal(size) {
+            return Object.entries(this.vals)
+                .filter(([k]) => k.endsWith('_' + size))
+                .reduce((sum, [, v]) => sum + (parseInt(v) || 0), 0);
+        },
+        get grandTotal() {
+            return Object.values(this.vals).reduce((sum, v) => sum + (parseInt(v) || 0), 0);
+        },
         get reductionAmount() {
             return Object.entries(this.vals).reduce((sum, [key, qty]) => {
                 const designId = key.split('_')[0];
@@ -270,6 +278,21 @@
                         </tr>
                         @endforeach
                     </tbody>
+                    <tfoot>
+                        <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
+                            <td class="px-5 py-3 text-xs font-semibold text-[#1D1D1F]">Total Reduced</td>
+                            @foreach($sizes as $sz)
+                            <td class="px-2 py-3 text-center">
+                                <span class="text-sm font-semibold text-[#0071E3] tabular-nums"
+                                      x-text="sizeTotal('{{ $sz }}') > 0 ? sizeTotal('{{ $sz }}') : '—'"></span>
+                            </td>
+                            @endforeach
+                            <td class="px-3 py-3 text-center">
+                                <span class="text-sm font-semibold text-[#0071E3] tabular-nums"
+                                      x-text="grandTotal > 0 ? grandTotal : '—'"></span>
+                            </td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
 

@@ -211,6 +211,8 @@
                         <tbody>
                             @php
                                 $batchByDesign = $batch->items->groupBy('design_id');
+                                $batchSizeTotals = array_fill_keys($sizes, 0);
+                                $batchGrandTotal = 0;
                             @endphp
                             @foreach($order->items as $item)
                             @php
@@ -219,6 +221,12 @@
                                 $batchTotal = $batchItems->sum('quantity');
                             @endphp
                             @if($batchTotal > 0)
+                            @php
+                                foreach ($sizes as $sz) {
+                                    $batchSizeTotals[$sz] += (int) ($batchSizes[$sz] ?? 0);
+                                }
+                                $batchGrandTotal += $batchTotal;
+                            @endphp
                             <tr>
                                 <td class="font-medium">{{ $item->design->name ?? '—' }}</td>
                                 @foreach($sizes as $sz)
@@ -231,6 +239,17 @@
                             @endif
                             @endforeach
                         </tbody>
+                        <tfoot>
+                            <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
+                                <td class="px-4 py-2.5 text-xs font-semibold text-[#1D1D1F]">Total</td>
+                                @foreach($sizes as $sz)
+                                <td class="px-4 py-2.5 text-right text-xs font-semibold text-[#1D1D1F]">
+                                    {{ $batchSizeTotals[$sz] > 0 ? $batchSizeTotals[$sz] : '—' }}
+                                </td>
+                                @endforeach
+                                <td class="px-4 py-2.5 text-right text-xs font-semibold text-[#1D1D1F]">{{ $batchGrandTotal }}</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
