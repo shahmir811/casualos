@@ -53,7 +53,7 @@ class OrderAdjustController extends Controller
         }
 
         DB::transaction(function () use ($order, $qtyXS, $qtyS, $qtyM, $qtyL, $qtyXL, $piecesPerDesign) {
-            $order->loadMissing(['items.design', 'catalogue']);
+            $order->loadMissing(['items.design', 'catalogue', 'customer']);
 
             // Mirror the exact pricing logic from PublicOrderController
             $benchmark   = $order->catalogue->quantity_benchmark;
@@ -75,7 +75,7 @@ class OrderAdjustController extends Controller
                 $item->qty_xl     = $qtyXL;
                 $item->save(); // booted() recomputes total_qty and total_amount using updated unit_price
 
-                $newTotal += (float) $item->fresh()->total_amount;
+                $newTotal += (float) $item->total_amount;
             }
 
             $order->update([
