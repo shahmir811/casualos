@@ -55,6 +55,8 @@ class OrderAdjustController extends Controller
         DB::transaction(function () use ($order, $qtyXS, $qtyS, $qtyM, $qtyL, $qtyXL, $piecesPerDesign) {
             $order->loadMissing(['items.design', 'catalogue', 'customer']);
 
+            $oldTotal = (float) $order->total_amount;
+
             // Mirror the exact pricing logic from PublicOrderController
             $benchmark   = $order->catalogue->quantity_benchmark;
             $useDiscount = $benchmark !== null && $piecesPerDesign > $benchmark;
@@ -82,6 +84,25 @@ class OrderAdjustController extends Controller
                 'total_amount'        => $newTotal,
                 'outstanding_balance' => max(0, $newTotal - (float) $order->total_paid),
             ]);
+
+            // Sync the original order_charged ledger entry to the new total.
+            // We use DB::table() to bypass CustomerLedger's boot-level update guard.
+            // We target only the first (oldest) order_charged entry — piece reassignment
+            // also creates order_charged rows for the same order, and those must not change.
+            if ($newTotal !== $oldTotal) {
+                $originalEntry = DB::table('customer_ledger')
+                    ->where('reference_type', 'App\Models\Order')
+                    ->where('reference_id', $order->id)
+                    ->where('transaction_type', 'order_charged')
+                    ->orderBy('id', 'asc')
+                    ->first();
+
+                if ($originalEntry) {
+                    DB::table('customer_ledger')
+                        ->where('id', $originalEntry->id)
+                        ->update(['amount' => $newTotal]);
+                }
+            }
 
             activity()
                 ->performedOn($order)
