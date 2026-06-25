@@ -3,9 +3,17 @@
 @section('content')
 
 @php
-    $firstItem     = $order->items->first();
-    $numDesigns    = $order->items->count();
-    $totalUnitPrices = $order->items->sum('unit_price');
+    $firstItem  = $order->items->first();
+    $numDesigns = $order->items->count();
+    $benchmark  = $order->catalogue->quantity_benchmark;
+
+    // Normal total: sum of each design's selling_price
+    $normalTotal = $order->items->sum(fn($item) => (float) ($item->design->selling_price ?? $item->unit_price));
+
+    // Discount total: sum of each design's discount_price (if set), else selling_price
+    $discountTotal = $order->items->sum(fn($item) => (float) (
+        $item->design->discount_price ?? $item->design->selling_price ?? $item->unit_price
+    ));
 
     $currentXS = (int) ($firstItem?->qty_xs ?? 0);
     $currentS  = (int) ($firstItem?->qty_s  ?? 0);
@@ -74,7 +82,10 @@
             <tr>
                 <th class="text-left">#</th>
                 <th class="text-left">Design</th>
-                <th class="text-right">Unit Price</th>
+                <th class="text-right">Selling Price</th>
+                @if($benchmark !== null)
+                <th class="text-right">Discount Price</th>
+                @endif
             </tr>
         </thead>
         <tbody>
@@ -82,7 +93,12 @@
             <tr>
                 <td class="text-[#6E6E73] text-xs tabular-nums">{{ $i + 1 }}</td>
                 <td class="font-medium text-[#1D1D1F]">{{ $item->design->name ?? '—' }}</td>
-                <td class="text-right tabular-nums text-[#6E6E73]">PKR {{ number_format($item->unit_price, 0) }}</td>
+                <td class="text-right tabular-nums text-[#6E6E73]">PKR {{ number_format($item->design->selling_price ?? $item->unit_price, 0) }}</td>
+                @if($benchmark !== null)
+                <td class="text-right tabular-nums text-[#34C759]">
+                    {{ $item->design->discount_price !== null ? 'PKR ' . number_format($item->design->discount_price, 0) : '—' }}
+                </td>
+                @endif
             </tr>
             @endforeach
         </tbody>
@@ -97,7 +113,9 @@
         m:  {{ old('qty_m',  $currentM) }},
         l:  {{ old('qty_l',  $currentL) }},
         xl: {{ old('qty_xl', $currentXL) }},
-        totalUnitPrices: {{ (float) $totalUnitPrices }},
+        benchmark:     {{ $benchmark !== null ? (int) $benchmark : 'null' }},
+        normalTotal:   {{ (float) $normalTotal }},
+        discountTotal: {{ (float) $discountTotal }},
         numDesigns: {{ $numDesigns }},
 
         get piecesPerDesign() {
@@ -106,8 +124,14 @@
         get totalPieces() {
             return this.piecesPerDesign * this.numDesigns;
         },
+        get useDiscount() {
+            return this.benchmark !== null && this.piecesPerDesign > this.benchmark;
+        },
+        get effectiveUnitPrices() {
+            return this.useDiscount ? this.discountTotal : this.normalTotal;
+        },
         get newTotal() {
-            return this.piecesPerDesign * this.totalUnitPrices;
+            return this.piecesPerDesign * this.effectiveUnitPrices;
         },
         formatPkr(n) {
             const str = String(Math.round(Math.abs(n)));
@@ -174,8 +198,18 @@
                 <div>
                     <p class="text-[#6E6E73] text-xs uppercase tracking-widest mb-1">New Total Amount</p>
                     <p class="text-[#1D1D1F] text-2xl font-light tabular-nums" x-text="formatPkr(newTotal)"></p>
+                    @if($benchmark !== null)
+                    <p class="text-xs mt-1"
+                       x-text="useDiscount ? 'Discount pricing active' : 'Normal pricing'"
+                       :class="useDiscount ? 'text-[#34C759] font-medium' : 'text-[#6E6E73]'"></p>
+                    @endif
                 </div>
             </div>
+            @if($benchmark !== null)
+            <p class="text-xs text-[#6E6E73] text-center mt-4">
+                Benchmark: {{ number_format($benchmark) }} pieces per design — discount pricing applies above this threshold.
+            </p>
+            @endif
         </div>
 
         <div class="flex items-center gap-3">
