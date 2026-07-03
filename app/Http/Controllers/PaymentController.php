@@ -109,12 +109,15 @@ class PaymentController extends Controller
                         'notes'                   => "Payment for Order #{$order->order_number} via advance (exceeded available credit)",
                         'created_by'              => Auth::id(),
                     ]);
+                }
 
-                    $newSurplus = max(0, $newTotalPaid - $order->total_amount);
-                    $surplus    = $newSurplus - $oldSurplus;
-                    if ($surplus > 0) {
-                        $customer->increment('advance_credit_balance', $surplus);
-                    }
+                // Surplus can arise purely from the credit portion overpaying the order
+                // (e.g. available credit exceeds what was actually owed), so this must
+                // run regardless of whether there was a separate payment portion.
+                $newSurplus = max(0, $newTotalPaid - $order->total_amount);
+                $surplus    = $newSurplus - $oldSurplus;
+                if ($surplus > 0) {
+                    $customer->increment('advance_credit_balance', $surplus);
                 }
             } else {
                 CustomerLedger::create([
