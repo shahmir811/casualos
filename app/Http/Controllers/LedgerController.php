@@ -63,6 +63,32 @@ class LedgerController extends Controller
                         ];
                     }
 
+                    $rows = [];
+                    foreach ($r->items as $i) {
+                        $did = $i->design_id;
+                        if (!isset($rows[$did])) {
+                            $rows[$did] = [
+                                'name'       => $i->design->name ?? '—',
+                                'unit_price' => (float) $i->unit_price,
+                                'sizes'      => ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0],
+                                'qty'        => 0,
+                                'amount'     => 0.0,
+                            ];
+                        }
+                        $rows[$did]['sizes'][$i->size] = $i->qty_reduced;
+                        $rows[$did]['qty']    += $i->qty_reduced;
+                        $rows[$did]['amount'] += (float) $i->amount_reduced;
+                    }
+
+                    $sizeTotals = ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0];
+                    $qtyTotal   = 0;
+                    foreach ($rows as $row) {
+                        foreach ($sizeTotals as $key => $val) {
+                            $sizeTotals[$key] += $row['sizes'][$key];
+                        }
+                        $qtyTotal += $row['qty'];
+                    }
+
                     $reductionMap[$r->id] = [
                         'date'              => $r->reduction_date->format('d M Y'),
                         'logged_by'         => $r->reducedBy->name ?? '—',
@@ -73,13 +99,25 @@ class LedgerController extends Controller
                         'adjustment_amount' => 'PKR ' . number_format((float) $r->adjustment_amount, 0),
                         'new_total'         => 'PKR ' . number_format((float) $r->new_total, 0),
                         'surplus_action'    => $r->surplus_action,
-                        'items'             => $r->items->map(fn($i) => [
-                            'design'         => $i->design->name ?? '—',
-                            'size'           => strtoupper($i->size),
-                            'qty'            => $i->qty_reduced,
-                            'unit_price'     => 'PKR ' . number_format((float) $i->unit_price, 0),
-                            'amount'         => 'PKR ' . number_format((float) $i->amount_reduced, 0),
-                        ])->values()->toArray(),
+                        'items'             => collect($rows)->values()->map(fn($row) => [
+                            'design'     => $row['name'],
+                            'xs'         => $row['sizes']['xs'],
+                            's'          => $row['sizes']['s'],
+                            'm'          => $row['sizes']['m'],
+                            'l'          => $row['sizes']['l'],
+                            'xl'         => $row['sizes']['xl'],
+                            'qty'        => $row['qty'],
+                            'unit_price' => 'PKR ' . number_format($row['unit_price'], 0),
+                            'amount'     => 'PKR ' . number_format($row['amount'], 0),
+                        ])->toArray(),
+                        'item_totals'       => [
+                            'xs'  => $sizeTotals['xs'],
+                            's'   => $sizeTotals['s'],
+                            'm'   => $sizeTotals['m'],
+                            'l'   => $sizeTotals['l'],
+                            'xl'  => $sizeTotals['xl'],
+                            'qty' => $qtyTotal,
+                        ],
                         'refund'            => $refund,
                     ];
                 });

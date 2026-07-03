@@ -309,6 +309,7 @@
                 paymentType: '{{ old('payment_type', 'cash') }}',
                 amountDisplay: '{{ old('amount') ? number_format((int) old('amount'), 0) : '' }}',
                 amountRaw: '{{ old('amount') ?? '' }}',
+                advanceBalance: {{ (float) ($order->customer?->advance_credit_balance ?? 0) }},
                 files: [],
                 isDragging: false,
                 lightboxSrc: '',
@@ -316,6 +317,8 @@
                 get isBankTransfer() { return this.paymentType === 'bank_transfer'; },
                 get isAdvance() { return this.paymentType === 'advance'; },
                 get needsBank() { return this.paymentType === 'cash' || this.paymentType === 'bank_transfer'; },
+                get creditPortion() { return Math.min(Number(this.amountRaw || 0), this.advanceBalance); },
+                get paymentPortion() { return Math.max(Number(this.amountRaw || 0) - this.advanceBalance, 0); },
                 formatAmount(e) {
                     let raw = e.target.value.replace(/[^0-9]/g, '');
                     this.amountRaw = raw;
@@ -358,15 +361,20 @@
                         @input="formatAmount($event)"
                         class="apple-input" placeholder="e.g. 50,000">
                     <input type="hidden" name="amount" :value="amountRaw">
+                    <p x-show="isAdvance && Number(amountRaw || 0) > advanceBalance" x-cloak
+                       class="mt-2 text-xs text-[#0071E3] bg-[#EFF8FF] border border-[#BEE3FF] rounded-lg px-3 py-2 leading-relaxed">
+                        <template x-if="creditPortion > 0">
+                            <span>PKR <span x-text="creditPortion.toLocaleString('en-US')" class="font-semibold"></span> will be applied from advance credit. </span>
+                        </template>
+                        <span>PKR <span x-text="paymentPortion.toLocaleString('en-US')" class="font-semibold"></span> will be recorded as an additional payment.</span>
+                    </p>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Payment Method <span class="text-[#FF3B30]">*</span></label>
                     <select name="payment_type" required class="apple-input" x-model="paymentType">
                         <option value="cash">Cash</option>
                         <option value="bank_transfer">Bank Transfer</option>
-                        @if(($order->customer?->advance_credit_balance ?? 0) > 0)
-                        <option value="advance">From Advance Credit (PKR {{ number_format($order->customer->advance_credit_balance, 0) }} available)</option>
-                        @endif
+                        <option value="advance">From Advance Credit @if(($order->customer?->advance_credit_balance ?? 0) > 0)(PKR {{ number_format($order->customer->advance_credit_balance, 0) }} available)@endif</option>
                     </select>
                 </div>
 
@@ -794,38 +802,80 @@
             </div>
 
             {{-- Items Reduced --}}
+            @php
+                $sizeCols = ['xs' => 'XS', 's' => 'S', 'm' => 'M', 'l' => 'L', 'xl' => 'XL'];
+                $reductionRows = [];
+                foreach ($reduction->items as $item) {
+                    $did = $item->design_id;
+                    if (!isset($reductionRows[$did])) {
+                        $reductionRows[$did] = [
+                            'name'       => $item->design->name ?? '—',
+                            'unit_price' => $item->unit_price,
+                            'sizes'      => ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0],
+                            'qty'        => 0,
+                            'amount'     => 0,
+                        ];
+                    }
+                    $reductionRows[$did]['sizes'][$item->size] = $item->qty_reduced;
+                    $reductionRows[$did]['qty']    += $item->qty_reduced;
+                    $reductionRows[$did]['amount'] += $item->amount_reduced;
+                }
+                $sizeTotals = ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0];
+                $qtyTotal   = 0;
+                foreach ($reductionRows as $row) {
+                    foreach ($sizeTotals as $key => $val) {
+                        $sizeTotals[$key] += $row['sizes'][$key];
+                    }
+                    $qtyTotal += $row['qty'];
+                }
+            @endphp
             <div class="card overflow-hidden">
                 <div class="px-5 py-3 border-b border-[#F2F2F7]">
                     <h3 class="text-sm font-semibold text-[#1D1D1F]">Items Reduced</h3>
                 </div>
-                <table class="w-full apple-table">
-                    <thead>
-                        <tr>
-                            <th class="text-left">Design</th>
-                            <th class="text-center">Size</th>
-                            <th class="text-center">Qty</th>
-                            <th class="text-right">Unit Price</th>
-                            <th class="text-right">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($reduction->items as $item)
-                        <tr>
-                            <td class="font-medium text-[#1D1D1F]">{{ $item->design->name ?? '—' }}</td>
-                            <td class="text-center font-mono text-xs">{{ strtoupper($item->size) }}</td>
-                            <td class="text-center tabular-nums">{{ $item->qty_reduced }}</td>
-                            <td class="text-right tabular-nums text-[#6E6E73]">PKR {{ number_format($item->unit_price, 0) }}</td>
-                            <td class="text-right tabular-nums font-medium text-[#FF3B30]">PKR {{ number_format($item->amount_reduced, 0) }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                    <tfoot>
-                        <tr class="border-t border-[#E8E8ED]">
-                            <td colspan="4" class="text-right font-semibold text-[#1D1D1F] py-3 pr-4">Total Reduction</td>
-                            <td class="text-right tabular-nums font-semibold text-[#FF3B30] py-3">PKR {{ number_format($reduction->adjustment_amount, 0) }}</td>
-                        </tr>
-                    </tfoot>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="w-full apple-table whitespace-nowrap">
+                        <thead>
+                            <tr>
+                                <th class="text-left">Design</th>
+                                @foreach($sizeCols as $label)
+                                <th class="text-center px-3">{{ $label }}</th>
+                                @endforeach
+                                <th class="text-center">Qty</th>
+                                <th class="text-right">Unit Price</th>
+                                <th class="text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($reductionRows as $row)
+                            <tr>
+                                <td class="font-medium text-[#1D1D1F]">{{ $row['name'] }}</td>
+                                @foreach($sizeCols as $key => $label)
+                                <td class="text-center tabular-nums px-3">{{ $row['sizes'][$key] > 0 ? $row['sizes'][$key] : '—' }}</td>
+                                @endforeach
+                                <td class="text-center tabular-nums font-medium">{{ $row['qty'] }}</td>
+                                <td class="text-right tabular-nums text-[#6E6E73]">PKR {{ number_format($row['unit_price'], 0) }}</td>
+                                <td class="text-right tabular-nums font-medium text-[#FF3B30]">PKR {{ number_format($row['amount'], 0) }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr class="border-t border-[#E8E8ED] bg-[#F9F9FB]">
+                                <td class="font-semibold text-[#1D1D1F] py-3">Total Qty</td>
+                                @foreach($sizeCols as $key => $label)
+                                <td class="text-center tabular-nums font-semibold px-3">{{ $sizeTotals[$key] > 0 ? $sizeTotals[$key] : '—' }}</td>
+                                @endforeach
+                                <td class="text-center tabular-nums font-semibold">{{ $qtyTotal }}</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr class="border-t border-[#E8E8ED]">
+                                <td colspan="8" class="text-right font-semibold text-[#1D1D1F] py-3 pr-4">Total Reduction</td>
+                                <td class="text-right tabular-nums font-semibold text-[#FF3B30] py-3">PKR {{ number_format($reduction->adjustment_amount, 0) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
 
             {{-- Financial Impact --}}
