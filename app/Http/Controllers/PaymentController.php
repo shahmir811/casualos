@@ -86,10 +86,39 @@ class PaymentController extends Controller
             $customer = $order->customer;
 
             if ($request->payment_type === 'advance') {
-                // Advance payments consume the existing advance_credit_balance.
-                // No new ledger entry — the credit is already in the ledger via the
-                // prior overpayment's payment_received entry exceeding its order_charged.
-                $customer->decrement('advance_credit_balance', $request->amount);
+                // Amount beyond the available advance_credit_balance (including the
+                // full amount when the balance is 0) is not blocked — it falls
+                // through and is recorded as a normal payment_received entry instead.
+                $creditPortion  = min((float) $request->amount, (float) $customer->advance_credit_balance);
+                $paymentPortion = $request->amount - $creditPortion;
+
+                if ($creditPortion > 0) {
+                    // Advance credit consumed. No new ledger entry — the credit is already in the
+                    // ledger via the prior overpayment's payment_received entry exceeding its order_charged.
+                    $customer->decrement('advance_credit_balance', $creditPortion);
+                }
+
+                if ($paymentPortion > 0) {
+                    CustomerLedger::create([
+                        'customer_id'             => $order->customer_id,
+                        'transaction_type'        => 'payment_received',
+                        'amount'                  => -$paymentPortion,
+                        'running_advance_balance' => $customer->advance_credit_balance,
+                        'reference_type'          => 'App\Models\Payment',
+                        'reference_id'            => $payment->id,
+                        'notes'                   => "Payment for Order #{$order->order_number} via advance (exceeded available credit)",
+                        'created_by'              => Auth::id(),
+                    ]);
+                }
+
+                // Surplus can arise purely from the credit portion overpaying the order
+                // (e.g. available credit exceeds what was actually owed), so this must
+                // run regardless of whether there was a separate payment portion.
+                $newSurplus = max(0, $newTotalPaid - $order->total_amount);
+                $surplus    = $newSurplus - $oldSurplus;
+                if ($surplus > 0) {
+                    $customer->increment('advance_credit_balance', $surplus);
+                }
             } else {
                 CustomerLedger::create([
                     'customer_id'             => $order->customer_id,

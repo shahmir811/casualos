@@ -52,38 +52,80 @@
     </div>
 
     {{-- Items reduced --}}
+    @php
+        $sizeCols = ['xs' => 'XS', 's' => 'S', 'm' => 'M', 'l' => 'L', 'xl' => 'XL'];
+        $reductionRows = [];
+        foreach ($reduction->items as $item) {
+            $did = $item->design_id;
+            if (!isset($reductionRows[$did])) {
+                $reductionRows[$did] = [
+                    'name'       => $item->design->name ?? '—',
+                    'unit_price' => $item->unit_price,
+                    'sizes'      => ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0],
+                    'qty'        => 0,
+                    'amount'     => 0,
+                ];
+            }
+            $reductionRows[$did]['sizes'][$item->size] = $item->qty_reduced;
+            $reductionRows[$did]['qty']    += $item->qty_reduced;
+            $reductionRows[$did]['amount'] += $item->amount_reduced;
+        }
+        $sizeTotals = ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0];
+        $qtyTotal   = 0;
+        foreach ($reductionRows as $row) {
+            foreach ($sizeTotals as $key => $val) {
+                $sizeTotals[$key] += $row['sizes'][$key];
+            }
+            $qtyTotal += $row['qty'];
+        }
+    @endphp
     <div class="card overflow-hidden">
         <div class="px-5 py-4 border-b border-[#F2F2F7]">
             <h2 class="text-sm font-semibold text-[#1D1D1F]">Items Reduced</h2>
         </div>
-        <table class="w-full apple-table">
-            <thead>
-                <tr>
-                    <th class="text-left">Design</th>
-                    <th class="text-center">Size</th>
-                    <th class="text-center">Qty</th>
-                    <th class="text-right">Unit Price</th>
-                    <th class="text-right">Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($reduction->items as $item)
-                <tr>
-                    <td class="font-medium text-[#1D1D1F]">{{ $item->design->name ?? '—' }}</td>
-                    <td class="text-center font-mono text-xs">{{ strtoupper($item->size) }}</td>
-                    <td class="text-center tabular-nums">{{ $item->qty_reduced }}</td>
-                    <td class="text-right tabular-nums text-[#6E6E73]">PKR {{ number_format($item->unit_price, 0) }}</td>
-                    <td class="text-right tabular-nums font-medium text-[#FF3B30]">PKR {{ number_format($item->amount_reduced, 0) }}</td>
-                </tr>
-                @endforeach
-            </tbody>
-            <tfoot>
-                <tr class="border-t border-[#E8E8ED]">
-                    <td colspan="4" class="text-right font-semibold text-[#1D1D1F] py-3 pr-4">Total Reduction</td>
-                    <td class="text-right tabular-nums font-semibold text-[#FF3B30] py-3">PKR {{ number_format($reduction->adjustment_amount, 0) }}</td>
-                </tr>
-            </tfoot>
-        </table>
+        <div class="overflow-x-auto">
+            <table class="w-full apple-table whitespace-nowrap">
+                <thead>
+                    <tr>
+                        <th class="text-left">Design</th>
+                        @foreach($sizeCols as $label)
+                        <th class="text-center px-3">{{ $label }}</th>
+                        @endforeach
+                        <th class="text-center">Qty</th>
+                        <th class="text-right">Unit Price</th>
+                        <th class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($reductionRows as $row)
+                    <tr>
+                        <td class="font-medium text-[#1D1D1F]">{{ $row['name'] }}</td>
+                        @foreach($sizeCols as $key => $label)
+                        <td class="text-center tabular-nums px-3">{{ $row['sizes'][$key] > 0 ? $row['sizes'][$key] : '—' }}</td>
+                        @endforeach
+                        <td class="text-center tabular-nums font-medium">{{ $row['qty'] }}</td>
+                        <td class="text-right tabular-nums text-[#6E6E73]">PKR {{ number_format($row['unit_price'], 0) }}</td>
+                        <td class="text-right tabular-nums font-medium text-[#FF3B30]">PKR {{ number_format($row['amount'], 0) }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr class="border-t border-[#E8E8ED] bg-[#F9F9FB]">
+                        <td class="font-semibold text-[#1D1D1F] py-3">Total Qty</td>
+                        @foreach($sizeCols as $key => $label)
+                        <td class="text-center tabular-nums font-semibold px-3">{{ $sizeTotals[$key] > 0 ? $sizeTotals[$key] : '—' }}</td>
+                        @endforeach
+                        <td class="text-center tabular-nums font-semibold">{{ $qtyTotal }}</td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr class="border-t border-[#E8E8ED]">
+                        <td colspan="8" class="text-right font-semibold text-[#1D1D1F] py-3 pr-4">Total Reduction</td>
+                        <td class="text-right tabular-nums font-semibold text-[#FF3B30] py-3">PKR {{ number_format($reduction->adjustment_amount, 0) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
     </div>
 
     {{-- Financial impact --}}

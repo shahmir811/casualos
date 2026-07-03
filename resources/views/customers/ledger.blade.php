@@ -176,32 +176,51 @@
             <div class="border-t border-[#F2F2F7]"></div>
 
             {{-- Items reduced --}}
-            <div>
+            <div class="overflow-x-auto">
                 <p class="text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-3">Items Reduced</p>
-                <table class="w-full apple-table text-sm">
+                <table class="w-full apple-table text-sm whitespace-nowrap">
                     <thead>
                         <tr>
                             <th class="text-left">Design</th>
-                            <th class="text-center">Size</th>
+                            <th class="text-center px-3">XS</th>
+                            <th class="text-center px-3">S</th>
+                            <th class="text-center px-3">M</th>
+                            <th class="text-center px-3">L</th>
+                            <th class="text-center px-3">XL</th>
                             <th class="text-center">Qty</th>
                             <th class="text-right">Unit Price</th>
                             <th class="text-right">Amount</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <template x-for="item in (reduction?.items ?? [])" :key="item.design + item.size">
+                        <template x-for="item in (reduction?.items ?? [])" :key="item.design">
                             <tr>
                                 <td class="font-medium text-[#1D1D1F]" x-text="item.design"></td>
-                                <td class="text-center font-mono text-xs" x-text="item.size"></td>
-                                <td class="text-center tabular-nums" x-text="item.qty"></td>
+                                <td class="text-center tabular-nums px-3" x-text="item.xs || '—'"></td>
+                                <td class="text-center tabular-nums px-3" x-text="item.s || '—'"></td>
+                                <td class="text-center tabular-nums px-3" x-text="item.m || '—'"></td>
+                                <td class="text-center tabular-nums px-3" x-text="item.l || '—'"></td>
+                                <td class="text-center tabular-nums px-3" x-text="item.xl || '—'"></td>
+                                <td class="text-center tabular-nums font-medium" x-text="item.qty"></td>
                                 <td class="text-right tabular-nums text-[#6E6E73]" x-text="item.unit_price"></td>
                                 <td class="text-right tabular-nums font-medium text-[#FF3B30]" x-text="item.amount"></td>
                             </tr>
                         </template>
                     </tbody>
                     <tfoot>
+                        <tr class="border-t border-[#E8E8ED] bg-[#F9F9FB]">
+                            <td class="font-semibold text-[#1D1D1F] py-3">Total Qty</td>
+                            <td class="text-center tabular-nums font-semibold px-3" x-text="reduction?.item_totals?.xs || '—'"></td>
+                            <td class="text-center tabular-nums font-semibold px-3" x-text="reduction?.item_totals?.s || '—'"></td>
+                            <td class="text-center tabular-nums font-semibold px-3" x-text="reduction?.item_totals?.m || '—'"></td>
+                            <td class="text-center tabular-nums font-semibold px-3" x-text="reduction?.item_totals?.l || '—'"></td>
+                            <td class="text-center tabular-nums font-semibold px-3" x-text="reduction?.item_totals?.xl || '—'"></td>
+                            <td class="text-center tabular-nums font-semibold" x-text="reduction?.item_totals?.qty"></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
                         <tr class="border-t border-[#E8E8ED]">
-                            <td colspan="4" class="text-right font-semibold text-[#1D1D1F] py-3 pr-4">Total Reduction</td>
+                            <td colspan="8" class="text-right font-semibold text-[#1D1D1F] py-3 pr-4">Total Reduction</td>
                             <td class="text-right tabular-nums font-semibold text-[#FF3B30] py-3" x-text="reduction?.adjustment_amount"></td>
                         </tr>
                     </tfoot>
