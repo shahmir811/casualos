@@ -70,6 +70,7 @@
                     <th class="text-left">#</th>
                     <th class="text-left">Customer</th>
                     <th class="text-left">City</th>
+                    <th class="text-left">Country</th>
                     <th class="text-right">XS</th>
                     <th class="text-right">S</th>
                     <th class="text-right">M</th>
@@ -89,6 +90,7 @@
                     <td class="text-[#86868B] text-xs">{{ $i + 1 }}</td>
                     <td class="font-medium">{{ $order->customer?->name ?? $order->submitted_name }}</td>
                     <td class="text-[#6E6E73]">{{ $order->customer?->city ?? $order->submitted_city }}</td>
+                    <td class="text-[#6E6E73]">{{ $order->customer?->country ?? '—' }}</td>
                     <td class="text-right">{{ $order->agg_xs ?: '—' }}</td>
                     <td class="text-right">{{ $order->agg_s ?: '—' }}</td>
                     <td class="text-right">{{ $order->agg_m ?: '—' }}</td>
@@ -104,13 +106,13 @@
                     <td class="text-[#6E6E73] text-xs">{{ $order->title_given_label }}</td>
                 </tr>
                 @empty
-                <tr><td colspan="14" class="text-center text-[#86868B] py-12">No confirmed orders for this catalogue.</td></tr>
+                <tr><td colspan="15" class="text-center text-[#86868B] py-12">No confirmed orders for this catalogue.</td></tr>
                 @endforelse
             </tbody>
             @if($orders->count())
             <tfoot>
                 <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
-                    <td class="px-5 py-3 font-semibold text-sm" colspan="3">Total</td>
+                    <td class="px-5 py-3 font-semibold text-sm" colspan="4">Total</td>
                     <td class="px-5 py-3 text-right font-bold text-sm">{{ $totXs ?: '—' }}</td>
                     <td class="px-5 py-3 text-right font-bold text-sm">{{ $totS ?: '—' }}</td>
                     <td class="px-5 py-3 text-right font-bold text-sm">{{ $totM ?: '—' }}</td>

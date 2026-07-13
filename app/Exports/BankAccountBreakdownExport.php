@@ -35,7 +35,7 @@ class BankAccountBreakdownExport
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle(substr($this->selectedCatalogue->name, 0, 31));
 
-        $headers = ['#', 'Customer', 'City'];
+        $headers = ['#', 'Customer', 'City', 'Country'];
         foreach ($this->bankAccounts as $ba) {
             $headers[] = $ba->title;
         }
@@ -59,6 +59,7 @@ class BankAccountBreakdownExport
                 $i + 1,
                 $order->customer?->name ?? $order->submitted_name,
                 $order->customer?->city ?? $order->submitted_city,
+                $order->customer?->country ?? '—',
             ];
             foreach ($this->bankAccounts as $ba) {
                 $rowData[] = (float) ($order->bank_totals[$ba->id] ?? 0);
@@ -71,7 +72,7 @@ class BankAccountBreakdownExport
             $row++;
         }
 
-        $totalRow = ['', '', 'Total'];
+        $totalRow = ['', '', '', 'Total'];
         foreach ($this->bankAccounts as $ba) {
             $totalRow[] = (float) $this->orders->sum(fn($o) => $o->bank_totals[$ba->id] ?? 0);
         }

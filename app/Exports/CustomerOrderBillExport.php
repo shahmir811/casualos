@@ -34,7 +34,7 @@ class CustomerOrderBillExport
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle(substr($this->selectedCatalogue->name, 0, 31));
 
-        $headers = ['#', 'Customer', 'City', 'XS', 'S', 'M', 'L', 'XL', 'Total Qty', 'Rate', 'Total Bill', 'Received', 'Receivable', 'Title Given'];
+        $headers = ['#', 'Customer', 'City', 'Country', 'XS', 'S', 'M', 'L', 'XL', 'Total Qty', 'Rate', 'Total Bill', 'Received', 'Receivable', 'Title Given'];
         $colCount = count($headers);
         $lastCol  = Coordinate::stringFromColumnIndex($colCount);
 
@@ -51,6 +51,7 @@ class CustomerOrderBillExport
                 $i + 1,
                 $order->customer?->name ?? $order->submitted_name,
                 $order->customer?->city ?? $order->submitted_city,
+                $order->customer?->country ?? '—',
                 $order->agg_xs,
                 $order->agg_s,
                 $order->agg_m,
@@ -67,7 +68,7 @@ class CustomerOrderBillExport
         }
 
         $sheet->fromArray([
-            '', '', 'Total',
+            '', '', '', 'Total',
             $this->orders->sum('agg_xs'),
             $this->orders->sum('agg_s'),
             $this->orders->sum('agg_m'),

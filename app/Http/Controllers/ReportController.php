@@ -450,12 +450,14 @@ class ReportController extends Controller
             ->where('catalogue_id', $catalogueId)
             ->whereNotIn('status', ['cancelled'])
             ->leftJoin('bank_accounts as ab', 'orders.assigned_bank_account_id', '=', 'ab.id')
+            ->leftJoin('customers', 'orders.customer_id', '=', 'customers.id')
             ->select(
                 'orders.submitted_name',
                 'orders.submitted_city',
                 'orders.outstanding_balance',
                 'orders.assigned_bank_account_id',
-                DB::raw('ab.title as assigned_bank_title')
+                DB::raw('ab.title as assigned_bank_title'),
+                'customers.country as customer_country'
             )
             ->orderBy('orders.id')
             ->get();
@@ -485,6 +487,7 @@ class ReportController extends Controller
             $rows[] = [
                 'name'        => $order->submitted_name,
                 'city'        => $order->submitted_city ?? '',
+                'country'     => $order->customer_country ?? '',
                 'receivable'  => $outstanding,
                 'title_given' => $order->assigned_bank_title ?? '',
                 'bank_rcv'    => $bankRcv,

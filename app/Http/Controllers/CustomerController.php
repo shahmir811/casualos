@@ -36,6 +36,8 @@ class CustomerController extends Controller
             'name'           => 'required|string|max:255',
             'contact_number' => 'required|string|max:30',
             'city'           => 'required|string|max:100',
+            'country'        => 'required|string|in:' . implode(',', Customer::COUNTRIES),
+            'address'        => 'nullable|string|max:255',
             'email'          => 'required|email|unique:customers,email',
         ]);
 
@@ -52,6 +54,8 @@ class CustomerController extends Controller
                 'email'          => $customer->email,
                 'contact_number' => $customer->contact_number,
                 'city'           => $customer->city,
+                'country'        => $customer->country,
+                'address'        => $customer->address,
             ])
             ->log('Customer "' . $customer->name . '" created');
 
@@ -76,11 +80,13 @@ class CustomerController extends Controller
             'name'           => 'required|string|max:255',
             'contact_number' => 'required|string|max:30',
             'city'           => 'required|string|max:100',
+            'country'        => 'required|string|in:' . implode(',', Customer::COUNTRIES),
+            'address'        => 'nullable|string|max:255',
             'email'          => 'required|email|unique:customers,email,' . $customer->id,
         ]);
 
         $logProps = ['customer' => $validated['name']];
-        foreach (['name', 'email', 'contact_number', 'city'] as $field) {
+        foreach (['name', 'email', 'contact_number', 'city', 'country', 'address'] as $field) {
             $old = (string) ($customer->getOriginal($field) ?? '');
             $new = (string) ($validated[$field] ?? '');
             if ($old !== $new) {

@@ -92,8 +92,9 @@ $bankColors = [
 <table>
     <colgroup>
         <col style="width:2%">
-        <col style="width:18%">
-        <col style="width:8%">
+        <col style="width:16%">
+        <col style="width:7%">
+        <col style="width:7%">
         <col style="width:8%">
         <col style="width:8%">
         @foreach($banks as $bank)<col style="width:{{ number_format(54 / $banks->count(), 1) }}%">@endforeach
@@ -104,6 +105,7 @@ $bankColors = [
             <th>#</th>
             <th class="left">Customer Name</th>
             <th class="left">City</th>
+            <th class="left">Country</th>
             <th class="right orange">Receivable</th>
             <th>Title Given</th>
             @foreach($banks as $bank)
@@ -127,6 +129,7 @@ $bankColors = [
             <td class="center" style="color:#86868B;">{{ $i + 1 }}</td>
             <td class="left name">{{ $row['name'] }}</td>
             <td class="left" style="color:#6E6E73;">{{ $row['city'] ?: '' }}</td>
+            <td class="left" style="color:#6E6E73;">{{ $row['country'] ?: '' }}</td>
 
             <td class="right highlight-rcv">
                 @if($row['receivable'] > 0)
@@ -167,6 +170,7 @@ $bankColors = [
         <tr>
             <td class="center">{{ count($rows) }}</td>
             <td class="left">Total</td>
+            <td></td>
             <td></td>
             <td class="right red">{{ number_format($grandReceivable) }}</td>
             <td></td>

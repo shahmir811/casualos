@@ -10,8 +10,23 @@ class Customer extends Model
 {
     use HasFactory;
 
+    public const COUNTRIES = [
+        'Australia', 'Canada', 'Pakistan', 'Saudi Arabia', 'UAE', 'UK', 'USA',
+    ];
+
+    // Currency symbol shown on piece tags for each destination country
+    public const CURRENCY_SYMBOLS = [
+        'Australia'    => 'AUS $',
+        'Canada'       => 'CAD $',
+        'Pakistan'     => 'Rs.',
+        'Saudi Arabia' => 'SR',
+        'UAE'          => 'AED',
+        'UK'           => '£',
+        'USA'          => 'US $',
+    ];
+
     protected $fillable = [
-        'name', 'city', 'contact_number', 'email', 'portal_token',
+        'name', 'city', 'country', 'address', 'contact_number', 'email', 'portal_token',
         'advance_credit_balance', 'created_by',
     ];
 

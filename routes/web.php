@@ -36,6 +36,8 @@ use App\Http\Controllers\CronLogController;
 use App\Http\Controllers\OrderBankAssignmentController;
 use App\Http\Controllers\BankCollectionReportController;
 use App\Http\Controllers\OrderAdjustController;
+use App\Http\Controllers\DesignCountryPriceController;
+use App\Http\Controllers\PieceTagController;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,6 +59,9 @@ Route::get('/order/{token}/thankyou', [PublicOrderController::class, 'thankyou']
 // Customer self-service portal (unique link per customer)
 Route::get('/portal/{token}',        [CustomerPortalController::class, 'show'])->name('portal.show');
 Route::post('/portal/{token}/verify',[CustomerPortalController::class, 'verify'])->name('portal.verify');
+
+// Piece tag barcode scan result (read by any barcode scanner/phone camera)
+Route::get('/tags/{barcode}', [PieceTagController::class, 'scan'])->name('tags.scan');
 
 /*
 |--------------------------------------------------------------------------
@@ -182,6 +187,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('dispatch/{order}/create',          [DispatchController::class, 'create'])->name('dispatch.create');
         Route::get('dispatch/{order}/workspace',       [DispatchController::class, 'workspace'])->name('dispatch.workspace');
         Route::post('dispatch/{order}',                [DispatchController::class, 'store'])->name('dispatch.store');
+        Route::get('dispatch/{order}/sack-label',      [DispatchController::class, 'sackLabel'])->name('dispatch.sack-label');
+        Route::get('dispatch/{order}/print-tags',      [DispatchController::class, 'printTags'])->name('dispatch.print-tags');
 
     });
 
@@ -257,6 +264,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('bank-accounts', [BankAccountController::class, 'index'])->name('bank-accounts.index');
         Route::post('bank-accounts', [BankAccountController::class, 'store'])->name('bank-accounts.store');
         Route::post('bank-accounts/{bankAccount}/toggle', [BankAccountController::class, 'toggle'])->name('bank-accounts.toggle');
+
+        // Country pricing for tags (per design, per destination country)
+        Route::get('country-pricing', [DesignCountryPriceController::class, 'index'])->name('country-pricing.index');
+        Route::post('country-pricing/{catalogue}', [DesignCountryPriceController::class, 'store'])->name('country-pricing.store');
     });
 
     /*

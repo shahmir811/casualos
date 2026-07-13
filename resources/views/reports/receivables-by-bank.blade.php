@@ -63,6 +63,7 @@ $bankColors = [
                     <th class="px-2 py-2 text-center font-semibold border border-[#333]" style="min-width:36px;">#</th>
                     <th class="px-2 py-2 text-left font-semibold border border-[#333]" style="min-width:160px;">Customer Name</th>
                     <th class="px-2 py-2 text-left font-semibold border border-[#333]" style="min-width:90px;">City</th>
+                    <th class="px-2 py-2 text-left font-semibold border border-[#333]" style="min-width:90px;">Country</th>
                     <th class="px-2 py-2 text-right font-semibold border border-[#333]" style="min-width:100px; background:#D97706; color:#fff;">Receivable</th>
                     <th class="px-2 py-2 text-center font-semibold border border-[#333]" style="min-width:100px;">Title Given</th>
                     @foreach($banks as $bank)
@@ -83,6 +84,7 @@ $bankColors = [
                     <td class="px-2 py-1.5 text-center text-[#86868B] border border-[#E8E8ED]">{{ $i + 1 }}</td>
                     <td class="px-2 py-1.5 text-left font-medium text-[#1D1D1F] border border-[#E8E8ED]">{{ $row['name'] }}</td>
                     <td class="px-2 py-1.5 text-left text-[#6E6E73] border border-[#E8E8ED]">{{ $row['city'] ?: '—' }}</td>
+                    <td class="px-2 py-1.5 text-left text-[#6E6E73] border border-[#E8E8ED]">{{ $row['country'] ?: '—' }}</td>
 
                     <td class="px-2 py-1.5 text-right tabular-nums font-semibold border border-[#E8E8ED]" style="background:#FFFBEB;">
                         @if($row['receivable'] > 0)
@@ -132,6 +134,7 @@ $bankColors = [
                 <tr style="background:#E5E5EA; border-top:2px solid #1D1D1F;">
                     <td class="px-2 py-2 text-center font-bold text-[#1D1D1F] border border-[#C7C7CC]">{{ count($rows) }}</td>
                     <td class="px-2 py-2 text-left font-bold text-[#1D1D1F] border border-[#C7C7CC]">Total</td>
+                    <td class="px-2 py-2 border border-[#C7C7CC]"></td>
                     <td class="px-2 py-2 border border-[#C7C7CC]"></td>
                     <td class="px-2 py-2 text-right tabular-nums font-bold border border-[#C7C7CC]" style="background:#FEF3C7; color:#DC2626;">
                         {{ number_format($grandReceivable) }}

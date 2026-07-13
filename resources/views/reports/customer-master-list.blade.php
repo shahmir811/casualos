@@ -22,6 +22,7 @@
                 <th class="text-left">Name</th>
                 <th class="text-left">Phone</th>
                 <th class="text-left">City</th>
+                <th class="text-left">Country</th>
                 <th class="text-right">Total Orders</th>
                 <th class="text-left">Portal Link</th>
                 <th class="text-left">Joined</th>
@@ -35,6 +36,7 @@
                 </td>
                 <td class="text-[#6E6E73]">{{ $customer->phone ?? '—' }}</td>
                 <td class="text-[#6E6E73]">{{ $customer->city ?? '—' }}</td>
+                <td class="text-[#6E6E73]">{{ $customer->country ?? '—' }}</td>
                 <td class="text-right font-medium">{{ $customer->orders_count }}</td>
                 <td>
                     <span class="text-xs text-[#86868B] font-mono">...{{ substr($customer->portal_token, -8) }}</span>
@@ -42,7 +44,7 @@
                 <td class="text-[#6E6E73] text-xs">{{ $customer->created_at->format('d M Y') }}</td>
             </tr>
             @empty
-            <tr><td colspan="6" class="text-center text-[#86868B] py-12">No customers found.</td></tr>
+            <tr><td colspan="7" class="text-center text-[#86868B] py-12">No customers found.</td></tr>
             @endforelse
         </tbody>
     </table>

@@ -57,7 +57,7 @@ class BankCollectionExport
         $sheet->setTitle(substr($this->selectedCatalogue->name, 0, 31));
 
         $bankCount     = $this->banks->count();
-        $lastDataCol   = 15 + $bankCount + 4; // A–O fixed + banks + misc + 3 summary cols
+        $lastDataCol   = 16 + $bankCount + 4; // A–P fixed (incl. Country) + banks + misc + 3 summary cols
         $lastColLetter = Coordinate::stringFromColumnIndex($lastDataCol);
 
         // ── Row 1: report title ───────────────────────────────────────────────
@@ -80,7 +80,7 @@ class BankCollectionExport
         // ── Row 4: column headers ─────────────────────────────────────────────
         $headerRow = 4;
         $headers   = [
-            'Sr#', 'Customer Name', 'City',
+            'Sr#', 'Customer Name', 'City', 'Country',
             "Extra\nSmall", 'Small', 'Medium', 'Large', "Extra\nLarge",
             "Total\nQty", "Over All\nTotal Qty", 'Rate',
             'Total Bill', "Amount\nReceived", "Amount\nReceivable",
@@ -108,9 +108,9 @@ class BankCollectionExport
                             'wrapText'   => true],
             'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FF444444']]],
         ]);
-        $sheet->getStyle("L{$headerRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFA500');
-        $sheet->getStyle("M{$headerRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF22C55E');
-        $sheet->getStyle("N{$headerRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFA500');
+        $sheet->getStyle("M{$headerRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFA500');
+        $sheet->getStyle("N{$headerRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF22C55E');
+        $sheet->getStyle("O{$headerRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFA500');
         $sheet->getRowDimension($headerRow)->setRowHeight(30);
 
         // ── Data rows ─────────────────────────────────────────────────────────
@@ -126,6 +126,7 @@ class BankCollectionExport
             $sheet->setCellValue($this->ref($col++, $r), $i + 1);
             $sheet->setCellValue($this->ref($col++, $r), $row['name']);
             $sheet->setCellValue($this->ref($col++, $r), $row['city']);
+            $sheet->setCellValue($this->ref($col++, $r), $row['country']);
             $sheet->setCellValue($this->ref($col++, $r), $row['qty_xs'] ?: '');
             $sheet->setCellValue($this->ref($col++, $r), $row['qty_s']  ?: '');
             $sheet->setCellValue($this->ref($col++, $r), $row['qty_m']  ?: '');
@@ -165,12 +166,12 @@ class BankCollectionExport
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FFD2D2D7']]],
                 'font'    => ['size' => 9],
             ]);
-            $sheet->getStyle("L{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFF9C4');
-            $sheet->getStyle("M{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD1FAE5');
-            $sheet->getStyle("N{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFF9C4');
+            $sheet->getStyle("M{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFF9C4');
+            $sheet->getStyle("N{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD1FAE5');
+            $sheet->getStyle("O{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFF9C4');
 
-            $amtStartLetter = Coordinate::stringFromColumnIndex(12);
-            $sheet->getStyle("D{$r}:K{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $amtStartLetter = Coordinate::stringFromColumnIndex(13);
+            $sheet->getStyle("E{$r}:L{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("{$amtStartLetter}{$r}:{$lastColLetter}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         }
 
@@ -179,16 +180,16 @@ class BankCollectionExport
         $this->writeSummaryRow($sheet, $totalRow, [
             $this->ref(1, $totalRow)  => (string) count($this->rows),
             $this->ref(2, $totalRow)  => 'Total',
-            $this->ref(4, $totalRow)  => (string) $totXs,
-            $this->ref(5, $totalRow)  => (string) $totS,
-            $this->ref(6, $totalRow)  => (string) $totM,
-            $this->ref(7, $totalRow)  => (string) $totL,
-            $this->ref(8, $totalRow)  => (string) $totXl,
-            $this->ref(9, $totalRow)  => (string) $totTotalQty,
-            $this->ref(10, $totalRow) => (string) $totOverAllQty,
-            $this->ref(12, $totalRow) => number_format($this->grandExpected),
-            $this->ref(13, $totalRow) => number_format($this->grandCollected),
-            $this->ref(14, $totalRow) => number_format($this->grandReceivable),
+            $this->ref(5, $totalRow)  => (string) $totXs,
+            $this->ref(6, $totalRow)  => (string) $totS,
+            $this->ref(7, $totalRow)  => (string) $totM,
+            $this->ref(8, $totalRow)  => (string) $totL,
+            $this->ref(9, $totalRow)  => (string) $totXl,
+            $this->ref(10, $totalRow) => (string) $totTotalQty,
+            $this->ref(11, $totalRow) => (string) $totOverAllQty,
+            $this->ref(13, $totalRow) => number_format($this->grandExpected),
+            $this->ref(14, $totalRow) => number_format($this->grandCollected),
+            $this->ref(15, $totalRow) => number_format($this->grandReceivable),
         ], $bankTotals, $totalRow, $this->fmt($totMisc), number_format($this->grandCollected), number_format($this->grandReceivable), number_format($this->grandExpected));
 
         $sheet->getStyle("A{$totalRow}:{$lastColLetter}{$totalRow}")->applyFromArray([
@@ -197,17 +198,17 @@ class BankCollectionExport
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FF999999']],
                           'top'        => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['argb' => 'FF1D1D1F']]],
         ]);
-        $amtStartLetter = Coordinate::stringFromColumnIndex(12);
-        $sheet->getStyle("D{$totalRow}:K{$totalRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $amtStartLetter = Coordinate::stringFromColumnIndex(13);
+        $sheet->getStyle("E{$totalRow}:L{$totalRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle("{$amtStartLetter}{$totalRow}:{$lastColLetter}{$totalRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
         // ── Total Payment row (per-bank expected) ─────────────────────────────
         $tpRow = $totalRow + 1;
         $col   = 2;
         $sheet->setCellValue($this->ref($col++, $tpRow), 'Total Payment');
-        $col = 12;
+        $col = 13;
         $sheet->setCellValue($this->ref($col++, $tpRow), number_format($this->grandExpected));
-        $col = 16;
+        $col = 17;
         foreach ($this->banks as $bank) {
             $sheet->setCellValue($this->ref($col++, $tpRow), $this->fmt($this->expected[$bank->id] ?? 0));
         }
@@ -217,21 +218,21 @@ class BankCollectionExport
             'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FFDBEAFE']],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FFBFDBFE']]],
         ]);
-        $amtStartLetter = Coordinate::stringFromColumnIndex(12);
+        $amtStartLetter = Coordinate::stringFromColumnIndex(13);
         $sheet->getStyle("{$amtStartLetter}{$tpRow}:{$lastColLetter}{$tpRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
         // ── Receivable row (per-bank outstanding) ─────────────────────────────
         $rcvRow = $totalRow + 2;
         $col    = 2;
         $sheet->setCellValue($this->ref($col++, $rcvRow), 'Receivable');
-        $col = 14;
+        $col = 15;
         $sheet->setCellValue($this->ref($col++, $rcvRow), number_format($this->grandReceivable));
-        $col = 16;
+        $col = 17;
         foreach ($this->banks as $bank) {
             $sheet->setCellValue($this->ref($col++, $rcvRow), $this->fmt($this->receivable[$bank->id] ?? 0));
         }
         // right-side summary: skip misc, skip received, write receivable, skip total bill
-        $miscColNum = 16 + $bankCount;
+        $miscColNum = 17 + $bankCount;
         $sheet->setCellValue($this->ref($miscColNum + 2, $rcvRow), number_format($this->grandReceivable));
 
         $sheet->getStyle("A{$rcvRow}:{$lastColLetter}{$rcvRow}")->applyFromArray([
@@ -239,7 +240,7 @@ class BankCollectionExport
             'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FFFEF9C3']],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FFFDE68A']]],
         ]);
-        $amtStartLetter = Coordinate::stringFromColumnIndex(12);
+        $amtStartLetter = Coordinate::stringFromColumnIndex(13);
         $sheet->getStyle("{$amtStartLetter}{$rcvRow}:{$lastColLetter}{$rcvRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
         // ── Footnote ──────────────────────────────────────────────────────────
@@ -255,18 +256,19 @@ class BankCollectionExport
         $sheet->getColumnDimension('A')->setWidth(5);
         $sheet->getColumnDimension('B')->setWidth(22);
         $sheet->getColumnDimension('C')->setWidth(12);
-        foreach (['D','E','F','G','H'] as $c) {
+        $sheet->getColumnDimension('D')->setWidth(12);
+        foreach (['E','F','G','H','I'] as $c) {
             $sheet->getColumnDimension($c)->setWidth(7);
         }
-        $sheet->getColumnDimension('I')->setWidth(8);
-        $sheet->getColumnDimension('J')->setWidth(10);
+        $sheet->getColumnDimension('J')->setWidth(8);
         $sheet->getColumnDimension('K')->setWidth(10);
-        $sheet->getColumnDimension('L')->setWidth(13);
+        $sheet->getColumnDimension('L')->setWidth(10);
         $sheet->getColumnDimension('M')->setWidth(13);
         $sheet->getColumnDimension('N')->setWidth(13);
-        $sheet->getColumnDimension('O')->setWidth(14);
+        $sheet->getColumnDimension('O')->setWidth(13);
+        $sheet->getColumnDimension('P')->setWidth(14);
 
-        $bankColStart = 16;
+        $bankColStart = 17;
         foreach ($this->banks as $idx => $bank) {
             $colLetter = Coordinate::stringFromColumnIndex($bankColStart + $idx);
             $sheet->getColumnDimension($colLetter)->setWidth(13);
@@ -281,7 +283,7 @@ class BankCollectionExport
         $sheet->getColumnDimension($summaryCol2Letter)->setWidth(13);
         $sheet->getColumnDimension($summaryCol3Letter)->setWidth(13);
 
-        $sheet->freezePane('P' . ($headerRow + 1));
+        $sheet->freezePane(Coordinate::stringFromColumnIndex($bankColStart) . ($headerRow + 1));
 
         return $spreadsheet;
     }
@@ -302,13 +304,13 @@ class BankCollectionExport
             $sheet->setCellValue($ref, $value);
         }
 
-        $bankColStart = 16;
+        $bankColStart = 17;
         foreach ($this->banks as $idx => $bank) {
             $colNum = $bankColStart + $idx;
             $sheet->setCellValue($this->ref($colNum, $row), $bankTotals[$bank->id] > 0 ? number_format($bankTotals[$bank->id]) : '');
         }
 
-        $miscColNum = 16 + $this->banks->count();
+        $miscColNum = 17 + $this->banks->count();
         $sheet->setCellValue($this->ref($miscColNum,     $row), $misc);
         $sheet->setCellValue($this->ref($miscColNum + 1, $row), $summaryReceived);
         $sheet->setCellValue($this->ref($miscColNum + 2, $row), $summaryReceivable);

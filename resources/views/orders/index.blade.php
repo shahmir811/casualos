@@ -206,6 +206,7 @@
                                 </a>
                             </th>
                             <th class="text-left" style="min-width:110px;">City</th>
+                            <th class="text-left" style="min-width:100px;">Country</th>
                             <th class="text-center px-3" style="min-width:50px;">XS</th>
                             <th class="text-center px-3" style="min-width:50px;">S</th>
                             <th class="text-center px-3" style="min-width:50px;">M</th>
@@ -323,6 +324,9 @@
                         {{-- City --}}
                         <td class="text-[#6E6E73] text-sm">{{ $order->submitted_city }}</td>
 
+                        {{-- Country --}}
+                        <td class="text-[#6E6E73] text-sm">{{ $order->customer?->country ?? '—' }}</td>
+
                         {{-- Size quantities (per design — same across all designs) --}}
                         <td class="text-center text-sm tabular-nums px-3 {{ $qxs ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $qxs ?: '—' }}</td>
                         <td class="text-center text-sm tabular-nums px-3 {{ $qs  ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $qs  ?: '—' }}</td>
@@ -374,7 +378,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="14" class="text-center text-[#86868B] py-12">
+                        <td colspan="15" class="text-center text-[#86868B] py-12">
                             No orders found{{ $selectedCatalogue ? ' for ' . $selectedCatalogue->name : '' }}.
                         </td>
                     </tr>
@@ -386,7 +390,7 @@
                         @if(in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager', 'creative_head']) && $selectedCatalogue)
                         <td></td>
                         @endif
-                        <td colspan="4" class="font-semibold text-[#1D1D1F] text-sm">
+                        <td colspan="5" class="font-semibold text-[#1D1D1F] text-sm">
                             Totals — {{ count($orderList) }} orders
                         </td>
                         <td class="text-center font-bold text-[#1D1D1F] tabular-nums px-3">{{ number_format($summary['xs']) }}</td>

@@ -2,37 +2,156 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
 use App\Models\Design;
+use App\Models\DesignCountryPrice;
 use App\Models\DispatchBatch;
 use App\Models\DispatchBatchItem;
 use App\Models\Order;
 use App\Models\OutsourcedBatchItem;
+use App\Models\PieceTag;
 use App\Models\PressReturnItem;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Picqer\Barcode\BarcodeGeneratorSVG;
 
 class DispatchController extends Controller
 {
     public function index(Request $request)
     {
         $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: null;
-        $search = trim($request->input('search', ''));
+        $search         = trim($request->input('search', ''));
+        $paymentStatus  = $request->input('payment_status', '');
+        $dispatchStatus = $request->input('dispatch_status', '');
+        $dateFrom       = $request->input('date_from', '');
+        $dateTo         = $request->input('date_to', '');
 
         $orders = Order::with(['customer', 'catalogue', 'items', 'dispatchBatches.items'])
             ->when($selectedCatalogueId, fn($q) => $q->where('catalogue_id', $selectedCatalogueId))
             ->when($search, fn($q) => $q->whereHas('customer', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
+            ->when($paymentStatus === 'not_paid', fn($q) => $q->where('total_paid', '<=', 0))
+            ->when($paymentStatus === 'partially_paid', fn($q) => $q->where('total_paid', '>', 0)->where('outstanding_balance', '>', 0))
+            ->when($paymentStatus === 'fully_paid', fn($q) => $q->where('total_paid', '>', 0)->where('outstanding_balance', '<=', 0))
+            ->when($dispatchStatus === 'pending', fn($q) => $q->whereNotIn('status', ['partially_dispatched', 'dispatched']))
+            ->when($dispatchStatus === 'partial', fn($q) => $q->where('status', 'partially_dispatched'))
+            ->when($dispatchStatus === 'complete', fn($q) => $q->where('status', 'dispatched'))
+            ->when($dateFrom, fn($q) => $q->whereDate('updated_at', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->whereDate('updated_at', '<=', $dateTo))
             ->latest()
             ->paginate(20)
             ->withQueryString();
 
-        return view('production.dispatch.index', compact('orders', 'search'));
+        return view('production.dispatch.index', compact(
+            'orders', 'search', 'paymentStatus', 'dispatchStatus', 'dateFrom', 'dateTo'
+        ));
     }
 
     public function show(Order $order)
     {
         $order->load(['customer', 'catalogue', 'items.design', 'dispatchBatches.items.design']);
         return view('production.dispatch.show', compact('order'));
+    }
+
+    public function sackLabel(Order $order)
+    {
+        $order->load(['customer', 'catalogue']);
+
+        $logoDataUri = pdf_logo_data_uri();
+
+        $pdf = Pdf::loadView('production.dispatch.sack-label-pdf', compact('order', 'logoDataUri'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('sack-label-' . $order->order_number . '.pdf');
+    }
+
+    public function printTags(Order $order)
+    {
+        $order->load(['items.design', 'customer']);
+        $sizes   = ['xs', 's', 'm', 'l', 'xl'];
+        $country = $order->customer->country;
+
+        if (empty($country)) {
+            return back()->with('error',
+                "This order's customer (" . ($order->customer->name ?? $order->submitted_name) . ") has no country set. Edit the customer to add a country before printing tags."
+            );
+        }
+
+        // Every design in the order must have a price set for the customer's country first
+        $missingDesigns = [];
+        foreach ($order->items as $item) {
+            $hasQty = $item->qty_xs + $item->qty_s + $item->qty_m + $item->qty_l + $item->qty_xl > 0;
+            if (!$hasQty) continue;
+
+            $hasPrice = DesignCountryPrice::where('design_id', $item->design_id)
+                ->where('country', $country)
+                ->exists();
+
+            if (!$hasPrice) {
+                $missingDesigns[] = $item->design->name ?? "Design #{$item->design_id}";
+            }
+        }
+
+        if (!empty($missingDesigns)) {
+            return back()->with('error',
+                "Set a {$country} price in Country Pricing for: " . implode(', ', array_unique($missingDesigns)) . ' before printing tags.'
+            );
+        }
+
+        $barcodeGenerator = new BarcodeGeneratorSVG();
+        $pages = [];
+
+        foreach ($order->items as $item) {
+            foreach ($sizes as $size) {
+                $qty = (int) $item->{'qty_' . $size};
+                if ($qty === 0) continue;
+
+                $tag = PieceTag::firstOrNew([
+                    'order_id'  => $order->id,
+                    'design_id' => $item->design_id,
+                    'size'      => $size,
+                ]);
+
+                if (!$tag->exists) {
+                    $priceRow      = DesignCountryPrice::where('design_id', $item->design_id)
+                        ->where('country', $country)
+                        ->first();
+                    $tag->country = $country;
+                    $tag->price   = $priceRow->price;
+                    $tag->save();
+                }
+
+                $page = [
+                    'size'        => strtoupper($size),
+                    'price'       => $tag->price,
+                    'symbol'      => Customer::CURRENCY_SYMBOLS[$country] ?? '',
+                    'barcode_svg' => base64_encode($this->fittedBarcodeSvg($barcodeGenerator, $tag->barcode, 110, 20)),
+                    'barcode_text'=> $tag->barcode,
+                ];
+
+                for ($i = 0; $i < $qty; $i++) {
+                    $pages[] = $page;
+                }
+            }
+        }
+
+        // One physical 2"x1" label per page, sized for the Zebra label roll
+        $pdf = Pdf::loadView('production.dispatch.piece-tags-pdf', compact('pages'))
+            ->setPaper([0, 0, 144, 72]);
+
+        return $pdf->download('piece-tags-' . $order->order_number . '.pdf');
+    }
+
+    // Renders the barcode at exactly $maxWidth points wide so it always fits inside the 2"x1" label,
+    // regardless of how many digits the barcode value has.
+    private function fittedBarcodeSvg(BarcodeGeneratorSVG $generator, string $code, float $maxWidth, float $height): string
+    {
+        $baseline = $generator->getBarcode($code, BarcodeGeneratorSVG::TYPE_CODE_128_C, 1, $height);
+        $baseWidth = preg_match('/width="([\d.]+)"/', $baseline, $m) ? (float) $m[1] : $maxWidth;
+        $widthFactor = $baseWidth > 0 ? $maxWidth / $baseWidth : 1.0;
+
+        return $generator->getBarcode($code, BarcodeGeneratorSVG::TYPE_CODE_128_C, $widthFactor, $height);
     }
 
     public function workspace(Order $order)
