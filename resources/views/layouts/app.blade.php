@@ -388,6 +388,14 @@
                 Dispatch
             </a>
 
+            <a href="{{ route('dispatch-optimizer.index') }}"
+               class="nav-item {{ request()->routeIs('dispatch-optimizer.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                Dispatch Optimizer
+            </a>
+
             <a href="{{ route('wages.index') }}"
                class="nav-item {{ request()->routeIs('wages.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
