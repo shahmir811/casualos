@@ -38,6 +38,7 @@ use App\Http\Controllers\BankCollectionReportController;
 use App\Http\Controllers\OrderAdjustController;
 use App\Http\Controllers\DesignCountryPriceController;
 use App\Http\Controllers\PieceTagController;
+use App\Http\Controllers\DispatchOptimizerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -189,6 +190,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('dispatch/{order}',                [DispatchController::class, 'store'])->name('dispatch.store');
         Route::get('dispatch/{order}/sack-label',      [DispatchController::class, 'sackLabel'])->name('dispatch.sack-label');
         Route::get('dispatch/{order}/print-tags',      [DispatchController::class, 'printTags'])->name('dispatch.print-tags');
+        Route::post('dispatch-batches/{dispatchBatch}/cargo-document', [DispatchController::class, 'updateCargoDocument'])->name('dispatch-batches.cargo-document');
+
+        // Dispatch Optimizer — recommends which pending orders to dispatch to best clear packed inventory
+        Route::get('dispatch-optimizer', [DispatchOptimizerController::class, 'index'])->name('dispatch-optimizer.index');
 
     });
 

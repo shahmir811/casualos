@@ -15,6 +15,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Picqer\Barcode\BarcodeGeneratorSVG;
 
 class DispatchController extends Controller
@@ -437,5 +438,25 @@ class DispatchController extends Controller
 
         return redirect()->route('dispatch.show', $order)
             ->with('success', "Dispatch batch #{$batchNumber} recorded successfully.");
+    }
+
+    public function updateCargoDocument(Request $request, DispatchBatch $dispatchBatch)
+    {
+        $this->denyCreativeHead();
+
+        $request->validate([
+            'cargo_document' => 'required|file|mimes:pdf,jpeg,jpg,png|max:10240',
+        ]);
+
+        $oldPath = $dispatchBatch->cargo_document;
+        $newPath = $request->file('cargo_document')->store('cargo-documents', 's3');
+
+        $dispatchBatch->update(['cargo_document' => $newPath]);
+
+        if ($oldPath) {
+            Storage::disk('s3')->delete($oldPath);
+        }
+
+        return back()->with('success', "Cargo document for Batch #{$dispatchBatch->batch_number} " . ($oldPath ? 'replaced' : 'attached') . '.');
     }
 }

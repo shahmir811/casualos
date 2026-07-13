@@ -268,6 +268,43 @@
                             </div>
                             @endif
 
+                            {{-- Dispatch details --}}
+                            @if($order->dispatchBatches->isNotEmpty())
+                            <div>
+                                <p class="text-[#86868B] text-xs font-medium uppercase tracking-wide mb-2">Dispatch Details</p>
+                                <div class="space-y-2">
+                                    @foreach($order->dispatchBatches as $batch)
+                                    <div class="bg-[#F5F5F7] rounded-xl p-3">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <div class="min-w-0">
+                                                <p class="text-[#1D1D1F] text-xs font-semibold">Batch #{{ $batch->batch_number }}</p>
+                                                <p class="text-[#86868B] text-[10px] mt-0.5">{{ $batch->dispatch_date->format('d M Y') }} · {{ $batch->totalPieces() }} {{ Str::plural('piece', $batch->totalPieces()) }}</p>
+                                            </div>
+                                            @if($batch->cargo_document)
+                                            @php $ext = strtolower(pathinfo($batch->cargo_document, PATHINFO_EXTENSION)); @endphp
+                                            <a href="{{ Storage::url($batch->cargo_document) }}" target="_blank" title="View Cargo Document" class="flex-shrink-0">
+                                                @if(in_array($ext, ['jpg', 'jpeg', 'png', 'webp']))
+                                                    <img src="{{ Storage::url($batch->cargo_document) }}" alt="Cargo Document" class="h-10 w-10 object-cover rounded-lg border border-[#E8E8ED]">
+                                                @else
+                                                    <div class="h-10 w-10 flex flex-col items-center justify-center rounded-lg border border-[#E8E8ED] bg-red-50">
+                                                        <svg class="w-4 h-4 text-red-500 mb-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                                                        </svg>
+                                                        <span class="text-[9px] font-bold text-red-500 leading-none">PDF</span>
+                                                    </div>
+                                                @endif
+                                            </a>
+                                            @endif
+                                        </div>
+                                        @if($batch->shipping_address)
+                                        <p class="text-[#6E6E73] text-[10px] mt-2 pt-2 border-t border-white">Shipping address: <span class="text-[#1D1D1F]">{{ $batch->shipping_address }}</span></p>
+                                        @endif
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endif
+
                         </div>
                     </div>
 
