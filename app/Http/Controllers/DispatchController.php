@@ -8,6 +8,7 @@ use App\Models\DispatchBatchItem;
 use App\Models\Order;
 use App\Models\OutsourcedBatchItem;
 use App\Models\PressReturnItem;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +48,18 @@ class DispatchController extends Controller
     {
         $order->load(['customer', 'catalogue', 'items.design', 'dispatchBatches.items.design']);
         return view('production.dispatch.show', compact('order'));
+    }
+
+    public function sackLabel(Order $order)
+    {
+        $order->load(['customer', 'catalogue']);
+
+        $logoDataUri = pdf_logo_data_uri();
+
+        $pdf = Pdf::loadView('production.dispatch.sack-label-pdf', compact('order', 'logoDataUri'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('sack-label-' . $order->order_number . '.pdf');
     }
 
     public function workspace(Order $order)

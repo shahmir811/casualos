@@ -182,6 +182,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('dispatch/{order}/create',          [DispatchController::class, 'create'])->name('dispatch.create');
         Route::get('dispatch/{order}/workspace',       [DispatchController::class, 'workspace'])->name('dispatch.workspace');
         Route::post('dispatch/{order}',                [DispatchController::class, 'store'])->name('dispatch.store');
+        Route::get('dispatch/{order}/sack-label',      [DispatchController::class, 'sackLabel'])->name('dispatch.sack-label');
 
     });
 

@@ -80,7 +80,14 @@
                 @endif
             </div>
         </div>
-        <p class="text-sm text-[#6E6E73] mb-1">{{ $order->customer->name ?? '—' }}</p>
+        <p class="text-sm text-[#6E6E73] mb-1 flex items-center gap-1.5">
+            {{ $order->customer->name ?? '—' }}
+            <a href="{{ route('dispatch.sack-label', $order) }}" title="Download Sack Label" class="text-red-500 hover:text-red-600 shrink-0">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                </svg>
+            </a>
+        </p>
         <div class="flex items-center justify-between mt-2">
             <span class="text-sm font-semibold text-[#1D1D1F]">PKR {{ number_format($order->total_amount, 0) }}</span>
             <a href="{{ route('dispatch.show', $order) }}" class="btn-primary text-xs">View →</a>
@@ -120,7 +127,16 @@
             @endphp
             <tr>
                 <td class="font-medium">#{{ $order->order_number }}</td>
-                <td>{{ $order->customer->name ?? '—' }}</td>
+                <td>
+                    <span class="inline-flex items-center gap-1.5">
+                        {{ $order->customer->name ?? '—' }}
+                        <a href="{{ route('dispatch.sack-label', $order) }}" title="Download Sack Label" class="text-red-500 hover:text-red-600 shrink-0">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                            </svg>
+                        </a>
+                    </span>
+                </td>
                 <td>PKR {{ number_format($order->total_amount, 0) }}</td>
                 <td>
                     @if($totalPaid <= 0)
