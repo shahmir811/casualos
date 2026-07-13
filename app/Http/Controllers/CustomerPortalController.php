@@ -27,7 +27,7 @@ class CustomerPortalController extends Controller
 
         session(['portal_verified_' . $customer->id => true]);
 
-        $customer->load(['orders.items.design', 'orders.catalogue', 'orders.payments', 'ledger']);
+        $customer->load(['orders.items.design', 'orders.catalogue', 'orders.payments', 'orders.dispatchBatches.items', 'ledger']);
 
         return view('portal.dashboard', compact('customer'));
     }
