@@ -26,14 +26,14 @@
             Rashid Bhai and Yousaf Bhai (Saturday → Friday) per catalogue and create or update
             <strong>unconfirmed</strong> charge records. Confirmed (paid) records are never changed.
         </p>
-        <form id="form-recalculate" method="POST" action="{{ route('tarpai-charges.recalculate') }}" class="flex items-end gap-3">
+        <form id="form-recalculate" method="POST" action="{{ route('tarpai-charges.recalculate') }}" class="flex flex-col sm:flex-row sm:items-end gap-3">
             @csrf
             <div>
                 <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Any date in the week</label>
                 <input type="date" name="week_date" value="{{ today()->toDateString() }}"
-                       class="apple-input" required>
+                       class="apple-input w-full sm:w-auto" required>
             </div>
-            <button type="button" class="btn-secondary"
+            <button type="button" class="btn-secondary w-full sm:w-auto"
                     @click="$store.confirm.show({
                         title: 'Recalculate Tarpai Charges',
                         message: 'Unconfirmed charge records for this week will be overwritten. Confirmed (paid) records will not be changed.',
@@ -50,32 +50,34 @@
 {{-- Filters --}}
 <form method="GET" action="{{ route('tarpai-charges.index') }}" class="card p-4 mb-6">
     <div class="flex flex-wrap items-end gap-3">
-        <div>
+        <div class="w-full sm:w-auto">
             <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Week</label>
             <input type="date" name="week_date"
                    value="{{ request('week_date') }}"
-                   class="apple-input">
+                   class="apple-input w-full sm:w-auto">
         </div>
-        <div>
+        <div class="w-full sm:w-auto">
             <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Tarpai House</label>
-            <select name="tarpai_house" class="apple-input">
+            <select name="tarpai_house" class="apple-input w-full sm:w-auto">
                 <option value="">All Houses</option>
                 <option value="rashid_bhai"  {{ request('tarpai_house') === 'rashid_bhai'  ? 'selected' : '' }}>Rashid Bhai</option>
                 <option value="yousaf_bhai"  {{ request('tarpai_house') === 'yousaf_bhai'  ? 'selected' : '' }}>Yousaf Bhai</option>
             </select>
         </div>
-        <div>
+        <div class="w-full sm:w-auto">
             <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">Status</label>
-            <select name="status" class="apple-input">
+            <select name="status" class="apple-input w-full sm:w-auto">
                 <option value="">All</option>
                 <option value="pending"   {{ request('status') === 'pending'   ? 'selected' : '' }}>Pending</option>
                 <option value="confirmed" {{ request('status') === 'confirmed' ? 'selected' : '' }}>Confirmed</option>
             </select>
         </div>
-        <button type="submit" class="btn-primary">Filter</button>
-        @if(request()->hasAny(['week_date','tarpai_house','status']))
-        <a href="{{ route('tarpai-charges.index') }}" class="btn-secondary">Clear</a>
-        @endif
+        <div class="flex gap-2 w-full sm:w-auto">
+            <button type="submit" class="btn-primary flex-1 sm:flex-none">Filter</button>
+            @if(request()->hasAny(['week_date','tarpai_house','status']))
+            <a href="{{ route('tarpai-charges.index') }}" class="btn-secondary flex-1 sm:flex-none text-center">Clear</a>
+            @endif
+        </div>
     </div>
 </form>
 
@@ -84,7 +86,7 @@
     $totalPending = $payments->where('is_confirmed', false)->sum('total_amount');
 @endphp
 
-<div class="grid grid-cols-2 gap-4 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Confirmed &amp; Paid</p>
         <p class="text-3xl font-light text-green-600">Rs. {{ number_format($totalPaid, 0) }}</p>
@@ -97,57 +99,100 @@
     </div>
 </div>
 
-<div class="card overflow-hidden">
-    <table class="w-full apple-table">
-        <thead>
-            <tr>
-                <th class="text-left">Week</th>
-                <th class="text-left">Catalogue</th>
-                <th class="text-left">House</th>
-                <th class="text-right">Pieces</th>
-                <th class="text-right">Total Amount</th>
-                <th class="text-left">Status</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($payments as $payment)
-            <tr class="cursor-pointer hover:bg-[#F5F5F7]"
-                onclick="window.location='{{ route('tarpai-charges.show', $payment) }}'">
-                <td>
-                    <a href="{{ route('tarpai-charges.show', $payment) }}"
-                       class="font-medium text-sm text-[#0066CC] hover:underline">
-                        {{ $payment->week_start->format('d M') }} – {{ $payment->week_end->format('d M Y') }}
-                    </a>
-                </td>
-                <td>{{ $payment->catalogue->name ?? '—' }}</td>
-                <td>
-                    <span class="badge {{ $payment->houseBadgeClass() }}">{{ $payment->houseLabel() }}</span>
-                </td>
-                <td class="text-right">{{ number_format($payment->total_pieces_sent) }}</td>
-                <td class="text-right font-semibold">Rs. {{ number_format($payment->total_amount, 0) }}</td>
-                <td>
-                    @if($payment->is_confirmed)
-                        <span class="badge bg-green-100 text-green-700">Confirmed</span>
-                    @else
-                        <span class="badge bg-orange-100 text-orange-700">Pending</span>
-                    @endif
-                </td>
-                <td class="text-[#86868B] text-xs">
-                    @if($payment->is_confirmed)
-                        {{ $payment->confirmed_at?->format('d M Y') }}
-                    @else
-                        <span class="text-[#0066CC]">View →</span>
-                    @endif
-                </td>
-            </tr>
-            @empty
-            <tr>
-                <td colspan="7" class="text-center text-[#86868B] py-12">No charge records yet. Run the calculation on a Friday or use Recalculate above.</td>
-            </tr>
-            @endforelse
-        </tbody>
-    </table>
+{{-- ── Desktop table (md+) ─────────────────────────────────────────── --}}
+<div class="card overflow-hidden hidden md:block">
+    <div class="overflow-x-auto">
+        <table class="w-full apple-table">
+            <thead>
+                <tr>
+                    <th class="text-left">Week</th>
+                    <th class="text-left">Catalogue</th>
+                    <th class="text-left">House</th>
+                    <th class="text-right">Pieces</th>
+                    <th class="text-right">Total Amount</th>
+                    <th class="text-left">Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($payments as $payment)
+                <tr class="cursor-pointer hover:bg-[#F5F5F7]"
+                    onclick="window.location='{{ route('tarpai-charges.show', $payment) }}'">
+                    <td>
+                        <a href="{{ route('tarpai-charges.show', $payment) }}"
+                           class="font-medium text-sm text-[#0066CC] hover:underline">
+                            {{ $payment->week_start->format('d M') }} – {{ $payment->week_end->format('d M Y') }}
+                        </a>
+                    </td>
+                    <td>{{ $payment->catalogue->name ?? '—' }}</td>
+                    <td>
+                        <span class="badge {{ $payment->houseBadgeClass() }}">{{ $payment->houseLabel() }}</span>
+                    </td>
+                    <td class="text-right">{{ number_format($payment->total_pieces_sent) }}</td>
+                    <td class="text-right font-semibold">Rs. {{ number_format($payment->total_amount, 0) }}</td>
+                    <td>
+                        @if($payment->is_confirmed)
+                            <span class="badge bg-green-100 text-green-700">Confirmed</span>
+                        @else
+                            <span class="badge bg-orange-100 text-orange-700">Pending</span>
+                        @endif
+                    </td>
+                    <td class="text-[#86868B] text-xs whitespace-nowrap">
+                        @if($payment->is_confirmed)
+                            {{ $payment->confirmed_at?->format('d M Y') }}
+                        @else
+                            <span class="text-[#0066CC]">View →</span>
+                        @endif
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="7" class="text-center text-[#86868B] py-12">No charge records yet. Run the calculation on a Friday or use Recalculate above.</td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{{-- ── Mobile cards (below md) ─────────────────────────────────────── --}}
+<div class="space-y-3 md:hidden">
+    @forelse($payments as $payment)
+    <a href="{{ route('tarpai-charges.show', $payment) }}" class="card p-4 block">
+        <div class="flex items-start justify-between gap-3 mb-2">
+            <span class="font-medium text-sm text-[#0066CC]">
+                {{ $payment->week_start->format('d M') }} – {{ $payment->week_end->format('d M Y') }}
+            </span>
+            @if($payment->is_confirmed)
+                <span class="badge bg-green-100 text-green-700 shrink-0">Confirmed</span>
+            @else
+                <span class="badge bg-orange-100 text-orange-700 shrink-0">Pending</span>
+            @endif
+        </div>
+
+        <div class="flex items-center gap-2 mb-3">
+            <span class="text-[#6E6E73] text-xs">{{ $payment->catalogue->name ?? '—' }}</span>
+            <span class="badge {{ $payment->houseBadgeClass() }}">{{ $payment->houseLabel() }}</span>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-[#E8E8ED]">
+            <div>
+                <span class="text-[#86868B] text-xs">Pieces</span>
+                <span class="ml-1 text-[#1D1D1F] text-sm font-medium">{{ number_format($payment->total_pieces_sent) }}</span>
+            </div>
+            <div class="text-right">
+                <span class="text-[#86868B] text-xs">Total</span>
+                <span class="ml-1 text-[#1D1D1F] text-sm font-semibold">Rs. {{ number_format($payment->total_amount, 0) }}</span>
+            </div>
+        </div>
+
+        @if($payment->is_confirmed)
+        <p class="text-[#86868B] text-xs mt-2">Confirmed {{ $payment->confirmed_at?->format('d M Y') }}</p>
+        @endif
+    </a>
+    @empty
+    <div class="card p-8 text-center text-[#86868B] text-sm">No charge records yet. Run the calculation on a Friday or use Recalculate above.</div>
+    @endforelse
 </div>
 
 <div class="mt-5">{{ $payments->links() }}</div>

@@ -2,12 +2,12 @@
 @section('title', 'Stitching Units')
 @section('content')
 
-<div class="flex items-center justify-between mb-7">
+<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-7">
     <div>
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Stitching Units</h1>
         <p class="text-[#6E6E73] text-sm mt-1">Manage the stitching units used in production assignments</p>
     </div>
-    <a href="{{ route('stitching-units.create') }}" class="btn-primary">
+    <a href="{{ route('stitching-units.create') }}" class="btn-primary self-start sm:self-auto">
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
         </svg>
@@ -21,70 +21,124 @@
 </div>
 @endif
 
-<div class="card overflow-hidden">
-    <table class="w-full apple-table">
-        <thead>
-            <tr>
-                <th class="text-left">Unit #</th>
-                <th class="text-left">Name</th>
-                <th class="text-left">Payment Type</th>
-                <th class="text-left">Rate</th>
-                <th class="text-left">Status</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($stitchingUnits as $unit)
-            <tr class="{{ $unit->is_active ? '' : 'opacity-50' }}">
-                <td>
-                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl text-sm font-bold"
-                          style="background:#F5EEFF; color:#AF52DE;">
-                        {{ $unit->number }}
-                    </span>
-                </td>
-                <td class="font-medium text-[#1D1D1F]">{{ $unit->name }}</td>
-                <td>
-                    @if($unit->isPerPiece())
-                    <span class="badge" style="background:#E3F2FD; color:#1565C0; border-color:#BBDEFB;">Per Piece</span>
-                    @else
-                    <span class="badge" style="background:#FFF8E1; color:#E65100; border-color:#FFE0B2;">Salary</span>
-                    @endif
-                </td>
-                <td class="text-[#6E6E73] text-sm">
-                    @if($unit->isPerPiece() && $unit->per_piece_rate)
-                        Rs. {{ number_format($unit->per_piece_rate, 0) }}/pc
-                    @else
-                        <span class="text-[#D2D2D7]">—</span>
-                    @endif
-                </td>
-                <td>
-                    @if($unit->is_active)
-                    <span class="badge" style="background:#F0FFF4; color:#15803D; border-color:#BBF7D0;">Active</span>
-                    @else
-                    <span class="badge" style="background:#FEF2F2; color:#DC2626; border-color:#FECACA;">Inactive</span>
-                    @endif
-                </td>
-                <td class="text-right">
-                    <div class="flex items-center justify-end gap-3">
-                        <a href="{{ route('stitching-units.edit', $unit) }}"
-                           class="text-[#0066CC] text-sm hover:underline">Edit</a>
-                        <form method="POST" action="{{ route('stitching-units.toggle', $unit) }}">
-                            @csrf
-                            <button type="submit"
-                                    class="text-sm {{ $unit->is_active ? 'text-[#FF3B30]' : 'text-[#34C759]' }} hover:underline">
-                                {{ $unit->is_active ? 'Deactivate' : 'Activate' }}
-                            </button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-            @empty
-            <tr>
-                <td colspan="6" class="text-center text-[#86868B] py-12">No stitching units found.</td>
-            </tr>
-            @endforelse
-        </tbody>
-    </table>
+{{-- ── Desktop table (md+) ─────────────────────────────────────────── --}}
+<div class="card overflow-hidden hidden md:block">
+    <div class="overflow-x-auto">
+        <table class="w-full apple-table">
+            <thead>
+                <tr>
+                    <th class="text-left">Unit #</th>
+                    <th class="text-left">Name</th>
+                    <th class="text-left">Payment Type</th>
+                    <th class="text-left">Rate</th>
+                    <th class="text-left">Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($stitchingUnits as $unit)
+                <tr class="{{ $unit->is_active ? '' : 'opacity-50' }}">
+                    <td>
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl text-sm font-bold"
+                              style="background:#F5EEFF; color:#AF52DE;">
+                            {{ $unit->number }}
+                        </span>
+                    </td>
+                    <td class="font-medium text-[#1D1D1F]">{{ $unit->name }}</td>
+                    <td>
+                        @if($unit->isPerPiece())
+                        <span class="badge" style="background:#E3F2FD; color:#1565C0; border-color:#BBDEFB;">Per Piece</span>
+                        @else
+                        <span class="badge" style="background:#FFF8E1; color:#E65100; border-color:#FFE0B2;">Salary</span>
+                        @endif
+                    </td>
+                    <td class="text-[#6E6E73] text-sm">
+                        @if($unit->isPerPiece() && $unit->per_piece_rate)
+                            Rs. {{ number_format($unit->per_piece_rate, 0) }}/pc
+                        @else
+                            <span class="text-[#D2D2D7]">—</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if($unit->is_active)
+                        <span class="badge" style="background:#F0FFF4; color:#15803D; border-color:#BBF7D0;">Active</span>
+                        @else
+                        <span class="badge" style="background:#FEF2F2; color:#DC2626; border-color:#FECACA;">Inactive</span>
+                        @endif
+                    </td>
+                    <td class="text-right">
+                        <div class="flex items-center justify-end gap-3">
+                            <a href="{{ route('stitching-units.edit', $unit) }}"
+                               class="text-[#0066CC] text-sm hover:underline">Edit</a>
+                            <form method="POST" action="{{ route('stitching-units.toggle', $unit) }}">
+                                @csrf
+                                <button type="submit"
+                                        class="text-sm {{ $unit->is_active ? 'text-[#FF3B30]' : 'text-[#34C759]' }} hover:underline">
+                                    {{ $unit->is_active ? 'Deactivate' : 'Activate' }}
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="6" class="text-center text-[#86868B] py-12">No stitching units found.</td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{{-- ── Mobile cards (below md) ─────────────────────────────────────── --}}
+<div class="space-y-3 md:hidden">
+    @forelse($stitchingUnits as $unit)
+    <div class="card p-4 {{ $unit->is_active ? '' : 'opacity-50' }}">
+        <div class="flex items-start justify-between gap-3 mb-3">
+            <div class="flex items-center gap-3 min-w-0">
+                <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl text-sm font-bold shrink-0"
+                      style="background:#F5EEFF; color:#AF52DE;">
+                    {{ $unit->number }}
+                </span>
+                <span class="font-medium text-[#1D1D1F] text-sm truncate">{{ $unit->name }}</span>
+            </div>
+            @if($unit->is_active)
+            <span class="badge shrink-0" style="background:#F0FFF4; color:#15803D; border-color:#BBF7D0;">Active</span>
+            @else
+            <span class="badge shrink-0" style="background:#FEF2F2; color:#DC2626; border-color:#FECACA;">Inactive</span>
+            @endif
+        </div>
+
+        <div class="flex items-center gap-2 mb-3">
+            @if($unit->isPerPiece())
+            <span class="badge" style="background:#E3F2FD; color:#1565C0; border-color:#BBDEFB;">Per Piece</span>
+            @else
+            <span class="badge" style="background:#FFF8E1; color:#E65100; border-color:#FFE0B2;">Salary</span>
+            @endif
+            <span class="text-[#6E6E73] text-sm">
+                @if($unit->isPerPiece() && $unit->per_piece_rate)
+                    Rs. {{ number_format($unit->per_piece_rate, 0) }}/pc
+                @else
+                    <span class="text-[#D2D2D7]">—</span>
+                @endif
+            </span>
+        </div>
+
+        <div class="flex items-center gap-4 pt-3 border-t border-[#E8E8ED]">
+            <a href="{{ route('stitching-units.edit', $unit) }}"
+               class="text-[#0066CC] text-xs font-medium hover:underline">Edit</a>
+            <form method="POST" action="{{ route('stitching-units.toggle', $unit) }}">
+                @csrf
+                <button type="submit"
+                        class="text-xs font-medium {{ $unit->is_active ? 'text-[#FF3B30]' : 'text-[#34C759]' }} hover:underline">
+                    {{ $unit->is_active ? 'Deactivate' : 'Activate' }}
+                </button>
+            </form>
+        </div>
+    </div>
+    @empty
+    <div class="card p-8 text-center text-[#86868B] text-sm">No stitching units found.</div>
+    @endforelse
 </div>
 
 <p class="mt-4 text-xs text-[#86868B]">

@@ -512,6 +512,26 @@ The rule 5.17 overpayment-surplus check still runs **unconditionally** on the fu
 - A `order_charged` ledger entry is created for the **target customer** reflecting the added amount.
 - The **source order is not automatically modified** — if a corresponding reduction is needed on the source, it must be logged separately via Log Reduction.
 
+### 5.20 Piece Tags & Country Pricing (Barcode Labels for Dispatch)
+
+**Purpose:** Physical barcode tags applied to finished pieces before packing, generated and tracked by the system instead of being blank/unlinked.
+
+**Country pricing (admin-only):** `design_country_prices` table — one price per design per destination country (`Customer::COUNTRIES`: Australia, Canada, Pakistan, Saudi Arabia, UAE, UK, USA), unique on `(design_id, country)`. Managed from the **Country Pricing** screen (`country-pricing.index` / `country-pricing.store`, admin only), scoped to the active catalogue (same `session('active_catalogue_id')` pattern as other production screens). Leaving a cell blank deletes that design+country's price row. `Customer::CURRENCY_SYMBOLS` maps each country to its tag currency label: Pakistan → `Rs.`, UK → `£`, USA → `US $`, Australia → `AUS $`, Canada → `CAD $`, Saudi Arabia → `SR`, UAE → `AED`.
+
+**Piece tags:** `piece_tags` table — one row per `(order_id, design_id, size)` combination (unique constraint), created lazily the first time tags are printed for that order. `barcode` is a 10-digit, zero-padded numeric string derived from the row's own auto-increment `id` (`PieceTag::booted()` sets it after insert, since the id isn't known before). `price` and `country` are snapshotted onto the row at creation time from `design_country_prices` + the order's customer, so historical tags stay accurate even if country pricing changes later. Barcode uniqueness is guaranteed globally (stronger than the "unique per customer" requirement) since it's tied to the row's own PK — pieces of the same design+size for the same customer share one barcode.
+
+**Print flow:** `DispatchController::printTags()` (route `dispatch.print-tags`, same access as the rest of Dispatch — admin, production_manager, creative_head), triggered by a blue tag icon next to the customer name on the Dispatch index (both mobile card and desktop table, beside the existing red sack-label icon). Before generating anything it validates: (1) the order's customer has a `country` set — customers created before the country field existed may still have `country = null`; (2) every design in the order has a price set for that country. Either failure redirects back with a specific error message. For each order item + size with qty > 0, it finds-or-creates the `PieceTag`, then repeats that tag's label once per physical piece (a design+size with qty 3 produces 3 identical-barcode label pages).
+
+**Output format:** one 2"×1" PDF page per physical piece (`production/dispatch/piece-tags-pdf.blade.php`), sized via `Pdf::setPaper([0, 0, 144, 72])` to match the Zebra TLP2844 label roll — **not** a multi-tag grid sheet on plain paper. Barcodes are generated with `picqer/php-barcode-generator` (`BarcodeGeneratorSVG`, `TYPE_CODE_128_C`), embedded as base64 SVG data URIs, width dynamically fitted to the label via a private `fittedBarcodeSvg()` helper on `DispatchController`.
+
+**Barcode scan result (public, no auth):** `GET /tags/{barcode}` (`tags.scan`, `PieceTagController::scan()`) displays Casualite, customer name, catalogue name, design name, and size — not price — matching the `order.public`/`portal.show` pattern of public informational routes.
+
+**dompdf gotcha — read before touching `piece-tags-pdf.blade.php` or any other small custom-page-size PDF:**
+1. An explicit `height` on a container equal to (or very close to) the `@page` height, combined with `box-sizing: border-box`, makes dompdf silently overflow onto a spurious second page — even when content is shorter than the box. Never set an explicit `height` on the outermost per-page container; let it size from content, with a few points of slack under the page height.
+2. A percentage-width child (`width: 100%`) inside a `box-sizing: border-box` parent with padding gets sized against the wrong containing block and overflows past the padding into the page edge, clipping text. Give the child a fixed point-width equal to the parent's content width (page width minus padding), not a percentage.
+
+Both only surfaced when forcing `page-break-after: always` between many small pages — after changing this template, render to an image and check text bounding boxes, not just the page count.
+
 ---
 
 ## 6. Production Flow (In-House)
@@ -642,6 +662,10 @@ returns that cause discrepancies — it flags them for review.
 | `orders.destroy`            | `DELETE /orders/{order}`                           | Hard-delete order (admin + accountant)    |
 | `orders.payments.destroy`   | `DELETE /orders/{order}/payments/{payment}`        | Delete a payment (admin + accountant)     |
 | `og.image`                  | `GET /og-image/{token}`                            | Proxy catalogue OG image through app domain (public, no auth) |
+| `country-pricing.index`     | `GET /country-pricing`                             | Country Pricing screen (admin only)       |
+| `country-pricing.store`     | `POST /country-pricing/{catalogue}`                | Save country prices for a catalogue's designs (admin only) |
+| `dispatch.print-tags`       | `GET /dispatch/{order}/print-tags`                 | Download piece-tag barcode PDF (one 2"x1" label per piece) |
+| `tags.scan`                 | `GET /tags/{barcode}`                              | Public barcode scan result (no auth)      |
 
 **Never use `order.show` — it does not exist. The correct route name is `order.public`.**
 
@@ -715,6 +739,7 @@ returns that cause discrepancies — it flags them for review.
 - **"From Advance Credit" always available + split-payment handling** (2026-07-12): The "From Advance Credit" option in the Record Payment dropdown (`orders/show.blade.php`) is no longer hidden when `customer.advance_credit_balance` is 0 — it is always shown, with the available amount displayed inline only when the balance is greater than 0. `PaymentController::store()`'s `advance` branch no longer requires the entered amount to fit within the available balance: any amount beyond `advance_credit_balance` is automatically split into a credit portion (consumes the balance, no ledger entry, existing convention) and a payment portion (recorded as a `payment_received` ledger entry, same as cash/bank transfer). The rule 5.17 overpayment-surplus check now runs unconditionally for advance payments (fixed a bug where it was incorrectly nested inside the payment-portion branch, causing overpayment surplus to be lost when the entire amount was covered by credit). A live Alpine.js preview below the Amount field shows the credit/payment split before the accountant submits. See rule 5.19 for full detail.
 - **Customer Country + Address fields** (2026-07-13): `customers.country` (required, fixed dropdown list — Australia, Canada, Pakistan, Saudi Arabia, UAE, UK, USA — the countries Casualite dispatches to; type-to-filter combobox built with Alpine.js, no native `<select>`; backed by `Customer::COUNTRIES` const, validated server-side with `in:`) and `customers.address` (optional free-text street address, `nullable|string|max:255`) both added via migration `2026_07_13_000001_add_country_to_customers_table`. Field order on `customers/create.blade.php` and `customers/edit.blade.php`: Full Name, Email, Contact Number, **Address**, City, **Country**. Country is shown on the Customer show page, the Orders List (`orders/index.blade.php`), and 5 reports — Customer Master List, Receivables by Bank, Bank Account Breakdown, Customer Order Bill, Bank Collection (web + PDF + Excel exports for all 5). Address is shown **only** on the Customer show page — deliberately excluded from Orders List and every report; do not add an Address column anywhere else without asking first. `Customer::COUNTRIES` is the single source of truth for the fixed country list — do not duplicate the array in Blade views or elsewhere.
 - **Dispatch — Sack Label PDF download** (2026-07-13): `DispatchController::sackLabel()` (route `dispatch.sack-label`, `GET /dispatch/{order}/sack-label`, same access group as the rest of dispatch: admin, production_manager, creative_head) generates an A4 PDF (`production/dispatch/sack-label-pdf.blade.php`) showing the order's Customer Name, Contact Number, Address, City/Country, plus two blank boxes — **Sack #** and **Total Pieces** — left empty for staff to fill in by hand after physically packing a sack. Purpose: a single order can be split across multiple sacks, so the piece count per sack isn't known to the system in advance; the printed label is filled in and taped onto the sack. The download is triggered by a PDF icon next to the customer name on the Dispatch index page (both the mobile card list and desktop table) — **not** on the Dispatch show/detail page. Staff download it as many times as needed, one per sack.
+- **Piece Tags & Country Pricing** (2026-07-13): New per-design, per-country pricing (`design_country_prices` table, admin-only Country Pricing screen scoped to the active catalogue) feeds a new barcode tag system. `PieceTag` records (`piece_tags` table, unique per order+design+size, numeric Code128C barcode derived from its own id, price/country snapshotted at creation) are created lazily when the admin clicks the new blue Print Tags icon on the Dispatch index (next to the existing red sack-label icon, both mobile and desktop). Generates one 2"×1" PDF page per physical piece, sized for the Zebra TLP2844 label roll, using `picqer/php-barcode-generator`. Validates the customer has a country set and every design in the order has a price for that country before generating anything. Scanning a tag's barcode hits a public route (`tags.scan`) showing Casualite, customer name, catalogue name, design name, and size. See rule 5.20 for full detail, including two dompdf small-page-size layout bugs worth reading before touching the label template again.
 
 ### Known Bugs / Incomplete Features (must fix)
 
@@ -761,6 +786,8 @@ All migrations have been run. No pending migrations. For reference, the full set
 - `2026_06_05_210000` — creates `cron_logs` table (`job_name`, `job_label`, `triggered_by`, `week_start` nullable, `week_end` nullable, `records_created`, `records_updated`, `records_skipped`, `status` enum(`success`,`failed`), `output` text nullable, `ran_at` timestamp)
 - `2026_06_06_000001` — adds `assigned_bank_account_id` nullable FK to `orders` (references `bank_accounts`, nullOnDelete)
 - `2026_06_10_000001` — creates `order_number_sequence` table (single row, `last_number` seeded at 1005334); new orders increment this counter atomically instead of using `random_int`
+- `2026_07_13_170212_create_design_country_prices_table` — creates `design_country_prices` table (`design_id` FK cascade delete, `country`, `price` decimal 10,2); unique constraint `(design_id, country)`
+- `2026_07_13_170212_create_piece_tags_table` — creates `piece_tags` table (`order_id` FK cascade delete, `design_id` FK cascade delete, `size` enum(xs,s,m,l,xl), `barcode` nullable unique string, `country`, `price` decimal 10,2); unique constraint `(order_id, design_id, size)`
 
 ---
 
@@ -840,6 +867,10 @@ The general rule is **never delete** — user accounts are disabled, orders are 
 2. **Payments** — `PaymentController::destroy()` hard-deletes any payment (see rule 5.16). Used to correct duplicate entries.
 
 Do not add further `destroy()` routes without an explicit business justification.
+
+### dompdf on small custom page sizes (labels, tags)
+
+Any PDF sized to a physical label rather than A4/Letter (e.g. `piece-tags-pdf.blade.php`, sized to the 2"×1" Zebra label) is prone to two dompdf-specific bugs: an explicit `height` on a per-page container combined with `box-sizing: border-box` causes a spurious blank second page even when content fits, and a percentage-width child inside a padded `border-box` parent overflows past the padding into the page edge. See rule 5.20 for the full explanation and the fix (no explicit height; fixed point-widths instead of percentages). Verify any change to a label-sized PDF by rendering to an image and checking text bounding boxes — the page count alone can look correct while text is silently clipped.
 
 ### Bypassing the CustomerLedger boot-level deletion guard
 
