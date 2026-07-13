@@ -137,6 +137,7 @@ class BankCollectionReportController extends Controller
             ->where('orders.catalogue_id', $catalogueId)
             ->whereNotIn('orders.status', ['cancelled'])
             ->leftJoin('bank_accounts as ab', 'orders.assigned_bank_account_id', '=', 'ab.id')
+            ->leftJoin('customers', 'orders.customer_id', '=', 'customers.id')
             ->select(
                 'orders.id',
                 'orders.submitted_name',
@@ -144,7 +145,8 @@ class BankCollectionReportController extends Controller
                 'orders.total_amount',
                 'orders.total_paid',
                 'orders.outstanding_balance',
-                DB::raw('ab.title as assigned_bank_title')
+                DB::raw('ab.title as assigned_bank_title'),
+                'customers.country as customer_country'
             )
             ->orderBy('orders.id')
             ->get();
@@ -222,6 +224,7 @@ class BankCollectionReportController extends Controller
                 $rows[] = [
                     'name'              => $order->submitted_name,
                     'city'              => $order->submitted_city ?? '',
+                    'country'           => $order->customer_country ?? '',
                     'qty_xs'            => $qtyXs,
                     'qty_s'             => $qtyS,
                     'qty_m'             => $qtyM,

@@ -17,16 +17,30 @@ class DispatchController extends Controller
     public function index(Request $request)
     {
         $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: null;
-        $search = trim($request->input('search', ''));
+        $search         = trim($request->input('search', ''));
+        $paymentStatus  = $request->input('payment_status', '');
+        $dispatchStatus = $request->input('dispatch_status', '');
+        $dateFrom       = $request->input('date_from', '');
+        $dateTo         = $request->input('date_to', '');
 
         $orders = Order::with(['customer', 'catalogue', 'items', 'dispatchBatches.items'])
             ->when($selectedCatalogueId, fn($q) => $q->where('catalogue_id', $selectedCatalogueId))
             ->when($search, fn($q) => $q->whereHas('customer', fn($q2) => $q2->where('name', 'like', "%{$search}%")))
+            ->when($paymentStatus === 'not_paid', fn($q) => $q->where('total_paid', '<=', 0))
+            ->when($paymentStatus === 'partially_paid', fn($q) => $q->where('total_paid', '>', 0)->where('outstanding_balance', '>', 0))
+            ->when($paymentStatus === 'fully_paid', fn($q) => $q->where('total_paid', '>', 0)->where('outstanding_balance', '<=', 0))
+            ->when($dispatchStatus === 'pending', fn($q) => $q->whereNotIn('status', ['partially_dispatched', 'dispatched']))
+            ->when($dispatchStatus === 'partial', fn($q) => $q->where('status', 'partially_dispatched'))
+            ->when($dispatchStatus === 'complete', fn($q) => $q->where('status', 'dispatched'))
+            ->when($dateFrom, fn($q) => $q->whereDate('updated_at', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->whereDate('updated_at', '<=', $dateTo))
             ->latest()
             ->paginate(20)
             ->withQueryString();
 
-        return view('production.dispatch.index', compact('orders', 'search'));
+        return view('production.dispatch.index', compact(
+            'orders', 'search', 'paymentStatus', 'dispatchStatus', 'dateFrom', 'dateTo'
+        ));
     }
 
     public function show(Order $order)

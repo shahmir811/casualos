@@ -100,6 +100,7 @@ $bankColors = [
                     <th class="px-2 py-2 text-center font-semibold border border-[#333]" style="min-width:36px;">#</th>
                     <th class="px-2 py-2 text-left font-semibold border border-[#333]" style="min-width:160px;">Customer Name</th>
                     <th class="px-2 py-2 text-left font-semibold border border-[#333]" style="min-width:90px;">City</th>
+                    <th class="px-2 py-2 text-left font-semibold border border-[#333]" style="min-width:90px;">Country</th>
 
                     {{-- Size columns --}}
                     <th class="px-2 py-2 text-center font-semibold border border-[#333]" style="min-width:44px;">XS</th>
@@ -145,6 +146,7 @@ $bankColors = [
                     <td class="px-2 py-1.5 text-center text-[#86868B] border border-[#E8E8ED]">{{ $i + 1 }}</td>
                     <td class="px-2 py-1.5 text-left font-medium text-[#1D1D1F] border border-[#E8E8ED]">{{ $row['name'] }}</td>
                     <td class="px-2 py-1.5 text-left text-[#6E6E73] border border-[#E8E8ED]">{{ $row['city'] ?: '—' }}</td>
+                    <td class="px-2 py-1.5 text-left text-[#6E6E73] border border-[#E8E8ED]">{{ $row['country'] ?: '—' }}</td>
 
                     <td class="px-2 py-1.5 text-center border border-[#E8E8ED]">{{ $row['qty_xs'] ?: '—' }}</td>
                     <td class="px-2 py-1.5 text-center border border-[#E8E8ED]">{{ $row['qty_s']  ?: '—' }}</td>
@@ -231,6 +233,7 @@ $bankColors = [
                     <td class="px-2 py-2 text-center font-bold text-[#1D1D1F] border border-[#C7C7CC]">{{ count($rows) }}</td>
                     <td class="px-2 py-2 text-left font-bold text-[#1D1D1F] border border-[#C7C7CC]">Total</td>
                     <td class="px-2 py-2 border border-[#C7C7CC]"></td>
+                    <td class="px-2 py-2 border border-[#C7C7CC]"></td>
 
                     <td class="px-2 py-2 text-center font-bold border border-[#C7C7CC]">{{ $totXs }}</td>
                     <td class="px-2 py-2 text-center font-bold border border-[#C7C7CC]">{{ $totS }}</td>
@@ -281,7 +284,7 @@ $bankColors = [
                 <tr style="background:#DBEAFE;">
                     <td class="px-2 py-2 border border-[#BFDBFE]"></td>
                     <td class="px-2 py-2 text-left font-bold text-[#1D4ED8] border border-[#BFDBFE]">Total Payment</td>
-                    <td colspan="9" class="px-2 py-2 border border-[#BFDBFE]"></td>
+                    <td colspan="10" class="px-2 py-2 border border-[#BFDBFE]"></td>
 
                     <td class="px-2 py-2 text-right tabular-nums font-bold text-[#1D4ED8] border border-[#BFDBFE]">
                         {{ number_format($grandExpected) }}
@@ -310,7 +313,7 @@ $bankColors = [
                 <tr style="background:#FEF9C3;">
                     <td class="px-2 py-2 border border-[#FDE68A]"></td>
                     <td class="px-2 py-2 text-left font-bold text-[#92400E] border border-[#FDE68A]">Receivable</td>
-                    <td colspan="9" class="px-2 py-2 border border-[#FDE68A]"></td>
+                    <td colspan="10" class="px-2 py-2 border border-[#FDE68A]"></td>
 
                     <td class="px-2 py-2 border border-[#FDE68A]"></td>
                     <td class="px-2 py-2 border border-[#FDE68A]"></td>

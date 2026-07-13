@@ -10,8 +10,12 @@ class Customer extends Model
 {
     use HasFactory;
 
+    public const COUNTRIES = [
+        'Australia', 'Canada', 'Pakistan', 'Saudi Arabia', 'UAE', 'UK', 'USA',
+    ];
+
     protected $fillable = [
-        'name', 'city', 'contact_number', 'email', 'portal_token',
+        'name', 'city', 'country', 'address', 'contact_number', 'email', 'portal_token',
         'advance_credit_balance', 'created_by',
     ];
 

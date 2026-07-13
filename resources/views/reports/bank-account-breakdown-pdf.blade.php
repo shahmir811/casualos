@@ -71,6 +71,7 @@
             <th class="left">#</th>
             <th class="left">Customer</th>
             <th class="left">City</th>
+            <th class="left">Country</th>
             @foreach($bankAccounts as $ba)
                 <th class="right">{{ $ba->title }}</th>
             @endforeach
@@ -85,6 +86,7 @@
             <td class="muted">{{ $i + 1 }}</td>
             <td>{{ $order->customer?->name ?? $order->submitted_name }}</td>
             <td class="muted">{{ $order->customer?->city ?? $order->submitted_city }}</td>
+            <td class="muted">{{ $order->customer?->country ?? '—' }}</td>
             @foreach($bankAccounts as $ba)
                 <td class="right">
                     {{ ($order->bank_totals[$ba->id] ?? 0) > 0 ? number_format($order->bank_totals[$ba->id], 0) : '—' }}
@@ -100,7 +102,7 @@
     </tbody>
     <tfoot>
         <tr>
-            <td colspan="3" class="left">Total</td>
+            <td colspan="4" class="left">Total</td>
             @foreach($bankAccounts as $ba)
                 <td class="right">{{ $grandTotals[$ba->id] > 0 ? 'Rs. ' . number_format($grandTotals[$ba->id], 0) : '—' }}</td>
             @endforeach

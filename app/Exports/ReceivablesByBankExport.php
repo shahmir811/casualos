@@ -40,7 +40,7 @@ class ReceivablesByBankExport
         $sheet->setTitle(substr($this->selectedCatalogue->name, 0, 31));
 
         $bankCount     = $this->banks->count();
-        $lastDataCol   = 5 + $bankCount + 1; // #, Name, City, Receivable, Title + banks + Misc
+        $lastDataCol   = 6 + $bankCount + 1; // #, Name, City, Country, Receivable, Title + banks + Misc
         $lastColLetter = Coordinate::stringFromColumnIndex($lastDataCol);
 
         // ── Row 1: title ──────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ class ReceivablesByBankExport
 
         // ── Row 4: headers ────────────────────────────────────────────────────
         $headerRow = 4;
-        $headers   = ['#', 'Customer Name', 'City', 'Receivable', 'Title Given'];
+        $headers   = ['#', 'Customer Name', 'City', 'Country', 'Receivable', 'Title Given'];
         foreach ($this->banks as $bank) {
             $headers[] = $bank->title;
         }
@@ -79,7 +79,7 @@ class ReceivablesByBankExport
             'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FF444444']]],
         ]);
         // Receivable header in orange
-        $sheet->getStyle('D' . $headerRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFA500');
+        $sheet->getStyle('E' . $headerRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFA500');
         $sheet->getRowDimension($headerRow)->setRowHeight(20);
 
         // ── Data rows ─────────────────────────────────────────────────────────
@@ -92,6 +92,7 @@ class ReceivablesByBankExport
             $sheet->setCellValue($this->ref($col++, $r), $i + 1);
             $sheet->setCellValue($this->ref($col++, $r), $row['name']);
             $sheet->setCellValue($this->ref($col++, $r), $row['city']);
+            $sheet->setCellValue($this->ref($col++, $r), $row['country']);
             $sheet->setCellValue($this->ref($col++, $r), $row['receivable'] > 0 ? number_format($row['receivable']) : '');
             $sheet->setCellValue($this->ref($col++, $r), $row['title_given']);
 
@@ -108,8 +109,8 @@ class ReceivablesByBankExport
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FFD2D2D7']]],
                 'font'    => ['size' => 9],
             ]);
-            $sheet->getStyle("D{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFF9C4');
-            $sheet->getStyle("D{$r}:{$lastColLetter}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet->getStyle("E{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFF9C4');
+            $sheet->getStyle("E{$r}:{$lastColLetter}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         }
 
         // ── Total row ─────────────────────────────────────────────────────────
@@ -118,6 +119,7 @@ class ReceivablesByBankExport
         $sheet->setCellValue($this->ref($col++, $totalRow), count($this->rows));
         $sheet->setCellValue($this->ref($col++, $totalRow), 'Total');
         $col++; // city blank
+        $col++; // country blank
         $sheet->setCellValue($this->ref($col++, $totalRow), number_format($this->grandReceivable));
         $col++; // title blank
 
@@ -133,7 +135,7 @@ class ReceivablesByBankExport
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['argb' => 'FF999999']],
                           'top'        => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['argb' => 'FF1D1D1F']]],
         ]);
-        $sheet->getStyle("D{$totalRow}:{$lastColLetter}{$totalRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle("E{$totalRow}:{$lastColLetter}{$totalRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
         // ── Column widths ─────────────────────────────────────────────────────
         $sheet->getColumnDimension('A')->setWidth(5);
@@ -141,8 +143,9 @@ class ReceivablesByBankExport
         $sheet->getColumnDimension('C')->setWidth(14);
         $sheet->getColumnDimension('D')->setWidth(14);
         $sheet->getColumnDimension('E')->setWidth(14);
+        $sheet->getColumnDimension('F')->setWidth(14);
 
-        $bankColStart = 6;
+        $bankColStart = 7;
         foreach ($this->banks as $idx => $bank) {
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($bankColStart + $idx))->setWidth(14);
         }

@@ -8,7 +8,10 @@
     <div>
         <a href="{{ route('customers.index') }}" class="text-[#0066CC] text-sm hover:underline">← Customers</a>
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F] mt-3">{{ $customer->name }}</h1>
-        <p class="text-[#6E6E73] text-sm mt-1">{{ $customer->city }} · {{ $customer->contact_number }} · {{ $customer->email }}</p>
+        <p class="text-[#6E6E73] text-sm mt-1">{{ $customer->city }}{{ $customer->country ? ', ' . $customer->country : '' }} · {{ $customer->contact_number }} · {{ $customer->email }}</p>
+        @if($customer->address)
+        <p class="text-[#86868B] text-xs mt-0.5">{{ $customer->address }}</p>
+        @endif
     </div>
     @if(in_array(Auth::user()->role, ['admin', 'accountant']))
     <div class="flex items-center gap-2.5">

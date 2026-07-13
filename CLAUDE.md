@@ -393,6 +393,8 @@ passwords manually. Do not add one.
 | `bank_transfer`     | **required**      | **required**          |
 | `advance` (credit)  | not required      | optional (may attach) |
 
+**Advance-type amounts exceeding the customer's available credit are not blocked** — the excess falls through to a normal payment entry instead. See rule 5.19.
+
 **Why Cash requires a bank account:** even when a customer pays in cash, the company staff deposits that cash into a specific bank. The bank account field records the deposit destination — it is not about the payment being electronic.
 
 `receipt_image` is required **only** for `bank_transfer` (PDF, JPG, PNG or WebP, max 5 MB).
@@ -457,9 +459,22 @@ When `PaymentController::store()` results in `total_paid > total_amount` (i.e. t
 - **No ledger entry is created** — the overpayment is already visible in the ledger via the `payment_received` entries exceeding the `order_charged` amount. Adding an `advance_received` entry would cancel out the existing credit and misrepresent the balance.
 - The order show page displays an **"Overpaid"** stat card (instead of "Outstanding") showing the surplus in green with "Added to advance credit" below.
 - The order show page shows a **green notice banner** above the Record Payment section when the customer has advance credit and the order still has outstanding balance.
-- The **"From Advance Credit"** option in the payment type dropdown is only rendered when `customer.advance_credit_balance > 0`. It also shows the available amount inline.
+- The **"From Advance Credit"** option in the payment type dropdown is always rendered (see rule 5.19 for what happens when the entered amount exceeds the available balance). The available amount is shown inline only when `customer.advance_credit_balance > 0`.
 
 **On payment deletion (`PaymentController::destroy()`):** If the deleted payment contributed to a surplus, `advance_credit_balance` is decremented by the reduction in surplus — floored at the current balance (no negatives). No ledger entry for this reversal either.
+
+### 5.19 Advance Payment Exceeding Available Credit — Split Into Credit + Payment
+
+The **"From Advance Credit"** payment method is always selectable, even when the customer's `advance_credit_balance` is 0 (changed 2026-07-12 — previously this option was hidden from the dropdown unless the balance was greater than 0).
+
+When `PaymentController::store()` receives `payment_type = 'advance'` and the entered `amount` exceeds the customer's current `advance_credit_balance` (including the case where the balance is 0), the request is **never blocked or rejected**. The amount is split automatically:
+
+- `creditPortion = min(amount, advance_credit_balance)` — decremented from `advance_credit_balance`. No ledger entry is created for this portion (same convention as the rest of rule 5.17 — credit consumption here is not separately logged).
+- `paymentPortion = amount − creditPortion` — recorded as a normal `payment_received` ledger entry (negative amount), exactly as a cash/bank transfer payment would be.
+
+The rule 5.17 overpayment-surplus check still runs **unconditionally** on the full requested amount regardless of how it was split. This matters even when `paymentPortion` is 0 — e.g. a customer with PKR 1,000 credit paying PKR 700 toward an order that only owes PKR 500: the full PKR 700 is drawn from credit, but the resulting PKR 200 overpayment still flows back into `advance_credit_balance` (300 → 500), rather than being silently lost. Do not re-nest the surplus check inside a `paymentPortion > 0` condition — it must run for every advance payment.
+
+`orders/show.blade.php` shows a live inline preview below the Amount field (Alpine.js `creditPortion` / `paymentPortion` getters, driven by an `advanceBalance` value passed from the customer's `advance_credit_balance`) whenever the entered amount exceeds the available balance — e.g. "PKR 10,700 will be applied from advance credit. PKR 4,300 will be recorded as an additional payment." — so the accountant sees the split before submitting.
 
 ### 5.18 Adjust Order — Final Settlement Dispatch Flow
 
@@ -696,6 +711,7 @@ returns that cause discrepancies — it flags them for review.
 - **Log Reduction now updates `order_items` + auto-transitions dispatch status** (2026-06-24): `OrderReductionController::store()` gained two additions inside its DB transaction, placed after the auto-cancel check: **(1)** For each reduction item, the corresponding `order_items.qty_{size}` column is decremented by `qty_reduced` (floored at 0). `OrderItem::save()` triggers `booted()` which recomputes `total_qty` and `total_amount` automatically. **(2)** If `$order->status === 'partially_dispatched'`, the `items` relation is reloaded fresh (`unsetRelation` then `load`) and `$order->isFullyDispatched()` is called. If it returns `true` (meaning total ordered after reduction now equals or is less than total dispatched), the order status is set to `dispatched`. This makes the full final-settlement flow work end-to-end without any manual status override. See rule 5.18 for the complete flow.
 - **Audit log pruning — automated** (2026-06-19): `audit-log:prune` Artisan command deletes all `activity_log` entries older than **45 days**. Scheduled every first Sunday of the month at 00:00 via cron expression `0 0 1-7 * 0`. Writes a `CronLog` entry (`job_label = 'Audit Log Pruning'`, red dot) on every run — success or failure. Visible in the Cron Logs screen (admin only). Triggered by Scheduler only — no manual recalculate panel. No migrations required.
 - **Backup file pruning — automated** (2026-06-19): `backups:prune` Artisan command deletes all `.sql` backup files in the S3 `backups/` folder that are older than **30 days**. There is no separate database table for backup metadata — the Database Backup screen lists files directly from S3, so deleting a file from S3 removes it from that screen immediately. Scheduled every first Sunday of the month at 00:05 (5 minutes after `audit-log:prune`) via cron expression `5 0 1-7 * 0`. Writes a `CronLog` entry (`job_label = 'Backup Pruning'`, orange dot) on every run — success or failure. Visible in the Cron Logs screen (admin only). Triggered by Scheduler only — no manual recalculate panel. No migrations required.
+- **"From Advance Credit" always available + split-payment handling** (2026-07-12): The "From Advance Credit" option in the Record Payment dropdown (`orders/show.blade.php`) is no longer hidden when `customer.advance_credit_balance` is 0 — it is always shown, with the available amount displayed inline only when the balance is greater than 0. `PaymentController::store()`'s `advance` branch no longer requires the entered amount to fit within the available balance: any amount beyond `advance_credit_balance` is automatically split into a credit portion (consumes the balance, no ledger entry, existing convention) and a payment portion (recorded as a `payment_received` ledger entry, same as cash/bank transfer). The rule 5.17 overpayment-surplus check now runs unconditionally for advance payments (fixed a bug where it was incorrectly nested inside the payment-portion branch, causing overpayment surplus to be lost when the entire amount was covered by credit). A live Alpine.js preview below the Amount field shows the credit/payment split before the accountant submits. See rule 5.19 for full detail.
 
 ### Known Bugs / Incomplete Features (must fix)
 

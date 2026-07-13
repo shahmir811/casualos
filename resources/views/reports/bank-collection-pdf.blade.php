@@ -123,8 +123,9 @@ $bankCount = $banks->count();
 <table>
     <colgroup>
         <col style="width:2%">
-        <col style="width:12%">
+        <col style="width:11%">
         <col style="width:6%">
+        <col style="width:4%">
         <col style="width:2.5%"><col style="width:2.5%"><col style="width:2.5%"><col style="width:2.5%"><col style="width:2.5%">
         <col style="width:3.5%">
         <col style="width:4%">
@@ -144,6 +145,7 @@ $bankCount = $banks->count();
             <th>#</th>
             <th class="left">Customer Name</th>
             <th class="left">City</th>
+            <th class="left">Country</th>
             <th>XS</th><th>S</th><th>M</th><th>L</th><th>XL</th>
             <th>Total<br>Qty</th>
             <th>OA<br>Qty</th>
@@ -176,6 +178,7 @@ $bankCount = $banks->count();
             <td class="center" style="color:#86868B;">{{ $i + 1 }}</td>
             <td class="left name">{{ $row['name'] }}</td>
             <td class="left" style="color:#6E6E73;">{{ $row['city'] ?: '' }}</td>
+            <td class="left" style="color:#6E6E73;">{{ $row['country'] ?: '' }}</td>
 
             <td class="center">{{ $row['qty_xs'] ?: '' }}</td>
             <td class="center">{{ $row['qty_s']  ?: '' }}</td>
@@ -233,6 +236,7 @@ $bankCount = $banks->count();
             <td class="center">{{ count($rows) }}</td>
             <td class="left">Total</td>
             <td></td>
+            <td></td>
             <td class="center">{{ $totXs }}</td>
             <td class="center">{{ $totS }}</td>
             <td class="center">{{ $totM }}</td>
@@ -261,7 +265,7 @@ $bankCount = $banks->count();
         <tr style="background:#DBEAFE;">
             <td></td>
             <td class="left" style="color:#1D4ED8; font-weight:700;">Total Payment</td>
-            <td colspan="9"></td>
+            <td colspan="10"></td>
             <td class="right" style="color:#1D4ED8;">{{ number_format($grandExpected) }}</td>
             <td></td><td></td><td></td>
             @foreach($banks as $bank)
@@ -276,7 +280,7 @@ $bankCount = $banks->count();
         <tr style="background:#FEF9C3;">
             <td></td>
             <td class="left" style="color:#92400E; font-weight:700;">Receivable</td>
-            <td colspan="9"></td>
+            <td colspan="10"></td>
             <td></td><td></td>
             <td class="right red">{{ number_format($grandReceivable) }}</td>
             <td></td>

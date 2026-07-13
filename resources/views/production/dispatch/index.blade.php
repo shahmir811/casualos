@@ -7,20 +7,44 @@
     <p class="text-[#6E6E73] text-sm mt-1">Orders in stitching status ready for dispatch</p>
 </div>
 
-{{-- Search --}}
+{{-- Search & Filters --}}
 <div class="card p-4 mb-6">
     <form method="GET" action="{{ route('dispatch.index') }}">
-        <div class="flex items-center gap-3">
-            <div class="flex-1 max-w-sm">
+        <div class="flex flex-wrap items-end gap-3">
+            <div class="flex-1 min-w-[200px] max-w-sm">
                 <input type="text"
                        name="search"
                        value="{{ $search }}"
                        placeholder="Search by customer name…"
                        class="apple-input w-full">
             </div>
-            <button type="submit" class="btn-primary">Search</button>
-            @if($search)
-                <a href="{{ route('dispatch.index') }}" class="text-xs text-[#86868B] hover:text-[#1D1D1F]">× Clear</a>
+            <div class="min-w-[160px]">
+                <select name="payment_status" class="apple-input w-full">
+                    <option value="">All Payment Statuses</option>
+                    <option value="not_paid" @selected($paymentStatus === 'not_paid')>Not Paid</option>
+                    <option value="partially_paid" @selected($paymentStatus === 'partially_paid')>Partially Paid</option>
+                    <option value="fully_paid" @selected($paymentStatus === 'fully_paid')>Fully Paid</option>
+                </select>
+            </div>
+            <div class="min-w-[160px]">
+                <select name="dispatch_status" class="apple-input w-full">
+                    <option value="">All Dispatch Statuses</option>
+                    <option value="pending" @selected($dispatchStatus === 'pending')>Pending</option>
+                    <option value="partial" @selected($dispatchStatus === 'partial')>Partial</option>
+                    <option value="complete" @selected($dispatchStatus === 'complete')>Complete</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-[#86868B] mb-1">From</label>
+                <input type="date" name="date_from" value="{{ $dateFrom }}" class="apple-input">
+            </div>
+            <div>
+                <label class="block text-xs text-[#86868B] mb-1">To</label>
+                <input type="date" name="date_to" value="{{ $dateTo }}" class="apple-input">
+            </div>
+            <button type="submit" class="btn-primary">Filter</button>
+            @if($search || $paymentStatus || $dispatchStatus || $dateFrom || $dateTo)
+                <a href="{{ route('dispatch.index') }}" class="btn-secondary">Clear</a>
             @endif
         </div>
     </form>

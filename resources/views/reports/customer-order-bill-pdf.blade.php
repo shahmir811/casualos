@@ -76,6 +76,7 @@
             <th class="left">#</th>
             <th class="left">Customer</th>
             <th class="left">City</th>
+            <th class="left">Country</th>
             <th class="right">XS</th>
             <th class="right">S</th>
             <th class="right">M</th>
@@ -95,6 +96,7 @@
             <td class="muted">{{ $i + 1 }}</td>
             <td>{{ $order->customer?->name ?? $order->submitted_name }}</td>
             <td class="muted">{{ $order->customer?->city ?? $order->submitted_city }}</td>
+            <td class="muted">{{ $order->customer?->country ?? '—' }}</td>
             <td class="right">{{ $order->agg_xs ?: '—' }}</td>
             <td class="right">{{ $order->agg_s ?: '—' }}</td>
             <td class="right">{{ $order->agg_m ?: '—' }}</td>
@@ -113,7 +115,7 @@
     </tbody>
     <tfoot>
         <tr>
-            <td colspan="3" class="left">Total</td>
+            <td colspan="4" class="left">Total</td>
             <td class="right">{{ $totXs ?: '—' }}</td>
             <td class="right">{{ $totS ?: '—' }}</td>
             <td class="right">{{ $totM ?: '—' }}</td>

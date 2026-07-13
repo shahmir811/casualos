@@ -65,6 +65,7 @@
                     <th class="text-left">#</th>
                     <th class="text-left">Customer</th>
                     <th class="text-left">City</th>
+                    <th class="text-left">Country</th>
                     @foreach($bankAccounts as $ba)
                         <th class="text-right text-xs">{{ $ba->title }}</th>
                     @endforeach
@@ -79,6 +80,7 @@
                     <td class="text-[#86868B] text-xs">{{ $i + 1 }}</td>
                     <td class="font-medium">{{ $order->customer?->name ?? $order->submitted_name }}</td>
                     <td class="text-[#6E6E73]">{{ $order->customer?->city ?? $order->submitted_city }}</td>
+                    <td class="text-[#6E6E73]">{{ $order->customer?->country ?? '—' }}</td>
                     @foreach($bankAccounts as $ba)
                         <td class="text-right text-sm">
                             {{ ($order->bank_totals[$ba->id] ?? 0) > 0 ? number_format($order->bank_totals[$ba->id], 0) : '—' }}
@@ -91,13 +93,13 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="{{ 7 + $bankAccounts->count() }}" class="text-center text-[#86868B] py-12">No confirmed orders for this catalogue.</td></tr>
+                <tr><td colspan="{{ 8 + $bankAccounts->count() }}" class="text-center text-[#86868B] py-12">No confirmed orders for this catalogue.</td></tr>
                 @endforelse
             </tbody>
             @if($orders->count())
             <tfoot>
                 <tr class="border-t-2 border-[#E8E8ED] bg-[#F5F5F7]">
-                    <td class="px-5 py-3 font-semibold text-sm" colspan="3">Total</td>
+                    <td class="px-5 py-3 font-semibold text-sm" colspan="4">Total</td>
                     @foreach($bankAccounts as $ba)
                         <td class="px-5 py-3 text-right font-bold text-sm">
                             {{ $grandTotals[$ba->id] > 0 ? 'Rs. ' . number_format($grandTotals[$ba->id], 0) : '—' }}
