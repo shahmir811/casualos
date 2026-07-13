@@ -38,4 +38,9 @@ class Design extends Model
     {
         return $this->hasOne(ProductionAssignment::class);
     }
+
+    public function countryPrices(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DesignCountryPrice::class);
+    }
 }

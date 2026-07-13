@@ -470,6 +470,14 @@
                 Bank Accounts
             </a>
 
+            <a href="{{ route('country-pricing.index') }}"
+               class="nav-item {{ request()->routeIs('country-pricing.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5.586a2 2 0 011.414.586l7 7a2 2 0 010 2.828l-6.586 6.586a2 2 0 01-2.828 0l-7-7A2 2 0 013 11.586V6a3 3 0 013-3z"/>
+                </svg>
+                Country Pricing
+            </a>
+
             <a href="{{ route('users.index') }}"
                class="nav-item {{ request()->routeIs('users.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">

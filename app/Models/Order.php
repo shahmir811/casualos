@@ -159,4 +159,9 @@ class Order extends Model
     {
         return $this->hasMany(DispatchBatch::class)->orderBy('batch_number');
     }
+
+    public function pieceTags(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PieceTag::class);
+    }
 }
