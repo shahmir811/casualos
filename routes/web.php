@@ -40,6 +40,7 @@ use App\Http\Controllers\OrderAdjustController;
 use App\Http\Controllers\DesignCountryPriceController;
 use App\Http\Controllers\PieceTagController;
 use App\Http\Controllers\DispatchOptimizerController;
+use App\Http\Controllers\CostEstimationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -202,6 +203,12 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         // Dispatch Optimizer — recommends which pending orders to dispatch to best clear packed inventory
         Route::get('dispatch-optimizer', [DispatchOptimizerController::class, 'index'])->name('dispatch-optimizer.index');
+
+        // Cost Estimation (per design) — production qty and Pakki Embroidery rate are system-derived,
+        // the rest is filled in by the production manager
+        Route::get('designs/{design}/cost-estimation',     [CostEstimationController::class, 'edit'])->name('designs.cost-estimation.edit');
+        Route::post('designs/{design}/cost-estimation',    [CostEstimationController::class, 'update'])->name('designs.cost-estimation.update');
+        Route::get('designs/{design}/cost-estimation/pdf', [CostEstimationController::class, 'pdf'])->name('designs.cost-estimation.pdf');
 
     });
 

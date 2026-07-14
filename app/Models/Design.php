@@ -43,4 +43,9 @@ class Design extends Model
     {
         return $this->hasMany(DesignCountryPrice::class);
     }
+
+    public function costEstimation(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(CostEstimation::class);
+    }
 }

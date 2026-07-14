@@ -158,6 +158,12 @@
                             <span class="text-[#34C759] text-sm font-semibold">PKR {{ number_format($design->discount_price, 0) }}</span>
                         </div>
                         @endif
+                        @if($design->costEstimation?->per_unit_cost)
+                        <div class="flex items-center gap-2">
+                            <span class="text-[#6E6E73] text-xs font-medium uppercase tracking-wide" style="min-width:52px;">Cost/Unit</span>
+                            <span class="text-[#FF9500] text-sm font-semibold">PKR {{ number_format($design->costEstimation->per_unit_cost, 0) }}</span>
+                        </div>
+                        @endif
                     </div>
                 </div>
                 {{-- Right: badges --}}
@@ -188,6 +194,21 @@
                         })">
                     Delete
                 </button>
+                @endif
+            </div>
+            @endif
+
+            @if($design->isInHouse() && in_array(Auth::user()->role, ['admin', 'production_manager', 'creative_head']))
+            <div class="flex items-center gap-2 mt-2 pt-2 {{ in_array(Auth::user()->role, ['admin', 'creative_head']) ? '' : 'border-t border-[#F2F2F7]' }}">
+                <a href="{{ route('designs.cost-estimation.edit', $design) }}" class="text-[#0066CC] text-xs hover:underline">
+                    {{ $design->costEstimation ? 'Edit Cost Estimation' : 'Add Cost Estimation' }}
+                </a>
+                @if($design->costEstimation?->per_unit_cost)
+                <a href="{{ route('designs.cost-estimation.pdf', $design) }}" title="Download Cost Estimation PDF" class="text-red-500 hover:text-red-600 shrink-0">
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                    </svg>
+                </a>
                 @endif
             </div>
             @endif

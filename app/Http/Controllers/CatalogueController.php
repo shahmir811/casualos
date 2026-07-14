@@ -90,7 +90,11 @@ class CatalogueController extends Controller
      */
     public function show(Catalogue $catalogue)
     {
-        $catalogue->load(['designs' => fn($q) => $q->orderBy('sort_order'), 'createdBy']);
+        $catalogue->load([
+            'designs' => fn($q) => $q->orderBy('sort_order'),
+            'designs.costEstimation',
+            'createdBy',
+        ]);
 
         $ordersCount  = $catalogue->orders()->count();
 
