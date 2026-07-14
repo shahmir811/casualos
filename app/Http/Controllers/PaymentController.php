@@ -49,8 +49,14 @@ class PaymentController extends Controller
         $surplus          = 0;
 
         DB::transaction(function () use ($request, $receiptPaths, $titleGiven, $order, &$payment, &$wasAutoConfirmed, &$surplus) {
+            // Lock the order row so concurrent payments on the same order can't race
+            // each other into computing the same next sequence number.
+            Order::where('id', $order->id)->lockForUpdate()->first();
+            $nextSequence = (Payment::where('order_id', $order->id)->max('sequence_number') ?? 0) + 1;
+
             $payment = Payment::create([
                 'order_id'        => $order->id,
+                'sequence_number' => $nextSequence,
                 'customer_id'     => $order->customer_id,
                 'amount'          => $request->amount,
                 'payment_type'    => $request->payment_type,
@@ -162,7 +168,7 @@ class PaymentController extends Controller
             ->causedBy(Auth::user())
             ->event('detail')
             ->withProperties($props)
-            ->log('Payment of PKR ' . number_format((float) $request->amount, 0) . ' recorded on Order #' . $order->order_number);
+            ->log('Payment #' . $order->order_number . 'p' . $payment->sequence_number . ' of PKR ' . number_format((float) $request->amount, 0) . ' recorded on Order #' . $order->order_number);
 
         return back()->with('success', 'Payment of PKR ' . number_format($request->amount) . ' recorded.');
     }
@@ -173,10 +179,11 @@ class PaymentController extends Controller
             abort(404);
         }
 
-        $amount      = $payment->amount;
-        $paymentType = $payment->payment_type;
-        $paymentDate = $payment->payment_date?->format('d M Y') ?? '—';
-        $bankTitle   = $payment->bankAccount?->title ?? '—';
+        $amount         = $payment->amount;
+        $paymentType    = $payment->payment_type;
+        $paymentDate    = $payment->payment_date?->format('d M Y') ?? '—';
+        $bankTitle      = $payment->bankAccount?->title ?? '—';
+        $sequenceNumber = $payment->sequence_number;
 
         $statusReverted = false;
 
@@ -246,7 +253,7 @@ class PaymentController extends Controller
             ->causedBy(Auth::user())
             ->event('detail')
             ->withProperties($deleteProps)
-            ->log('Payment of PKR ' . number_format((float) $amount, 0) . ' DELETED from Order #' . $order->order_number);
+            ->log('Payment #' . $order->order_number . 'p' . $sequenceNumber . ' of PKR ' . number_format((float) $amount, 0) . ' DELETED from Order #' . $order->order_number);
 
         return back()->with('success', 'Payment of PKR ' . number_format($amount) . ' has been deleted and the order balance updated.');
     }

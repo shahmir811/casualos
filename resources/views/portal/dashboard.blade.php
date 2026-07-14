@@ -144,6 +144,7 @@
 
                     // Collect this order's payment IDs for ledger filtering
                     $orderPaymentIds = $order->payments->pluck('id');
+                    $paymentSeqMap   = $order->payments->pluck('sequence_number', 'id');
 
                     // Filter ledger entries that belong to this order
                     $orderActivity = $customer->ledger->filter(function ($entry) use ($order, $orderPaymentIds) {
@@ -218,7 +219,12 @@
                                             <p class="text-[#1D1D1F] text-xs font-medium">
                                                 {{ $activityLabels[$entry->transaction_type] ?? ucwords(str_replace('_', ' ', $entry->transaction_type)) }}
                                             </p>
-                                            <p class="text-[#86868B] text-[10px] mt-0.5">{{ $entry->created_at->format('d M Y') }}</p>
+                                            <p class="text-[#86868B] text-[10px] mt-0.5">
+                                                {{ $entry->created_at->format('d M Y') }}
+                                                @if($entry->transaction_type === 'payment_received' && !empty($paymentSeqMap[$entry->reference_id]))
+                                                    &middot; #{{ $order->order_number }}p{{ $paymentSeqMap[$entry->reference_id] }}
+                                                @endif
+                                            </p>
                                         </div>
                                         <span class="text-xs font-semibold flex-shrink-0 text-[#1D1D1F]">
                                             {{ formatPKR(abs($entry->amount)) }}

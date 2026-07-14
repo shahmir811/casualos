@@ -527,7 +527,12 @@
                 <span class="text-[#30D158] font-mono font-semibold text-sm whitespace-nowrap">PKR {{ number_format($payment->amount, 0) }}</span>
             </div>
             <div class="flex items-center justify-between gap-3">
-                <span class="text-[#6E6E73] text-xs">{{ $payment->payment_date->format('d M Y') }}</span>
+                <span class="text-[#6E6E73] text-xs">
+                    {{ $payment->payment_date->format('d M Y') }}
+                    @if($payment->sequence_number)
+                        <span class="font-mono">· #{{ $order->order_number }}p{{ $payment->sequence_number }}</span>
+                    @endif
+                </span>
                 <div class="flex items-center gap-2">
                     @foreach($receipts as $receipt)
                     @php $ext = strtolower(pathinfo($receipt, PATHINFO_EXTENSION)); @endphp
@@ -572,6 +577,13 @@
             @php $receipts = $payment->receipt_image ?? []; @endphp
             <tr>
                 <td class="text-[#6E6E73] text-xs whitespace-nowrap">{{ $payment->payment_date->format('d M Y') }}</td>
+                <td class="text-[#6E6E73] text-xs whitespace-nowrap font-mono">
+                    @if($payment->sequence_number)
+                        #{{ $order->order_number }}p{{ $payment->sequence_number }}
+                    @else
+                        —
+                    @endif
+                </td>
                 <td>
                     <span class="badge bg-green-100 text-green-700">{{ ucwords(str_replace('_', ' ', $payment->payment_type)) }}</span>
                     @if($payment->payment_type === 'bank_transfer' && $payment->bankAccount)

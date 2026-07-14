@@ -371,9 +371,10 @@
 <table class="payments-table">
     <thead>
         <tr>
-            <th style="text-align:left; width:18%;">Date</th>
-            <th style="text-align:left; width:26%;">Method</th>
-            <th style="text-align:left; width:36%;">Notes</th>
+            <th style="text-align:left; width:14%;">Date</th>
+            <th style="text-align:left; width:16%;">Payment #</th>
+            <th style="text-align:left; width:24%;">Method</th>
+            <th style="text-align:left; width:26%;">Notes</th>
             <th style="text-align:right; width:20%;">Amount</th>
         </tr>
     </thead>
@@ -381,6 +382,7 @@
         @foreach($order->payments as $i => $payment)
         <tr class="{{ $i % 2 === 1 ? 'even' : '' }}">
             <td>{{ $payment->payment_date->format('d M Y') }}</td>
+            <td>{{ $payment->sequence_number ? '#' . $order->order_number . 'p' . $payment->sequence_number : '—' }}</td>
             <td>
                 {{ ucwords(str_replace('_', ' ', $payment->payment_type)) }}
                 @if($payment->payment_type === 'bank_transfer' && $payment->bankAccount)

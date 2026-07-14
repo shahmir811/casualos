@@ -165,12 +165,14 @@ class HistoricalPaymentSeeder extends Seeder
                 }
 
                 $totalSeeded = 0;
+                $sequence    = 1;
 
                 foreach ($rows as $row) {
                     $isBankTransfer = $row['bank'] !== null;
 
                     $payment = Payment::create([
                         'order_id'        => $order->id,
+                        'sequence_number' => $sequence++,
                         'customer_id'     => $order->customer_id,
                         'amount'          => $row['amount'],
                         'payment_type'    => $isBankTransfer ? 'bank_transfer' : 'advance',

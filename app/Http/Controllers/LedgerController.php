@@ -127,7 +127,11 @@ class LedgerController extends Controller
                 ->with(['order' => fn($q) => $q->select('id', 'order_number', 'catalogue_id')->with('catalogue:id,name')])
                 ->get()
                 ->each(function ($p) use (&$orderMap, $pack) {
-                    $orderMap[Payment::class . ':' . $p->id] = $pack($p->order);
+                    $packed = $pack($p->order);
+                    if ($packed) {
+                        $packed['payment_seq'] = $p->sequence_number;
+                    }
+                    $orderMap[Payment::class . ':' . $p->id] = $packed;
                 });
         }
         if ($refundIds) {
@@ -191,7 +195,11 @@ class LedgerController extends Controller
                 ->with(['order' => fn($q) => $q->select('id', 'order_number', 'catalogue_id')->with('catalogue:id,name')])
                 ->get()
                 ->each(function ($p) use (&$orderMap, $pack) {
-                    $orderMap[Payment::class . ':' . $p->id] = $pack($p->order);
+                    $packed = $pack($p->order);
+                    if ($packed) {
+                        $packed['payment_seq'] = $p->sequence_number;
+                    }
+                    $orderMap[Payment::class . ':' . $p->id] = $packed;
                 });
         }
         if ($refundIds) {

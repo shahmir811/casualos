@@ -90,6 +90,9 @@
                     @if($orderRef)
                         <a href="{{ route('orders.show', $orderRef['id']) }}"
                            class="text-[#0066CC] hover:underline font-mono">#{{ $orderRef['number'] }}</a>
+                        @if($entry->transaction_type === 'payment_received' && !empty($orderRef['payment_seq']))
+                            <div class="text-[10px] text-[#86868B] font-mono">#{{ $orderRef['number'] }}p{{ $orderRef['payment_seq'] }}</div>
+                        @endif
                         @if($entry->transaction_type === 'order_reduced' && $entry->reference_id)
                             <button type="button"
                                     @click="show({{ $entry->reference_id }})"
