@@ -6,12 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
-class Payment extends Model
+class AdvancePayment extends Model
 {
     use LogsActivity;
 
     protected $fillable = [
-        'customer_id', 'order_id', 'sequence_number', 'payment_type', 'bank_account_id', 'title_given', 'amount', 'payment_date', 'notes', 'receipt_image', 'logged_by',
+        'customer_id', 'payment_type', 'amount', 'bank_account_id', 'payment_date', 'notes', 'receipt_image', 'logged_by',
     ];
 
     protected $casts = [
@@ -30,18 +30,13 @@ class Payment extends Model
         return $this->belongsTo(Customer::class);
     }
 
-    public function order(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function bankAccount(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(Order::class);
+        return $this->belongsTo(BankAccount::class);
     }
 
     public function loggedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'logged_by');
-    }
-
-    public function bankAccount(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-    {
-        return $this->belongsTo(BankAccount::class);
     }
 }

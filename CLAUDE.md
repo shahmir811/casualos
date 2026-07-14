@@ -288,6 +288,8 @@ if ($order->outstanding_balance > 0) {
 
 If the balance is not cleared, dispatch is blocked. The production manager sees this message clearly.
 
+**This check only gates *new* dispatch actions — it does not retroactively hold once dispatch has happened.** Editing a payment on an already-`dispatched` order (see rule 5.21) can lower `total_paid` enough to reintroduce a positive `outstanding_balance`. This is allowed — the edit form shows a non-blocking warning, but does not reverse the dispatch, revert the order status, or restore packed inventory. Do not assume `dispatched` implies `outstanding_balance == 0` always holds.
+
 ### 5.3 Cargo Document Is a File Upload (Not Text)
 
 Dispatch cargo document = **file upload** (PDF or image), stored in `cargo-documents/`
@@ -448,6 +450,8 @@ A payment record may be **permanently deleted** by admin or accountant at any ti
 
 **Advance credit (`applyCredit()`) is a separate flow** — it does not create a `payments` row, so it never appears in the Payments list and cannot be deleted via this route. No `advance_credit_balance` adjustment is needed on payment deletion.
 
+**Advance-type payment reversal (fixed 2026-07-14):** if the deleted payment was `payment_type = 'advance'` and had been split into a credit portion + payment portion (rule 5.19), `destroy()` restores only the **credit portion** to `advance_credit_balance` — derived from the linked `payment_received` ledger entry's amount (`creditPortion = payment.amount − paymentPortion`), not the full payment amount. The earlier implementation incorrectly restored the full amount even when part of it had been a genuine payment, silently inflating the customer's advance credit on every split-advance-payment deletion. The surplus-reversal check (previously only applied to non-advance payments) now also runs for advance-type payments. This logic lives in the shared private `PaymentController::reversePaymentContribution()` helper, also used by Edit (rule 5.21).
+
 **UI:** "Delete" link in each row of the Payments History table on `orders/show.blade.php`, visible to admin and accountant only. Uses `$store.confirm.show()` with `danger: true`.
 
 ### 5.17 Payment Overpayment — Auto-Convert Surplus to Advance Credit
@@ -531,6 +535,87 @@ The rule 5.17 overpayment-surplus check still runs **unconditionally** on the fu
 2. A percentage-width child (`width: 100%`) inside a `box-sizing: border-box` parent with padding gets sized against the wrong containing block and overflows past the padding into the page edge, clipping text. Give the child a fixed point-width equal to the parent's content width (page width minus padding), not a percentage.
 
 Both only surfaced when forcing `page-break-after: always` between many small pages — after changing this template, render to an image and check text bounding boxes, not just the page count.
+
+### 5.21 Payment Editing
+
+**Purpose:** correct a payment's amount, method, bank account, date, notes, or receipt after it was recorded, without losing its identity in the Payments History, invoice, ledger, or customer portal.
+
+**Route:** `orders.payments.edit` (GET) / `orders.payments.update` (PUT `/orders/{order}/payments/{payment}`), admin + accountant only — same access as Delete (rule 5.16). No order-status gate: editable even when the order is `dispatched`, for the same "fix a mistake" reason deletion isn't gated either.
+
+**The edited payment keeps the same row and the same `sequence_number`.** Editing never deletes and recreates the `payments` row — that would silently reassign its Payment ID (see rule 5.22; e.g. `#1005342p2` becoming `#1005342p4`), breaking references to it on the invoice, ledger, and portal history.
+
+**Implementation — reverse then reapply, in one `DB::transaction()`:**
+1. Lock the order row and the customer row (`lockForUpdate()`), same pattern as `store()`'s sequence-number lock.
+2. **Reverse the OLD state** via the shared `reversePaymentContribution()` helper (also used by `destroy()`, see rule 5.16): deletes the payment's linked `payment_received` ledger entry (if any), restores exactly the credit portion an `advance`-type payment had drawn, and reverses any overpayment surplus it contributed — all computed while `order.total_paid` still includes the payment's old amount.
+3. **Mutate the same row** with the new field values. `sequence_number` and `order_id` are never included in the update payload.
+4. **Recompute `order.total_paid` / `outstanding_balance`** from a fresh, authoritative `SUM()` over the order's payments (not incremental math) — mirrors `destroy()`'s recompute, not `store()`'s.
+5. **Reapply the NEW state**: creates a fresh `payment_received` ledger entry (or advance-credit consumption) exactly as `store()` would, using a surplus baseline computed as "total_paid as if the new amount weren't added yet" so the delta applied to `advance_credit_balance` is correct.
+
+**Receipts:** existing receipt files can be individually removed (checkbox-style UI mirrors the create form's upload widget) and deleted from S3 on save. **Switching `payment_type` away from `bank_transfer` unconditionally clears any existing receipt** (deleted from S3), regardless of what the accountant explicitly removed — even though `advance` optionally supports a receipt on create (rule 5.12), an edit that changes the type away from `bank_transfer` always drops the old one rather than leaving a stale file attached.
+
+**Dispatched-order warning:** if lowering a payment's amount would reintroduce a positive `outstanding_balance` on an order that's already `dispatched`, the edit form shows a non-blocking amber warning (Alpine.js, computed client-side from `total_amount` / `total_paid` / the payment's old and new amount). The submission is never blocked — see the rule 5.2 addendum.
+
+**Activity log:** `Payment` model already auto-logs field-level diffs via `LogsActivity` (`logAll()`). `update()` additionally writes one manual order-level `activity()` entry (same pattern as `store()`/`destroy()`) with a headline like `Payment #1005342p2 edited on Order #1005342 (PKR 260,003 → PKR 265,000)`.
+
+### 5.22 Payment IDs (Sequential per Order)
+
+**Purpose:** give each payment a stable, human-readable identifier — distinct from the row's database `id` — mirroring how `orders.order_number` (Section 2, "How Orders Work") replaced the raw order `id` everywhere customer-facing or accountant-facing.
+
+**Format:** `{order_number}p{sequence_number}` — e.g. Order #1005342's first payment is `#1005342p1`, second is `#1005342p2`. This string is **never stored** — it's computed on the fly wherever displayed, from `payments.sequence_number` (a real integer column) plus the order's already-known `order_number`. Storing the full string would duplicate `order_number` into every payment row for no benefit.
+
+**`payments.sequence_number`** — nullable unsigned integer, unique per `(order_id, sequence_number)` (composite unique index). Assigned in `PaymentController::store()` by locking the order row (`Order::where('id', $order->id)->lockForUpdate()->first()`) then computing `MAX(sequence_number) WHERE order_id = X, + 1` — the same locking pattern as `order_number_sequence`, but without needing a dedicated counter table, since sequence numbers are cleanly per-order and always start at 1 (unlike `order_number`, which needed a global sequence table because historical orders had random numbers in an unrelated range).
+
+**Deletion leaves gaps — numbers are never reused.** Deleting `#1005342p2` leaves `p1` and `p3` as-is; the next new payment on that order becomes `p4`, not `p2`, because generation always uses `MAX()` over whatever rows currently exist. This mirrors how `order_number` never gets reused after a hard-delete.
+
+**Editing never changes `sequence_number`** — see rule 5.21. A corrected payment keeps its original ID.
+
+**Backfill:** migration `2026_07_14_000001_add_sequence_number_to_payments_table` assigned sequence numbers to all pre-existing payments, per order, ordered by `payment_date` then `id` as a tiebreaker — computed dynamically from whatever was actually in the table at migrate-time (not hardcoded), so it's safe to run against any environment's real data. `HistoricalPaymentSeeder` was also updated to assign sequence numbers the same way, so a fresh dev/test seed stays consistent with production.
+
+**Displayed in six places, scoped to `payment_received`-type ledger rows where the display context is a ledger:**
+1. `orders/show.blade.php` — Payments History table (mobile card + desktop table), right after the date.
+2. `orders/invoice.blade.php` — dedicated "Payment #" column after Date.
+3. `portal/dashboard.blade.php` — Activity section under each order, only on Payment Received rows.
+4. `customers/ledger.blade.php` + `customers/ledger-pdf.blade.php` — under the order number in the Order column, only on `payment_received` rows. `LedgerController::show()`/`pdf()` extend their `$orderMap` entries with `payment_seq` when resolving a `Payment`-referenced ledger entry.
+5. `reports/customer-ledger.blade.php` — dedicated "Payment #" column, only on `payment_received` rows. `ReportController::customerLedger()` builds a `$paymentMap` (`payment.id → "order_number" . "p" . sequence_number`) for this.
+6. Activity log headlines in `PaymentController::store()`, `destroy()`, and `update()` (e.g. `"Payment #1005342p2 of PKR 260,003 recorded on Order #1005342"`).
+
+**Known pre-existing bug found while wiring this up (left unfixed, out of scope for now):** `reports/customer-ledger.blade.php` and `ReportController::customerLedger()` reference `$entry->entry_type`, a column that doesn't exist (the real column is `transaction_type` — see Section 4). The view also lists the removed `surplus_to_advance` type in its badge/label maps. As a result, the Type badges on this specific report render blank for every row. The Payment # column added by this rule correctly uses `transaction_type` for its own logic, so it isn't affected by the bug — but the pre-existing badge bug itself was deliberately left in place per instruction. See Known Bugs list below.
+
+### 5.23 Advance Payments (Standalone, Not Tied to an Order)
+
+**Purpose:** money received from a customer that isn't attached to any order (e.g. a customer who has already fully paid their current order pre-pays toward whatever they book next). This fills in the previously unused `advance_received` ledger type (Section 4), which existed in the schema from the start but had no code path writing it until now.
+
+**Why a separate table, not the `payments` table:** `payments.order_id` is nullable at the DB level, but the entire `PaymentController` flow (sequence numbers, Payment IDs, dispatch checks) assumes an order exists. Reusing it for order-less money would either break that assumption or scatter null-checks through code that's supposed to be order-scoped. `advance_payments` is a new, simpler table instead (`customer_id`, `payment_type`, `amount`, `bank_account_id`, `payment_date`, `notes`, `receipt_image`, `logged_by`). No `sequence_number`, no Payment ID format, since there's no `order_number` to anchor one to.
+
+**Route:** `customers/{customer}/advance-payments` (store/edit/update/destroy), admin + accountant only, same role group as the rest of Customers.
+
+**Payment method rules:** only `cash` and `bank_transfer` (unlike order payments, there's no "From Advance Credit" option here, since the customer can't pay their own advance credit into itself). Bank account is required for both, receipt required only for `bank_transfer` (same convention as rule 5.12).
+
+**On store:** creates the `advance_payments` row, writes an `advance_received` ledger entry (`amount` positive, `running_advance_balance` read before the increment, per rule 5.7), then increments `customer.advance_credit_balance` by the full amount. Wrapped in `DB::transaction()` with the customer row locked.
+
+**On edit/delete, floor at zero instead of going negative:** `advance_credit_balance` is one shared pool, not earmarked per source. By the time an advance payment is edited or deleted, some of the credit it originally added may already have been spent elsewhere (applied to an order via `credit_applied`, or consumed by the advance-type payment split in rule 5.19). The private `reverseAdvancePaymentContribution()` helper (mirrors `PaymentController::reversePaymentContribution()` from rule 5.21) removes only `min($amount, $available)` from the balance, never pushing it below 0. Any unreversed portion (`$shortfall`) is surfaced to the accountant: an amber, non-blocking warning on the edit form, and inline in the delete confirmation modal, both stating exactly how much of the original amount could not be reversed. Edit reuses the same reverse-then-reapply pattern as rule 5.21 (same row id preserved, no delete-and-recreate).
+
+**Where it shows up:** a collapsible "Record Advance Payment" form plus an "Advance Payments" history table (with Edit/Delete) on the customer show page (`customers/{customer}`), directly above the Orders list. No changes were needed to the customer ledger view, ledger PDF, or customer portal dashboard: all three already had `advance_received` rendering wired in (badge colour, amount colour, and a dedicated `$generalLedger` section in the portal) waiting for a source of data.
+
+---
+
+### 5.24 Advance Credit Auto-Applied to New Orders
+
+**Purpose:** eliminate the manual step where an accountant/admin had to open a brand-new order and record an "Advance" payment by hand whenever the customer already held `advance_credit_balance`. Now this happens automatically the moment the order is submitted through the public order form.
+
+**Where it runs:** `PublicOrderController::submit()`, inside the same `DB::transaction()` that creates the `Order`, its `OrderItem`s, and the `order_charged` ledger entry — immediately after the ledger entry, via `AdvanceCreditAutoApplyService::apply($order, $customer)`.
+
+**Amount applied:** `min($customer->advance_credit_balance, $order->total_amount)`. Nothing happens if the balance is 0. Because the order is brand new (`total_paid` starts at 0), the applied amount can never exceed `total_amount` — there is never a surplus and never a "payment portion" to split off, unlike the manual advance-payment flow in rule 5.19. This is deliberately simpler than `PaymentController::store()`'s `advance` branch and does not reuse it — that method is built around an HTTP request/response/receipt-upload cycle that doesn't apply to a system-triggered call.
+
+**What gets created:** a real `payments` row (`payment_type = 'advance'`, its own `sequence_number`, `notes = 'Auto-applied from advance credit balance'`, `logged_by = null`). `customer.advance_credit_balance` is decremented by the applied amount — **no `CustomerLedger` entry is created for this consumption**, matching the existing convention for the credit portion in rule 5.19's `advance` branch.
+
+**`payments.logged_by` is nullable** (migration `2026_07_14_000003_make_logged_by_nullable_on_payments_table`, mirrors the `customer_ledger.created_by` nullable migration from rule 5.1) — this is the only kind of payment that can have a null logger, since it's system-generated with no staff user in the request. No existing view rendered `payment->logged_by` before this change, so nothing else needed updating.
+
+**Auto-confirm threshold — a deliberate carve-out from the general auto-confirm rule:** normally *any* payment (including a manually-recorded advance payment via `PaymentController::store()`) auto-confirms `received → confirmed` regardless of amount (see the "Auto-confirm on payment" entry in Section 9). This automatic path is the **one exception**: the order only auto-confirms if the applied amount is **greater than** `config('casualite.advance_credit_auto_confirm_threshold')` (currently PKR 50,000, sourced from `.env` — see below). Smaller auto-applied amounts leave the order in `received` for a human to review and confirm manually. This carve-out applies **only** to this automatic path — manual advance payments recorded by staff are unaffected and keep auto-confirming unconditionally.
+
+**Config:** `config/casualite.php` — the project's first non-stock config file, introduced specifically so this threshold (and any future business constant) can be changed by editing one `.env` value (`ADVANCE_CREDIT_AUTO_CONFIRM_THRESHOLD`) and running `php artisan config:clear`/`config:cache`, with no code change. Never call `env()` outside a config file — always read this threshold via `config('casualite.advance_credit_auto_confirm_threshold')`.
+
+**Activity log:** one manual `activity()` entry is written on the order after the transaction closes (same pattern as `PaymentController::store()`'s headline entries), e.g. `"Payment #1005410p1 of PKR 60,000 auto-applied from advance credit on Order #1005410"`.
 
 ---
 
@@ -661,11 +746,18 @@ returns that cause discrepancies — it flags them for review.
 | `orders.reassign.store`     | `POST /orders/{order}/reassign-pieces`             | Save reassignment (admin only)            |
 | `orders.destroy`            | `DELETE /orders/{order}`                           | Hard-delete order (admin + accountant)    |
 | `orders.payments.destroy`   | `DELETE /orders/{order}/payments/{payment}`        | Delete a payment (admin + accountant)     |
+| `orders.payments.edit`      | `GET /orders/{order}/payments/{payment}/edit`      | Edit Payment form (admin + accountant)    |
+| `orders.payments.update`    | `PUT /orders/{order}/payments/{payment}`           | Save edited payment (admin + accountant)  |
 | `og.image`                  | `GET /og-image/{token}`                            | Proxy catalogue OG image through app domain (public, no auth) |
 | `country-pricing.index`     | `GET /country-pricing`                             | Country Pricing screen (admin only)       |
 | `country-pricing.store`     | `POST /country-pricing/{catalogue}`                | Save country prices for a catalogue's designs (admin only) |
 | `dispatch.print-tags`       | `GET /dispatch/{order}/print-tags`                 | Download piece-tag barcode PDF (one 2"x1" label per piece) |
 | `tags.scan`                 | `GET /tags/{barcode}`                              | Public barcode scan result (no auth)      |
+| `dispatch-optimizer.index`  | `GET /dispatch-optimizer`                          | Recommended dispatch allocation across pending orders (advisory only, admin + production_manager + creative_head) |
+| `advance-payments.store`    | `POST /customers/{customer}/advance-payments`      | Record an advance payment for a customer (admin + accountant) |
+| `advance-payments.edit`     | `GET /customers/{customer}/advance-payments/{advancePayment}/edit` | Edit Advance Payment form (admin + accountant) |
+| `advance-payments.update`   | `PUT /customers/{customer}/advance-payments/{advancePayment}`      | Save edited advance payment (admin + accountant) |
+| `advance-payments.destroy`  | `DELETE /customers/{customer}/advance-payments/{advancePayment}`   | Delete an advance payment (admin + accountant) |
 
 **Never use `order.show` — it does not exist. The correct route name is `order.public`.**
 
@@ -740,6 +832,11 @@ returns that cause discrepancies — it flags them for review.
 - **Customer Country + Address fields** (2026-07-13): `customers.country` (required, fixed dropdown list — Australia, Canada, Pakistan, Saudi Arabia, UAE, UK, USA — the countries Casualite dispatches to; type-to-filter combobox built with Alpine.js, no native `<select>`; backed by `Customer::COUNTRIES` const, validated server-side with `in:`) and `customers.address` (optional free-text street address, `nullable|string|max:255`) both added via migration `2026_07_13_000001_add_country_to_customers_table`. Field order on `customers/create.blade.php` and `customers/edit.blade.php`: Full Name, Email, Contact Number, **Address**, City, **Country**. Country is shown on the Customer show page, the Orders List (`orders/index.blade.php`), and 5 reports — Customer Master List, Receivables by Bank, Bank Account Breakdown, Customer Order Bill, Bank Collection (web + PDF + Excel exports for all 5). Address is shown **only** on the Customer show page — deliberately excluded from Orders List and every report; do not add an Address column anywhere else without asking first. `Customer::COUNTRIES` is the single source of truth for the fixed country list — do not duplicate the array in Blade views or elsewhere.
 - **Dispatch — Sack Label PDF download** (2026-07-13): `DispatchController::sackLabel()` (route `dispatch.sack-label`, `GET /dispatch/{order}/sack-label`, same access group as the rest of dispatch: admin, production_manager, creative_head) generates an A4 PDF (`production/dispatch/sack-label-pdf.blade.php`) showing the order's Customer Name, Contact Number, Address, City/Country, plus two blank boxes — **Sack #** and **Total Pieces** — left empty for staff to fill in by hand after physically packing a sack. Purpose: a single order can be split across multiple sacks, so the piece count per sack isn't known to the system in advance; the printed label is filled in and taped onto the sack. The download is triggered by a PDF icon next to the customer name on the Dispatch index page (both the mobile card list and desktop table) — **not** on the Dispatch show/detail page. Staff download it as many times as needed, one per sack.
 - **Piece Tags & Country Pricing** (2026-07-13): New per-design, per-country pricing (`design_country_prices` table, admin-only Country Pricing screen scoped to the active catalogue) feeds a new barcode tag system. `PieceTag` records (`piece_tags` table, unique per order+design+size, numeric Code128C barcode derived from its own id, price/country snapshotted at creation) are created lazily when the admin clicks the new blue Print Tags icon on the Dispatch index (next to the existing red sack-label icon, both mobile and desktop). Generates one 2"×1" PDF page per physical piece, sized for the Zebra TLP2844 label roll, using `picqer/php-barcode-generator`. Validates the customer has a country set and every design in the order has a price for that country before generating anything. Scanning a tag's barcode hits a public route (`tags.scan`) showing Casualite, customer name, catalogue name, design name, and size. See rule 5.20 for full detail, including two dompdf small-page-size layout bugs worth reading before touching the label template again.
+- **Dispatch Optimizer** (2026-07-14): `DispatchOptimizerService` recommends how to split current packed inventory across pending orders in the active catalogue (route `dispatch-optimizer.index`, view `production.dispatch-optimizer.index`, same access as the rest of Dispatch: admin, production_manager, creative_head). Advisory only — it does not create any dispatch batches itself; each recommended order links straight to its existing `dispatch.show` page where staff record the batch as normal. Candidate orders exclude `dispatched`/`cancelled` orders and any order with `outstanding_balance > 0` (rule 5.2 blocks these from being dispatched anyway, so recommending them would be unactionable). The first design attempted was a whole-order selection (pick a subset of whole orders whose combined demand exactly zeroes out packed inventory per design+size) — this is a 0/1 multidimensional-knapsack problem, NP-hard, and testing against real data (Azzurra) showed it recommends **zero** orders in practice, because every order demands a piece from every design in the catalogue (see "How Orders Work" in Section 2) while different designs deplete unevenly, so almost no whole order can ever be fully satisfied. The shipped design instead allocates per design+size cell independently: since dispatch is already partial per order in this system (`partially_dispatched` status, batch-wise dispatch), the most that can ever be dispatched from a cell is `min(available stock, combined demand for that cell)`, reached deterministically by handing out the stock until it or the demand runs out — no search needed, and always maximal. When a cell's demand exceeds supply, the remaining stock goes to the oldest order first (by `submitted_at`) — this is an assumption made for the first version, not a confirmed business rule, and would be the first thing to revisit if priority should instead depend on order size, customer tier, or something else.
+- **Payment IDs — sequential per order** (2026-07-14): `payments.sequence_number` (nullable int, unique per `(order_id, sequence_number)`) gives every payment a stable ID in the format `{order_number}p{n}` (e.g. `#1005342p2`), computed on the fly from the column plus the order's `order_number` — never stored as a string. Assigned via `MAX(sequence_number) WHERE order_id=X, + 1` under a row lock in `PaymentController::store()`; deletion leaves gaps, numbers are never reused. Backfilled for all historical payments via migration `2026_07_14_000001_add_sequence_number_to_payments_table`, ordered by `payment_date` then `id`. Displayed on the order show page's Payments History, the invoice PDF, the customer portal, the customer ledger (page + PDF), and the Reports → Customer Ledger screen — scoped to `payment_received`-type rows in ledger contexts. See rule 5.22 for full detail, including a pre-existing unrelated bug found (and deliberately left unfixed) on the Reports Customer Ledger page.
+- **Payment Editing** (2026-07-14): `PaymentController::edit()` / `update()` (`orders.payments.edit` GET + `orders.payments.update` PUT, admin + accountant only, same access as Delete). Edits reuse the same `payments` row and `sequence_number` — never delete-and-recreate — so the Payment ID (`#{order_number}p{n}`) stays stable across corrections. Implemented as reverse-old-then-reapply-new inside one transaction, sharing a new private `reversePaymentContribution()` helper with `destroy()`. Fixed alongside: `destroy()` previously restored the *full* amount of a deleted `advance`-type payment to `advance_credit_balance`, even when part of it had been a genuine payment (rule 5.19 split) — it now restores only the credit portion (derived from the linked ledger entry) and also reverses any surplus the payment contributed, which the old code skipped entirely for advance-type deletions. See rule 5.21 for full detail, rule 5.16 for the deletion-side fix, and the rule 5.2 addendum for the dispatched-order interaction.
+- **Advance Payments (standalone)** (2026-07-14): New `advance_payments` table plus `AdvancePaymentController` (store/edit/update/destroy, admin + accountant only) lets money be recorded against a customer directly, with no order involved, filling in the previously dormant `advance_received` ledger type. UI: "Record Advance Payment" form plus an "Advance Payments" history table on the customer show page. Store creates an `advance_received` ledger entry and increments `customer.advance_credit_balance`. Edit/delete reverse-then-reapply against that same balance, floored at 0 rather than going negative when some of the credit has already been spent elsewhere (e.g. applied to an order since), with an amber, non-blocking warning shown to the accountant whenever that floor kicks in. No changes were required to the customer ledger, ledger PDF, or portal dashboard views: all three already rendered `advance_received` entries correctly, just had no data feeding them until now. See rule 5.23 for full detail.
+- **Advance Credit Auto-Applied to New Orders** (2026-07-14): `AdvanceCreditAutoApplyService` is called from `PublicOrderController::submit()` right after order creation — if the customer holds `advance_credit_balance`, `min(balance, order_total)` is automatically recorded as a real advance-type `payments` row (own sequence number, `logged_by = null`, notes = `Auto-applied from advance credit balance`), no manual accountant step required. If the applied amount exceeds `config('casualite.advance_credit_auto_confirm_threshold')` (PKR 50,000 by default, sourced from `.env` via the new `config/casualite.php` — the project's first non-stock config file, introduced so this kind of business constant is a one-place edit), the order auto-confirms; otherwise it stays `received` for manual review — a deliberate carve-out from the general "any payment auto-confirms" rule that applies only to this automatic path. `payments.logged_by` was made nullable (migration `2026_07_14_000003_make_logged_by_nullable_on_payments_table`) to support this. See rule 5.24 for full detail.
 
 ### Known Bugs / Incomplete Features (must fix)
 
@@ -753,6 +850,7 @@ returns that cause discrepancies — it flags them for review.
 9. **Dispatch order status** — ✅ Fixed (2026-05-19): `partially_dispatched` status added; `DispatchController::store()` now sets `partially_dispatched` on partial dispatch and `dispatched` only when `isFullyDispatched()` returns true
 10. **Creative Head role expansion** — ✅ Fixed (2026-06-10): `creative_head` now has catalogue management write access, orders read-only (no financials), and production screens read-only. See Completed entry for full detail.
 11. **`OrderPieceReassignmentController` creates `order_charged` with wrong sign** — ✅ Fixed (2026-06-04): changed `amount => -$totalAdded` to `amount => $totalAdded` in `OrderPieceReassignmentController::store()`; historical wrong-sign entries corrected by migration `2026_06_04_000001`.
+12. **`reports/customer-ledger.blade.php` references non-existent `$entry->entry_type`** — should be `transaction_type` (see Section 4); also lists the removed `surplus_to_advance` type in its badge/label maps. Type badges render blank on this report. Discovered 2026-07-14 while adding Payment IDs (rule 5.22); intentionally left unfixed for now.
 
 ### All Migrations (run `php artisan migrate` after pulling)
 
@@ -788,6 +886,9 @@ All migrations have been run. No pending migrations. For reference, the full set
 - `2026_06_10_000001` — creates `order_number_sequence` table (single row, `last_number` seeded at 1005334); new orders increment this counter atomically instead of using `random_int`
 - `2026_07_13_170212_create_design_country_prices_table` — creates `design_country_prices` table (`design_id` FK cascade delete, `country`, `price` decimal 10,2); unique constraint `(design_id, country)`
 - `2026_07_13_170212_create_piece_tags_table` — creates `piece_tags` table (`order_id` FK cascade delete, `design_id` FK cascade delete, `size` enum(xs,s,m,l,xl), `barcode` nullable unique string, `country`, `price` decimal 10,2); unique constraint `(order_id, design_id, size)`
+- `2026_07_14_000001_add_sequence_number_to_payments_table` — adds nullable `sequence_number` unsigned integer to `payments`; backfills per-order sequential numbers ordered by `payment_date` then `id`; adds unique constraint `(order_id, sequence_number)`
+- `2026_07_14_000002_create_advance_payments_table` — creates `advance_payments` table (`customer_id` FK, `payment_type` enum(`cash`,`bank_transfer`), `amount` decimal 12,2, `bank_account_id` nullable FK to `bank_accounts`, `payment_date`, `notes`, `receipt_image` json, `logged_by` FK to `users`)
+- `2026_07_14_000003_make_logged_by_nullable_on_payments_table` — makes `payments.logged_by` nullable (drops FK, alters column, re-adds FK with `nullOnDelete()`), same pattern as `2026_04_24_000001`'s `customer_ledger.created_by` fix; needed so system-generated payments (auto-applied advance credit, rule 5.24) can be stored without a staff user reference
 
 ---
 
@@ -801,6 +902,15 @@ $catalogues = Catalogue::where('status', 'open')->with('designs')->get();
 
 Without `->with('designs')`, `Js::from($catalogues)` produces `undefined` for
 `cat.designs` in Alpine and causes a crash.
+
+### Business constants belong in `config/casualite.php`, sourced from `.env`
+
+`config/casualite.php` is the project's single home for tunable business constants (e.g.
+`advance_credit_auto_confirm_threshold`, rule 5.24) — never hardcode a business number
+(a threshold, a rate, a limit) directly in a controller or service. Add it to `.env` /
+`.env.example`, expose it via `config/casualite.php` (`env('VAR_NAME', $default)`), and
+read it elsewhere via `config('casualite.key')`. Never call `env()` outside a config file —
+this project follows that convention strictly everywhere else.
 
 ### Blade views
 

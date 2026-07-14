@@ -6,6 +6,7 @@ use App\Models\Catalogue;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\CustomerLedger;
+use App\Services\AdvanceCreditAutoApplyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -95,8 +96,9 @@ class PublicOrderController extends Controller
         }
 
         $orderId = null;
+        $autoAppliedPayment = null;
 
-        DB::transaction(function () use ($request, $catalogue, $customer, $qtyXS, $qtyS, $qtyM, $qtyL, $qtyXL, $piecesPerDesign, $totalAmount, $useDiscount, &$orderId) {
+        DB::transaction(function () use ($request, $catalogue, $customer, $qtyXS, $qtyS, $qtyM, $qtyL, $qtyXL, $piecesPerDesign, $totalAmount, $useDiscount, &$orderId, &$autoAppliedPayment) {
 
             // Create the order
             $order = Order::create([
@@ -157,8 +159,28 @@ class PublicOrderController extends Controller
                 'created_by'              => null, // nullable — see migration
             ]);
 
+            // Auto-apply any existing advance credit the customer holds to this new order
+            $autoAppliedPayment = app(AdvanceCreditAutoApplyService::class)->apply($order, $customer);
+
             $orderId = $order->id;
         });
+
+        if ($autoAppliedPayment) {
+            $order = Order::find($orderId);
+
+            activity()
+                ->performedOn($order)
+                ->event('detail')
+                ->withProperties([
+                    'order'          => 'Order #' . $order->order_number,
+                    'customer'       => $customer->name,
+                    'amount'         => 'PKR ' . number_format((float) $autoAppliedPayment->amount, 0),
+                    'auto_confirmed' => $order->status === 'confirmed' ? 'Yes' : 'No',
+                ])
+                ->log('Payment #' . $order->order_number . 'p' . $autoAppliedPayment->sequence_number
+                    . ' of PKR ' . number_format((float) $autoAppliedPayment->amount, 0)
+                    . ' auto-applied from advance credit on Order #' . $order->order_number);
+        }
 
         // Store order ID in session for the thank-you page
         session(['last_order_id' => $orderId]);

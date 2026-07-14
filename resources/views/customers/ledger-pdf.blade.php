@@ -229,6 +229,9 @@
             <td style="white-space:nowrap; font-family:monospace;">
                 @if($orderRef)
                     #{{ $orderRef['number'] }}
+                    @if($entry->transaction_type === 'payment_received' && !empty($orderRef['payment_seq']))
+                        <br><span style="font-size:9px; color:#6E6E73;">#{{ $orderRef['number'] }}p{{ $orderRef['payment_seq'] }}</span>
+                    @endif
                 @else
                     <span style="color:#C7C7CC;">—</span>
                 @endif

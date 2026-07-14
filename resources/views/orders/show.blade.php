@@ -527,7 +527,12 @@
                 <span class="text-[#30D158] font-mono font-semibold text-sm whitespace-nowrap">PKR {{ number_format($payment->amount, 0) }}</span>
             </div>
             <div class="flex items-center justify-between gap-3">
-                <span class="text-[#6E6E73] text-xs">{{ $payment->payment_date->format('d M Y') }}</span>
+                <span class="text-[#6E6E73] text-xs">
+                    {{ $payment->payment_date->format('d M Y') }}
+                    @if($payment->sequence_number)
+                        <span class="font-mono">· #{{ $order->order_number }}p{{ $payment->sequence_number }}</span>
+                    @endif
+                </span>
                 <div class="flex items-center gap-2">
                     @foreach($receipts as $receipt)
                     @php $ext = strtolower(pathinfo($receipt, PATHINFO_EXTENSION)); @endphp
@@ -546,6 +551,7 @@
                     @endif
                     @endforeach
                     @if(in_array(Auth::user()->role, ['admin', 'accountant']))
+                    <a href="{{ route('orders.payments.edit', [$order, $payment]) }}" class="text-[#0066CC] text-xs hover:underline">Edit</a>
                     <button type="button" class="text-[#FF3B30] text-xs hover:underline"
                             @click="$store.confirm.show({
                                 title: 'Delete Payment',
@@ -572,6 +578,13 @@
             @php $receipts = $payment->receipt_image ?? []; @endphp
             <tr>
                 <td class="text-[#6E6E73] text-xs whitespace-nowrap">{{ $payment->payment_date->format('d M Y') }}</td>
+                <td class="text-[#6E6E73] text-xs whitespace-nowrap font-mono">
+                    @if($payment->sequence_number)
+                        #{{ $order->order_number }}p{{ $payment->sequence_number }}
+                    @else
+                        —
+                    @endif
+                </td>
                 <td>
                     <span class="badge bg-green-100 text-green-700">{{ ucwords(str_replace('_', ' ', $payment->payment_type)) }}</span>
                     @if($payment->payment_type === 'bank_transfer' && $payment->bankAccount)
@@ -607,12 +620,13 @@
                     @endif
                 </td>
                 @if(in_array(Auth::user()->role, ['admin', 'accountant']))
-                <td class="text-right">
+                <td class="text-right whitespace-nowrap">
                     <form id="form-delete-payment-{{ $payment->id }}-desktop" method="POST"
                           action="{{ route('orders.payments.destroy', [$order, $payment]) }}">
                         @csrf
                         @method('DELETE')
                     </form>
+                    <a href="{{ route('orders.payments.edit', [$order, $payment]) }}" class="text-[#0066CC] text-xs hover:underline mr-3">Edit</a>
                     <button type="button"
                             class="text-[#FF3B30] text-xs hover:underline whitespace-nowrap"
                             @click="$store.confirm.show({

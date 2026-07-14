@@ -64,6 +64,7 @@ class ReportController extends Controller
         $selectedCustomer = null;
         $entries = collect();
         $balance = 0;
+        $paymentMap = [];
 
         if ($request->customer_id) {
             $selectedCustomer = Customer::find($request->customer_id);
@@ -71,9 +72,23 @@ class ReportController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
             $balance = $entries->sum('amount');
+
+            $paymentIds = $entries
+                ->where('transaction_type', 'payment_received')
+                ->pluck('reference_id')
+                ->filter()
+                ->unique();
+
+            if ($paymentIds->isNotEmpty()) {
+                $paymentMap = Payment::whereIn('id', $paymentIds)
+                    ->with('order:id,order_number')
+                    ->get()
+                    ->mapWithKeys(fn($p) => [$p->id => $p->order ? $p->order->order_number . 'p' . $p->sequence_number : null])
+                    ->toArray();
+            }
         }
 
-        return view('reports.customer-ledger', compact('customers', 'selectedCustomer', 'entries', 'balance'));
+        return view('reports.customer-ledger', compact('customers', 'selectedCustomer', 'entries', 'balance', 'paymentMap'));
     }
 
     public function productionStatus()

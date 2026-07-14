@@ -63,6 +63,11 @@ class Customer extends Model
         return $this->hasMany(Payment::class)->latest();
     }
 
+    public function advancePayments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AdvancePayment::class)->latest('payment_date');
+    }
+
     public function createdBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

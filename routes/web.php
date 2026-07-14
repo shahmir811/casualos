@@ -31,6 +31,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductionTrackerController;
 use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\ActiveCatalogueController;
+use App\Http\Controllers\AdvancePaymentController;
 use App\Http\Controllers\TarpaiPaymentController;
 use App\Http\Controllers\CronLogController;
 use App\Http\Controllers\OrderBankAssignmentController;
@@ -96,6 +97,11 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::resource('customers', CustomerController::class)->except(['destroy']);
         Route::get('customers/{customer}/ledger',     [LedgerController::class, 'show'])->name('customers.ledger');
         Route::get('customers/{customer}/ledger/pdf', [LedgerController::class, 'pdf'])->name('customers.ledger.pdf');
+
+        Route::post('customers/{customer}/advance-payments', [AdvancePaymentController::class, 'store'])->name('advance-payments.store');
+        Route::get('customers/{customer}/advance-payments/{advancePayment}/edit', [AdvancePaymentController::class, 'edit'])->name('advance-payments.edit');
+        Route::put('customers/{customer}/advance-payments/{advancePayment}', [AdvancePaymentController::class, 'update'])->name('advance-payments.update');
+        Route::delete('customers/{customer}/advance-payments/{advancePayment}', [AdvancePaymentController::class, 'destroy'])->name('advance-payments.destroy');
     });
 
     /*
@@ -120,6 +126,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('orders/{order}/stitch',   [OrderController::class, 'markStitching'])->name('orders.stitch');
         // Payments
         Route::resource('orders.payments', PaymentController::class)->only(['store']);
+        Route::get('orders/{order}/payments/{payment}/edit', [PaymentController::class, 'edit'])->name('orders.payments.edit');
+        Route::put('orders/{order}/payments/{payment}', [PaymentController::class, 'update'])->name('orders.payments.update');
         Route::delete('orders/{order}/payments/{payment}', [PaymentController::class, 'destroy'])->name('orders.payments.destroy');
         Route::post('orders/{order}/apply-credit', [PaymentController::class, 'applyCredit'])->name('orders.apply-credit');
 

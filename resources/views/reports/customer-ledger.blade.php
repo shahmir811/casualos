@@ -55,6 +55,7 @@
             <tr>
                 <th class="text-left">Date</th>
                 <th class="text-left">Type</th>
+                <th class="text-left">Payment #</th>
                 <th class="text-left">Notes</th>
                 <th class="text-right">Amount</th>
             </tr>
@@ -82,13 +83,20 @@
             <tr>
                 <td class="text-[#6E6E73] text-xs">{{ $entry->created_at->format('d M Y') }}</td>
                 <td><span class="badge {{ $typeColors[$entry->entry_type] ?? 'bg-[#F5F5F7] text-[#6E6E73]' }}">{{ $typeLabels[$entry->entry_type] ?? $entry->entry_type }}</span></td>
+                <td class="text-[#6E6E73] text-xs font-mono">
+                    @if($entry->transaction_type === 'payment_received' && !empty($paymentMap[$entry->reference_id]))
+                        #{{ $paymentMap[$entry->reference_id] }}
+                    @else
+                        —
+                    @endif
+                </td>
                 <td class="text-[#6E6E73] text-xs">{{ $entry->notes ?? '—' }}</td>
                 <td class="text-right font-medium {{ $entry->amount < 0 ? 'text-[#FF3B30]' : 'text-green-600' }}">
                     {{ $entry->amount < 0 ? '-' : '+' }}PKR {{ number_format(abs($entry->amount), 0) }}
                 </td>
             </tr>
             @empty
-            <tr><td colspan="4" class="text-center text-[#86868B] py-8">No ledger entries found.</td></tr>
+            <tr><td colspan="5" class="text-center text-[#86868B] py-8">No ledger entries found.</td></tr>
             @endforelse
         </tbody>
     </table>
