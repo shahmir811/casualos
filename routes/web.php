@@ -120,6 +120,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('orders/{order}/stitch',   [OrderController::class, 'markStitching'])->name('orders.stitch');
         // Payments
         Route::resource('orders.payments', PaymentController::class)->only(['store']);
+        Route::get('orders/{order}/payments/{payment}/edit', [PaymentController::class, 'edit'])->name('orders.payments.edit');
+        Route::put('orders/{order}/payments/{payment}', [PaymentController::class, 'update'])->name('orders.payments.update');
         Route::delete('orders/{order}/payments/{payment}', [PaymentController::class, 'destroy'])->name('orders.payments.destroy');
         Route::post('orders/{order}/apply-credit', [PaymentController::class, 'applyCredit'])->name('orders.apply-credit');
 

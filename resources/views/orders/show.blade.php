@@ -551,6 +551,7 @@
                     @endif
                     @endforeach
                     @if(in_array(Auth::user()->role, ['admin', 'accountant']))
+                    <a href="{{ route('orders.payments.edit', [$order, $payment]) }}" class="text-[#0066CC] text-xs hover:underline">Edit</a>
                     <button type="button" class="text-[#FF3B30] text-xs hover:underline"
                             @click="$store.confirm.show({
                                 title: 'Delete Payment',
@@ -619,12 +620,13 @@
                     @endif
                 </td>
                 @if(in_array(Auth::user()->role, ['admin', 'accountant']))
-                <td class="text-right">
+                <td class="text-right whitespace-nowrap">
                     <form id="form-delete-payment-{{ $payment->id }}-desktop" method="POST"
                           action="{{ route('orders.payments.destroy', [$order, $payment]) }}">
                         @csrf
                         @method('DELETE')
                     </form>
+                    <a href="{{ route('orders.payments.edit', [$order, $payment]) }}" class="text-[#0066CC] text-xs hover:underline mr-3">Edit</a>
                     <button type="button"
                             class="text-[#FF3B30] text-xs hover:underline whitespace-nowrap"
                             @click="$store.confirm.show({
