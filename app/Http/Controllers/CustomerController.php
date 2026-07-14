@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BankAccount;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -65,8 +66,12 @@ class CustomerController extends Controller
 
     public function show(Customer $customer)
     {
-        $customer->load(['orders' => fn($q) => $q->latest()->take(10)]);
-        return view('customers.show', compact('customer'));
+        $customer->load([
+            'orders' => fn($q) => $q->latest()->take(10),
+            'advancePayments.bankAccount',
+        ]);
+        $bankAccounts = BankAccount::where('is_active', true)->orderBy('title')->get();
+        return view('customers.show', compact('customer', 'bankAccounts'));
     }
 
     public function edit(Customer $customer)
