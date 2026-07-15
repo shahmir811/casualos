@@ -164,7 +164,9 @@
                         <p class="text-[#86868B] text-xs">Notifications are blocked in your browser settings.</p>
                     </template>
                     <template x-if="state === 'error'">
-                        <p class="text-[#FF3B30] text-xs">Couldn't enable notifications. Please try again.</p>
+                        <button type="button" @click="enable()" class="text-[#FF3B30] text-xs text-left">
+                            Couldn't enable notifications. Tap to try again.
+                        </button>
                     </template>
                 </div>
             </div>
@@ -419,13 +421,24 @@
                 async enable() {
                     this.state = 'subscribing';
                     try {
-                        const permission = await Notification.requestPermission();
+                        // Notification.requestPermission() and serviceWorker.ready never
+                        // reject on their own — if the OS prompt is left unanswered (tab
+                        // backgrounded, etc.) or the worker never activates, the await
+                        // hangs forever with no way for the customer to retry short of
+                        // reloading. Race everything against a timeout so enable() always
+                        // settles one way or the other.
+                        const withTimeout = (promise, ms) => Promise.race([
+                            promise,
+                            new Promise((_, reject) => setTimeout(() => reject(new Error('Timed out')), ms)),
+                        ]);
+
+                        const permission = await withTimeout(Notification.requestPermission(), 20000);
                         if (permission !== 'granted') {
                             this.state = permission === 'denied' ? 'denied' : 'idle';
                             return;
                         }
 
-                        const registration = await navigator.serviceWorker.ready;
+                        const registration = await withTimeout(navigator.serviceWorker.ready, 10000);
                         const vapidKey = document.querySelector('meta[name="vapid-public-key"]').content;
 
                         const subscription = await registration.pushManager.subscribe({
