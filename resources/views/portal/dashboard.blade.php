@@ -429,18 +429,18 @@
                         // hangs forever with no way for the customer to retry short of
                         // reloading. Race everything against a timeout so enable() always
                         // settles one way or the other.
-                        const withTimeout = (promise, ms) => Promise.race([
+                        const withTimeout = (promise, ms, label) => Promise.race([
                             promise,
-                            new Promise((_, reject) => setTimeout(() => reject(new Error('Timed out')), ms)),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error(`Timed out: ${label}`)), ms)),
                         ]);
 
-                        const permission = await withTimeout(Notification.requestPermission(), 20000);
+                        const permission = await withTimeout(Notification.requestPermission(), 20000, 'permission prompt');
                         if (permission !== 'granted') {
                             this.state = permission === 'denied' ? 'denied' : 'idle';
                             return;
                         }
 
-                        const registration = await withTimeout(navigator.serviceWorker.ready, 10000);
+                        const registration = await withTimeout(navigator.serviceWorker.ready, 10000, 'service worker not ready');
                         const vapidKey = document.querySelector('meta[name="vapid-public-key"]').content;
 
                         const subscription = await registration.pushManager.subscribe({
