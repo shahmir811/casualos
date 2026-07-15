@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\CustomerLedger;
+use App\Services\OrderStatusNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -198,6 +199,11 @@ class PaymentController extends Controller
         });
 
         $order->loadMissing('customer');
+
+        if ($wasAutoConfirmed) {
+            app(OrderStatusNotificationService::class)->notify($order, 'confirmed');
+        }
+
         $props = [
             'order'          => 'Order #' . $order->order_number,
             'customer'       => $order->customer?->name ?? $order->submitted_name,
@@ -528,6 +534,11 @@ class PaymentController extends Controller
 
             $order->update($statusUpdate);
         });
+
+        if ($wasAutoConfirmed) {
+            $order->loadMissing('customer');
+            app(OrderStatusNotificationService::class)->notify($order, 'confirmed');
+        }
 
         return back()->with('success', 'Credit of PKR ' . number_format($validated['credit_amount']) . ' applied.');
     }

@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\OutsourcedBatchItem;
 use App\Models\PieceTag;
 use App\Models\PressReturnItem;
+use App\Services\OrderStatusNotificationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -411,6 +412,9 @@ class DispatchController extends Controller
                 $order->update(['status' => 'partially_dispatched']);
             }
         });
+
+        $order->loadMissing('customer');
+        app(OrderStatusNotificationService::class)->notify($order, $order->status);
 
         $batchNumber = $order->dispatchBatches()->max('batch_number');
 

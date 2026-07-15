@@ -7,6 +7,7 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    @include('portal.partials.pwa-head')
     <style>
         body {
             font-family: 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -28,9 +29,11 @@
             font-weight: 600;
             letter-spacing: 0.01em;
         }
+        [x-cloak] { display: none !important; }
     </style>
 </head>
 <body class="min-h-screen pb-12">
+    @include('portal.partials.pwa-splash')
 
 @php
     function formatPKR(float|int $amount): string {
@@ -131,6 +134,42 @@
             </div>
         </div>
 
+        {{-- Push notification opt-in --}}
+        <div class="card px-5 py-4"
+             x-data="pushOptIn('{{ route('portal.push-subscribe', $customer->portal_token) }}')"
+             x-show="supported"
+             x-cloak>
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-[#F0F7FF] rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-[#0071E3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <template x-if="state === 'idle'">
+                        <button type="button" @click="enable()" class="text-[#0071E3] text-sm font-semibold">
+                            Enable Order Updates
+                        </button>
+                    </template>
+                    <template x-if="state === 'idle'">
+                        <p class="text-[#86868B] text-xs mt-0.5">Get notified the moment your order status changes.</p>
+                    </template>
+                    <template x-if="state === 'subscribing'">
+                        <p class="text-[#6E6E73] text-sm">Enabling…</p>
+                    </template>
+                    <template x-if="state === 'subscribed'">
+                        <p class="text-[#30D158] text-sm font-medium">Order update notifications enabled</p>
+                    </template>
+                    <template x-if="state === 'denied'">
+                        <p class="text-[#86868B] text-xs">Notifications are blocked in your browser settings.</p>
+                    </template>
+                    <template x-if="state === 'error'">
+                        <p class="text-[#FF3B30] text-xs">Couldn't enable notifications. Please try again.</p>
+                    </template>
+                </div>
+            </div>
+        </div>
+
         {{-- Orders list --}}
         <div>
             <p class="text-xs font-semibold uppercase tracking-widest text-[#86868B] mb-2 px-1">Your Orders</p>
@@ -158,7 +197,13 @@
                     })->sortBy('created_at');
                 @endphp
 
-                <div class="card overflow-hidden" x-data="{ open: false }">
+                <div class="card overflow-hidden"
+                     id="order-{{ $order->id }}"
+                     x-data="{ open: false }"
+                     x-init="if (window.location.hash === '#order-{{ $order->id }}') {
+                         open = true;
+                         $nextTick(() => $el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+                     }">
 
                     {{-- Collapsed header — always visible --}}
                     <button @click="open = !open" class="w-full px-5 py-4 flex items-center justify-between text-left gap-3">
@@ -349,6 +394,77 @@
     <p class="text-center text-[#C7C7CC] text-xs mt-8">
         © {{ date('Y') }} Casualite · Powered by CasualiteOS
     </p>
+
+    <script>
+        function pushOptIn(endpoint) {
+            return {
+                supported: 'serviceWorker' in navigator && 'PushManager' in window,
+                state: 'idle', // idle | subscribing | subscribed | denied | error
+
+                init() {
+                    if (! this.supported) return;
+
+                    if (Notification.permission === 'denied') {
+                        this.state = 'denied';
+                        return;
+                    }
+
+                    navigator.serviceWorker.ready.then((registration) => {
+                        registration.pushManager.getSubscription().then((subscription) => {
+                            if (subscription) this.state = 'subscribed';
+                        });
+                    });
+                },
+
+                async enable() {
+                    this.state = 'subscribing';
+                    try {
+                        const permission = await Notification.requestPermission();
+                        if (permission !== 'granted') {
+                            this.state = permission === 'denied' ? 'denied' : 'idle';
+                            return;
+                        }
+
+                        const registration = await navigator.serviceWorker.ready;
+                        const vapidKey = document.querySelector('meta[name="vapid-public-key"]').content;
+
+                        const subscription = await registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(vapidKey),
+                        });
+
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: JSON.stringify(subscription.toJSON()),
+                        });
+
+                        if (! response.ok) throw new Error('Subscribe request failed');
+
+                        this.state = 'subscribed';
+                    } catch (error) {
+                        console.error('Push subscription failed:', error);
+                        this.state = 'error';
+                    }
+                },
+            };
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+    </script>
 
 </body>
 </html>

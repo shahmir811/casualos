@@ -57,3 +57,13 @@ Schedule::command('backups:prune')
     ->when(fn () => now()->day <= 7)
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/backups-prune.log'));
+
+// Shared hosting has no persistent process for `queue:work` (no supervisor/systemd),
+// so push notification jobs (OrderStatusChanged, QUEUE_CONNECTION=database) are drained
+// here instead — riding the same schedule:run cron entry already configured on the
+// server. --stop-when-empty exits immediately once the queue is drained rather than
+// idling, and --max-time=50 forces it to exit before the next minute's cron tick fires.
+Schedule::command('queue:work --stop-when-empty --max-time=50')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/queue-work.log'));

@@ -60,8 +60,10 @@ Route::post('/order/{token}', [PublicOrderController::class, 'submit'])->name('o
 Route::get('/order/{token}/thankyou', [PublicOrderController::class, 'thankyou'])->name('order.thankyou');
 
 // Customer self-service portal (unique link per customer)
-Route::get('/portal/{token}',        [CustomerPortalController::class, 'show'])->name('portal.show');
-Route::post('/portal/{token}/verify',[CustomerPortalController::class, 'verify'])->name('portal.verify');
+Route::get('/portal/{token}',              [CustomerPortalController::class, 'show'])->name('portal.show');
+Route::post('/portal/{token}/verify',      [CustomerPortalController::class, 'verify'])->name('portal.verify');
+Route::get('/portal/{token}/manifest.json',[CustomerPortalController::class, 'manifest'])->name('portal.manifest');
+Route::post('/portal/{token}/push-subscribe',[CustomerPortalController::class, 'pushSubscribe'])->name('portal.push-subscribe');
 
 // Piece tag barcode scan result (read by any barcode scanner/phone camera)
 Route::get('/tags/{barcode}', [PieceTagController::class, 'scan'])->name('tags.scan');
