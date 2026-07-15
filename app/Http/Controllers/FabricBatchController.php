@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Catalogue;
 use App\Models\Design;
 use App\Models\FabricBatch;
+use App\Models\Order;
 use App\Models\ProductionAssignment;
+use App\Services\OrderStatusNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -116,10 +118,21 @@ class FabricBatchController extends Controller
             ]);
         }
 
-        // Auto-transition confirmed orders → stitching; skip partially_dispatched (already in dispatch flow)
-        \App\Models\Order::where('catalogue_id', $validated['catalogue_id'])   // Order not imported — using FQCN intentionally
+        // Auto-transition confirmed orders → stitching; skip partially_dispatched (already in dispatch flow).
+        // IDs are captured before the bulk update() since it's a query-builder call that
+        // bypasses Eloquent model events entirely — there's no other way to know which
+        // orders were actually affected in order to notify their customers below.
+        $ordersTransitioningToStitching = Order::where('catalogue_id', $validated['catalogue_id'])
             ->where('status', 'confirmed')
+            ->pluck('id');
+
+        Order::whereIn('id', $ordersTransitioningToStitching)
             ->update(['status' => 'stitching']);
+
+        $notificationService = app(OrderStatusNotificationService::class);
+        foreach (Order::with('customer')->whereIn('id', $ordersTransitioningToStitching)->get() as $transitionedOrder) {
+            $notificationService->notify($transitionedOrder, 'stitching');
+        }
 
         $batch->loadMissing(['items.design', 'catalogue']);
         $itemDetails = $batch->items->map(fn($i) => [

@@ -6,6 +6,7 @@ use App\Models\CustomerLedger;
 use App\Models\Order;
 use App\Models\OrderReduction;
 use App\Models\Refund;
+use App\Services\OrderStatusNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +39,8 @@ class OrderReductionController extends Controller
         if (empty($nonZeroItems)) {
             return back()->withErrors(['items' => 'Please enter at least one quantity to reduce.'])->withInput();
         }
+
+        $statusBeforeReduction = $order->status;
 
         DB::transaction(function () use ($request, $order, $nonZeroItems) {
             $order->loadMissing(['items.design', 'customer']);
@@ -209,6 +212,14 @@ class OrderReductionController extends Controller
                 ->withProperties(array_merge($logProps, ['items' => $reductionItems]))
                 ->log("Order #{$order->order_number} reduced by PKR " . number_format($totalReduced, 0) . " ({$adjustmentLabel})");
         });
+
+        // Covers both possible status changes from this action: auto-cancel
+        // (new_total reached zero) and the partially_dispatched -> dispatched
+        // reconciliation — the two are mutually exclusive in a single request.
+        if ($order->status !== $statusBeforeReduction && in_array($order->status, ['cancelled', 'dispatched'], true)) {
+            $order->loadMissing('customer');
+            app(OrderStatusNotificationService::class)->notify($order, $order->status);
+        }
 
         return redirect()->route('orders.show', $order)
             ->with('success', 'Order reduction logged successfully.');

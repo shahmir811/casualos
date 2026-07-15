@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // VAPID keys authenticating web push notifications for the customer
+    // portal PWA. Generated once via `php artisan webpush:vapid`.
+    'vapid' => [
+        'subject'     => env('VAPID_SUBJECT', 'mailto:casualiteos@gmail.com'),
+        'public_key'  => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+    ],
+
 ];

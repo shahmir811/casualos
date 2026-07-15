@@ -6,6 +6,7 @@
     <title>Customer Portal — Casualite</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
+    @include('portal.partials.pwa-head')
     <style>
         body {
             font-family: 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -32,6 +33,7 @@
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center px-4 py-12">
+    @include('portal.partials.pwa-splash')
 
     <div class="w-full max-w-sm">
 

@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
 class Customer extends Model
 {
-    use HasFactory;
+    use HasFactory, Notifiable, HasPushSubscriptions;
 
     public const COUNTRIES = [
         'Australia', 'Canada', 'Pakistan', 'Saudi Arabia', 'UAE', 'UK', 'USA',
@@ -71,5 +73,10 @@ class Customer extends Model
     public function createdBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function devices(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CustomerDevice::class);
     }
 }
