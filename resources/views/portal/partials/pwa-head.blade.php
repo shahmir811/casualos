@@ -14,10 +14,19 @@
 
 <script>
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js', {
-                scope: '{{ route('portal.show', $customer->portal_token) }}',
-            }).catch((err) => console.error('SW registration failed:', err));
+        // Exposed on window so pushOptIn() (dashboard.blade.php) can await the
+        // real registration outcome instead of only navigator.serviceWorker.ready,
+        // which just reports "no active worker" with no reason why — this surfaces
+        // the actual browser-thrown error (bad response, security error, etc.).
+        window.swRegistration = new Promise((resolve, reject) => {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js', {
+                    scope: '{{ route('portal.show', $customer->portal_token) }}',
+                }).then(resolve).catch((err) => {
+                    console.error('SW registration failed:', err);
+                    reject(err);
+                });
+            });
         });
     }
 </script>

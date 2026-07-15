@@ -440,6 +440,14 @@
                             return;
                         }
 
+                        // Wait on the actual registration outcome first — if it rejected
+                        // (bad response, security error, etc.), this throws that real
+                        // browser error instead of falling through to the generic
+                        // "not ready" timeout below with no explanation.
+                        if (window.swRegistration) {
+                            await withTimeout(window.swRegistration, 8000, 'service worker registration');
+                        }
+
                         const registration = await withTimeout(navigator.serviceWorker.ready, 10000, 'service worker not ready');
                         const vapidKey = document.querySelector('meta[name="vapid-public-key"]').content;
 
