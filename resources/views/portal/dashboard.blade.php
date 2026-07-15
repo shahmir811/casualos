@@ -166,6 +166,7 @@
                     <template x-if="state === 'error'">
                         <button type="button" @click="enable()" class="text-[#FF3B30] text-xs text-left">
                             Couldn't enable notifications. Tap to try again.
+                            <span x-show="errorMessage" x-text="'(' + errorMessage + ')'" class="block text-[#AEAEB2] mt-0.5"></span>
                         </button>
                     </template>
                 </div>
@@ -402,6 +403,7 @@
             return {
                 supported: 'serviceWorker' in navigator && 'PushManager' in window,
                 state: 'idle', // idle | subscribing | subscribed | denied | error
+                errorMessage: '',
 
                 init() {
                     if (! this.supported) return;
@@ -456,11 +458,12 @@
                             body: JSON.stringify(subscription.toJSON()),
                         });
 
-                        if (! response.ok) throw new Error('Subscribe request failed');
+                        if (! response.ok) throw new Error(`Subscribe request failed (HTTP ${response.status})`);
 
                         this.state = 'subscribed';
                     } catch (error) {
                         console.error('Push subscription failed:', error);
+                        this.errorMessage = (error && error.message) ? error.message : 'Unknown error';
                         this.state = 'error';
                     }
                 },
