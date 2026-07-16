@@ -14,14 +14,15 @@ class Catalogue extends Model
 
     protected $fillable = [
         'name', 'cover_photo', 'cover_photo_og', 'qty_per_design', 'number_of_designs',
-        'quantity_benchmark', 'notes', 'status', 'order_token', 'created_by',
+        'quantity_benchmark', 'notes', 'status', 'order_token', 'hd_gallery_token', 'created_by',
     ];
 
-    // Auto-generate order_token on creation
+    // Auto-generate order_token and hd_gallery_token on creation
     protected static function booted(): void
     {
         static::creating(function (Catalogue $catalogue) {
             $catalogue->order_token = Str::random(32);
+            $catalogue->hd_gallery_token = Str::random(32);
         });
     }
 
@@ -73,6 +74,11 @@ class Catalogue extends Model
     public function fabricBatches(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(FabricBatch::class);
+    }
+
+    public function hdImages(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CatalogueHdImage::class)->latest();
     }
 
     public function wages(): \Illuminate\Database\Eloquent\Relations\HasMany

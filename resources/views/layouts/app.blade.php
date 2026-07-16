@@ -316,6 +316,16 @@
             </a>
             @endif
 
+            @if(in_array($r, ['admin','creative_head']))
+            <a href="{{ route('hd-gallery.index') }}"
+               class="nav-item {{ request()->routeIs('hd-gallery.*') || request()->routeIs('catalogues.hd-images.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4h6v6H4V4zM14 4h6v6h-6V4zM4 14h6v6H4v-6zM14 14h6v6h-6v-6z"/>
+                </svg>
+                HD Gallery
+            </a>
+            @endif
+
             <a href="{{ route('fabric-batches.index') }}"
                class="nav-item {{ request()->routeIs('fabric-batches.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
