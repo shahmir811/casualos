@@ -24,10 +24,17 @@ class CatalogueHdImageController extends Controller
     private const ALLOWED_MIMES = ['image/jpeg', 'image/png'];
 
     /**
-     * Sidebar entry point — no catalogue in the URL. Resolves whichever catalogue is
-     * currently selected in the sidebar's Active Catalogue dropdown (same
-     * session('active_catalogue_id') pattern as Country Pricing) and forwards to the
-     * catalogue-scoped index below, so uploads always land against that catalogue.
+     * Sidebar entry point — no catalogue in the URL. Renders the same screen as index()
+     * but resolves the catalogue from the sidebar's Active Catalogue dropdown
+     * (session('active_catalogue_id'), same pattern as Country Pricing) instead of a
+     * route parameter.
+     *
+     * This must render directly rather than redirect to catalogues.hd-images.index —
+     * redirecting would bake a specific catalogue's ID into the URL, and switching the
+     * sidebar dropdown afterward only updates the session; ActiveCatalogueController's
+     * back() reload would keep landing on that same ID-pinned URL regardless of the new
+     * selection. Staying on the session-resolved /hd-gallery URL means every reload
+     * (including the one after switching catalogues) re-resolves the current selection.
      */
     public function active()
     {
@@ -40,10 +47,15 @@ class CatalogueHdImageController extends Controller
             return redirect()->route('catalogues.index')->with('error', 'No catalogue found. Create one first.');
         }
 
-        return redirect()->route('catalogues.hd-images.index', $catalogue);
+        return $this->renderIndex($catalogue);
     }
 
     public function index(Catalogue $catalogue)
+    {
+        return $this->renderIndex($catalogue);
+    }
+
+    private function renderIndex(Catalogue $catalogue)
     {
         $catalogue->load('hdImages.uploadedBy');
 

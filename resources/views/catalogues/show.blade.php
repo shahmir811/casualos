@@ -93,26 +93,6 @@
 </div>
 @endif
 
-{{-- HD Gallery --}}
-@if(in_array(Auth::user()->role, ['admin', 'creative_head']))
-<div class="card p-5 mb-7" x-data="{ copied: false }">
-    <div class="flex items-center justify-between mb-3">
-        <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest">Shareable HD Gallery Link</p>
-        <a href="{{ route('catalogues.hd-images.index', $catalogue) }}" class="text-[#0066CC] text-xs font-medium hover:underline">Manage Images →</a>
-    </div>
-    <div class="flex items-center gap-3">
-        <input type="text" value="{{ route('gallery.show', $catalogue->hd_gallery_token) }}" readonly
-            class="apple-input text-xs flex-1 text-[#6E6E73]">
-        <button @click="navigator.clipboard.writeText('{{ route('gallery.show', $catalogue->hd_gallery_token) }}'); copied = true; setTimeout(() => copied = false, 2000)"
-            class="btn-primary flex-shrink-0">
-            <span x-show="!copied">Copy Link</span>
-            <span x-show="copied">Copied ✓</span>
-        </button>
-    </div>
-    <p class="text-[#86868B] text-xs mt-2">Share this link with customers who want to download full-resolution photos.</p>
-</div>
-@endif
-
 {{-- Additional Info --}}
 @if($catalogue->notes)
 <div class="card p-5 mb-7">
