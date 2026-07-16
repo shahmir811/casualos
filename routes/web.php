@@ -41,6 +41,8 @@ use App\Http\Controllers\DesignCountryPriceController;
 use App\Http\Controllers\PieceTagController;
 use App\Http\Controllers\DispatchOptimizerController;
 use App\Http\Controllers\CostEstimationController;
+use App\Http\Controllers\CatalogueHdImageController;
+use App\Http\Controllers\GalleryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -68,6 +70,10 @@ Route::post('/portal/{token}/push-subscribe',[CustomerPortalController::class, '
 // Piece tag barcode scan result (read by any barcode scanner/phone camera)
 Route::get('/tags/{barcode}', [PieceTagController::class, 'scan'])->name('tags.scan');
 
+// HD image gallery — shareable link customers use to browse and download full-res photos
+Route::get('/gallery/{token}', [GalleryController::class, 'show'])->name('gallery.show');
+Route::get('/gallery/{token}/images/{hdImage}/download', [GalleryController::class, 'download'])->name('gallery.download');
+
 /*
 |--------------------------------------------------------------------------
 | AUTHENTICATED ROUTES
@@ -90,6 +96,17 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('catalogues/{catalogue}/close',  [CatalogueController::class, 'close'])->name('catalogues.close');
     Route::post('catalogues/{catalogue}/reopen', [CatalogueController::class, 'reopen'])->name('catalogues.reopen');
     Route::resource('catalogues.designs', DesignController::class)->shallow();
+
+    // HD Image Gallery management (admin + creative_head only)
+    Route::middleware('role:admin|creative_head')->group(function () {
+        // Sidebar entry point — resolves the active catalogue from the session picker
+        Route::get('hd-gallery', [CatalogueHdImageController::class, 'active'])->name('hd-gallery.index');
+
+        Route::get('catalogues/{catalogue}/hd-images',    [CatalogueHdImageController::class, 'index'])->name('catalogues.hd-images.index');
+        Route::post('catalogues/{catalogue}/hd-images/presign', [CatalogueHdImageController::class, 'presign'])->name('catalogues.hd-images.presign');
+        Route::post('catalogues/{catalogue}/hd-images',   [CatalogueHdImageController::class, 'store'])->name('catalogues.hd-images.store');
+        Route::delete('catalogues/{catalogue}/hd-images/{hdImage}', [CatalogueHdImageController::class, 'destroy'])->name('catalogues.hd-images.destroy');
+    });
 
     /*
     |------------------------------------------------------------------

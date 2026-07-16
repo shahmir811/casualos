@@ -186,7 +186,7 @@
                             {{-- Per-component size grid --}}
                             <div x-show="selectedComponents.includes('{{ $comp }}')" x-cloak
                                  class="mt-2 pl-2 border-l-2 border-[#0071E3]/20 space-y-1">
-                                <div class="grid grid-cols-5 gap-1.5">
+                                <div class="grid grid-cols-5 gap-1">
                                     @foreach(['xs','s','m','l','xl'] as $size)
                                     <div>
                                         <label class="block text-[10px] font-semibold uppercase tracking-widest mb-1 text-center transition-colors"
@@ -198,7 +198,7 @@
                                                min="0"
                                                x-model.number="componentSizes.{{ $comp }}.{{ $size }}"
                                                :disabled="maxFor('{{ $comp }}', '{{ $size }}') === 0"
-                                               class="apple-input text-center text-sm"
+                                               class="apple-input text-center text-sm !px-1 !py-2 w-full min-w-0"
                                                :class="maxFor('{{ $comp }}', '{{ $size }}') === 0 ? 'opacity-40 cursor-not-allowed bg-[#F5F5F7]' : (overLimitFor('{{ $comp }}', '{{ $size }}') ? 'border-[#FF3B30] bg-[#FFF0EF] text-[#FF3B30]' : '')">
                                         <div class="mt-0.5 text-center">
                                             <span class="text-[9px]"

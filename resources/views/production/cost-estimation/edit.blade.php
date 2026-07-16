@@ -114,13 +114,13 @@
                 </div>
                 @else
                 <div class="overflow-x-auto">
-                    <table class="w-full min-w-[520px]">
+                    <table class="w-full">
                         <thead>
                             <tr class="border-b border-[#F2F2F7] bg-[#FAFAFA]">
                                 <th class="text-left text-[11px] font-semibold text-[#6E6E73] uppercase tracking-widest px-3 py-2">Particulars</th>
                                 <th class="text-right text-[11px] font-semibold text-[#6E6E73] uppercase tracking-widest px-2 py-2 w-20">Avg</th>
-                                <th class="text-right text-[11px] font-semibold text-[#6E6E73] uppercase tracking-widest px-2 py-2 w-20">Qty</th>
-                                <th class="text-right text-[11px] font-semibold text-[#6E6E73] uppercase tracking-widest px-2 py-2 w-24">Rate</th>
+                                <th class="text-right text-[11px] font-semibold text-[#6E6E73] uppercase tracking-widest px-2 py-2 w-28">Qty</th>
+                                <th class="text-right text-[11px] font-semibold text-[#6E6E73] uppercase tracking-widest px-2 py-2 w-28">Rate</th>
                                 <th class="text-right text-[11px] font-semibold text-[#6E6E73] uppercase tracking-widest px-2 py-2 w-28">Amount</th>
                             </tr>
                         </thead>
