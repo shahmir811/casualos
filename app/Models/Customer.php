@@ -13,14 +13,19 @@ class Customer extends Model
     use HasFactory, Notifiable, HasPushSubscriptions;
 
     public const COUNTRIES = [
-        'Australia', 'Canada', 'Pakistan', 'Saudi Arabia', 'UAE', 'UK', 'USA',
+        'Australia', 'Bangladesh', 'Canada', 'Kuwait', 'Oman', 'Pakistan',
+        'Qatar', 'Saudi Arabia', 'UAE', 'UK', 'USA',
     ];
 
     // Currency symbol shown on piece tags for each destination country
     public const CURRENCY_SYMBOLS = [
         'Australia'    => 'AUS $',
+        'Bangladesh'   => 'TK',
         'Canada'       => 'CAD $',
+        'Kuwait'       => 'KWD',
+        'Oman'         => 'OMR',
         'Pakistan'     => 'Rs.',
+        'Qatar'        => 'QAR',
         'Saudi Arabia' => 'SR',
         'UAE'          => 'AED',
         'UK'           => '£',
