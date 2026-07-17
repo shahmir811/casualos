@@ -238,6 +238,27 @@
                     <div x-show="open" x-transition class="border-t border-[#F2F2F7]">
                         <div class="px-5 py-4 space-y-4">
 
+                            {{-- HD Photos — always shown, regardless of how many (or whether any) images are uploaded --}}
+                            @if($order->catalogue && $order->catalogue->hd_gallery_token)
+                            <a href="{{ route('gallery.show', $order->catalogue->hd_gallery_token) }}" target="_blank" rel="noopener"
+                               class="flex items-center justify-between gap-3 bg-[#F5F5F7] rounded-xl p-3 hover:bg-[#EFEFF4] transition-colors">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center flex-shrink-0 border border-[#E8E8ED]">
+                                        <svg class="w-4 h-4 text-[#0071E3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-[#1D1D1F] text-xs font-semibold">HD Photos</p>
+                                        <p class="text-[#86868B] text-[10px] mt-0.5">Download full-resolution photos</p>
+                                    </div>
+                                </div>
+                                <svg class="w-4 h-4 text-[#C7C7CC] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </a>
+                            @endif
+
                             {{-- Payment summary --}}
                             <div class="bg-[#F5F5F7] rounded-xl p-3 grid grid-cols-2 gap-3">
                                 <div>
