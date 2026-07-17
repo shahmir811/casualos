@@ -82,7 +82,7 @@
                 <div class="text-[#86868B] text-xs mb-0.5">Orders</div>
                 <div class="text-[#1D1D1F]">{{ $customer->orders_count ?? '—' }}</div>
             </div>
-            @if($customer->advance_credit_balance > 0)
+            @if(!$hideFinancials && $customer->advance_credit_balance > 0)
             <div class="col-span-2">
                 <div class="text-[#86868B] text-xs mb-0.5">Advance Credit</div>
                 <div class="text-[#30D158] font-medium">PKR {{ number_format($customer->advance_credit_balance, 0) }}</div>
@@ -104,7 +104,9 @@
                 <th class="text-left">Contact</th>
                 <th class="text-left">City</th>
                 <th class="text-left">Orders</th>
+                @if(!$hideFinancials)
                 <th class="text-left">Advance Credit</th>
+                @endif
                 <th class="text-left"></th>
             </tr>
         </thead>
@@ -118,6 +120,7 @@
                 </td>
                 <td class="text-[#6E6E73]">{{ $customer->city }}</td>
                 <td class="text-[#6E6E73]">{{ $customer->orders_count ?? '—' }}</td>
+                @if(!$hideFinancials)
                 <td>
                     @if($customer->advance_credit_balance > 0)
                         <span class="text-[#30D158] text-sm font-medium">PKR {{ number_format($customer->advance_credit_balance, 0) }}</span>
@@ -125,6 +128,7 @@
                         <span class="text-[#86868B]">—</span>
                     @endif
                 </td>
+                @endif
                 <td>
                     <div class="flex items-center gap-3">
                         <button type="button"
@@ -145,7 +149,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="6" class="text-center text-[#86868B] py-12">No customers found.</td>
+                <td colspan="{{ $hideFinancials ? 5 : 6 }}" class="text-center text-[#86868B] py-12">No customers found.</td>
             </tr>
             @endforelse
         </tbody>

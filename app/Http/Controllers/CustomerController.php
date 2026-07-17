@@ -23,7 +23,9 @@ class CustomerController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('customers.index', compact('customers'));
+        $hideFinancials = Auth::user()->role === 'production_manager';
+
+        return view('customers.index', compact('customers', 'hideFinancials'));
     }
 
     public function create()
@@ -71,7 +73,9 @@ class CustomerController extends Controller
             'advancePayments.bankAccount',
         ]);
         $bankAccounts = BankAccount::where('is_active', true)->orderBy('title')->get();
-        return view('customers.show', compact('customer', 'bankAccounts'));
+        $hideFinancials = Auth::user()->role === 'production_manager';
+
+        return view('customers.show', compact('customer', 'bankAccounts', 'hideFinancials'));
     }
 
     public function edit(Customer $customer)
