@@ -58,14 +58,14 @@
         }
 
         .sack-row {
-            border-bottom: 1pt solid #E8E8ED;
+            border-bottom: none;
             margin-top: 24pt;
-            padding: 20pt 0;
+            padding: 20pt 0 8pt 0;
         }
         .pieces-row {
             border-bottom: none;
-            margin-top: 24pt;
-            padding: 20pt 0 0 0;
+            margin-top: 8pt;
+            padding: 12pt 0 0 0;
         }
         .blank-box {
             border: 2pt solid #1D1D1F;
