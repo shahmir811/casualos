@@ -110,11 +110,28 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     /*
     |------------------------------------------------------------------
-    | CUSTOMER MANAGEMENT (admin + accountant only)
+    | CUSTOMER MANAGEMENT
+    | View/edit: admin + accountant + production_manager (no financials for production_manager)
+    | Create + all financial sub-routes (ledger, advance payments): admin + accountant only
     |------------------------------------------------------------------
     */
+    Route::middleware('role:admin|accountant|production_manager')->group(function () {
+        Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
+    });
+
     Route::middleware('role:admin|accountant')->group(function () {
-        Route::resource('customers', CustomerController::class)->except(['destroy']);
+        Route::get('customers/create', [CustomerController::class, 'create'])->name('customers.create');
+        Route::post('customers', [CustomerController::class, 'store'])->name('customers.store');
+    });
+
+    Route::middleware('role:admin|accountant|production_manager')->group(function () {
+        Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+        Route::get('customers/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
+        Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+        Route::patch('customers/{customer}', [CustomerController::class, 'update']);
+    });
+
+    Route::middleware('role:admin|accountant')->group(function () {
         Route::get('customers/{customer}/ledger',     [LedgerController::class, 'show'])->name('customers.ledger');
         Route::get('customers/{customer}/ledger/pdf', [LedgerController::class, 'pdf'])->name('customers.ledger.pdf');
 

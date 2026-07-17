@@ -13,28 +13,32 @@
         <p class="text-[#86868B] text-xs mt-0.5">{{ $customer->address }}</p>
         @endif
     </div>
-    @if(in_array(Auth::user()->role, ['admin', 'accountant']))
+    @if(in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager']))
     <div class="flex items-center gap-2.5">
-        @if(Auth::user()->role === 'admin')
+        @if(in_array(Auth::user()->role, ['admin', 'production_manager']))
         <a href="{{ route('customers.edit', $customer) }}" class="btn-secondary">Edit</a>
         @endif
+        @if(!$hideFinancials)
         <a href="{{ route('customers.ledger', $customer) }}" class="btn-secondary">Ledger</a>
+        @endif
     </div>
     @endif
 </div>
 
 {{-- Summary Cards --}}
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
+<div class="grid grid-cols-1 sm:grid-cols-{{ $hideFinancials ? 2 : 3 }} gap-4 mb-7">
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Total Orders</p>
         <p class="text-[#1D1D1F] text-2xl font-light">{{ $customer->orders->count() }}</p>
     </div>
+    @if(!$hideFinancials)
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Advance Credit</p>
         <p class="text-2xl font-light {{ round((float) $customer->advance_credit_balance) > 0 ? 'text-[#30D158]' : 'text-[#1D1D1F]' }}">
             PKR {{ number_format($customer->advance_credit_balance, 0) }}
         </p>
     </div>
+    @endif
     <div class="stat-card">
         <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-1">Customer Portal</p>
         <a href="{{ route('portal.show', $customer->portal_token) }}" target="_blank"
@@ -45,7 +49,7 @@
 </div>
 
 {{-- Record Advance Payment --}}
-@if(in_array(Auth::user()->role, ['admin', 'accountant']))
+@if(!$hideFinancials)
 <div class="card mb-5" x-data="{ open: {{ $errors->any() ? 'true' : 'false' }} }">
     <button type="button" @click="open = !open" class="w-full px-6 py-4 text-left flex items-center justify-between">
         <h2 class="text-[#1D1D1F] text-sm font-semibold">Record Advance Payment</h2>
@@ -239,7 +243,7 @@
 @endif
 
 {{-- Advance Payments History --}}
-@if($customer->advancePayments->count())
+@if(!$hideFinancials && $customer->advancePayments->count())
 <div class="card mb-5">
     <div class="px-6 py-4 border-b border-[#F2F2F7]">
         <h2 class="text-[#1D1D1F] text-sm font-semibold">Advance Payments ({{ $customer->advancePayments->count() }})</h2>
@@ -391,7 +395,9 @@
                 <tr>
                     <th class="text-left">Order #</th>
                     <th class="text-left">Catalogue</th>
+                    @if(!$hideFinancials)
                     <th class="text-left">Amount</th>
+                    @endif
                     <th class="text-left">Status</th>
                     <th class="text-left">Date</th>
                     <th></th>
@@ -410,7 +416,9 @@
                 <tr>
                     <td class="font-medium">#{{ $order->order_number }}</td>
                     <td class="text-[#6E6E73]">{{ $order->catalogue->name ?? '—' }}</td>
+                    @if(!$hideFinancials)
                     <td>PKR {{ number_format($order->total_amount, 0) }}</td>
+                    @endif
                     <td>
                         <span class="{{ $statusBadge[$order->status] ?? 'badge bg-[#F5F5F7] text-[#6E6E73]' }}">{{ $order->status }}</span>
                     </td>
@@ -420,7 +428,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="6" class="text-center text-[#86868B] py-10">No orders yet.</td></tr>
+                <tr><td colspan="{{ $hideFinancials ? 5 : 6 }}" class="text-center text-[#86868B] py-10">No orders yet.</td></tr>
                 @endforelse
             </tbody>
         </table>
