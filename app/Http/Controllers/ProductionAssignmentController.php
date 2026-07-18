@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Spatie\Activitylog\Models\Activity;
 
 class ProductionAssignmentController extends Controller
 {
@@ -101,8 +102,35 @@ class ProductionAssignmentController extends Controller
             ->get()
             ->pluck('qty', 'design_id');
 
+        // ── Customer order demand per design, per size (non-cancelled orders) ─
+        $demandBySizeRows = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.catalogue_id', $catalogueId)
+            ->where('orders.status', '!=', 'cancelled')
+            ->select(
+                'order_items.design_id',
+                DB::raw('SUM(order_items.qty_xs) as xs'),
+                DB::raw('SUM(order_items.qty_s) as s'),
+                DB::raw('SUM(order_items.qty_m) as m'),
+                DB::raw('SUM(order_items.qty_l) as l'),
+                DB::raw('SUM(order_items.qty_xl) as xl')
+            )
+            ->groupBy('order_items.design_id')
+            ->get()
+            ->keyBy('design_id');
+
+        // ── Pieces already assigned to stitching units, per design per size ─
+        $stitchingAssignedBySizeRows = DB::table('production_assignment_items')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
+            ->where('production_assignments.catalogue_id', $catalogueId)
+            ->where('production_assignments.destination', 'stitching_unit')
+            ->select('production_assignments.design_id', 'production_assignment_items.size', DB::raw('SUM(production_assignment_items.quantity) as qty'))
+            ->groupBy('production_assignments.design_id', 'production_assignment_items.size')
+            ->get()
+            ->groupBy('design_id');
+
         // ── Attach available_qty and np_available_qty to each design ─────
-        $catalogue->designs->each(function ($design) use ($receivedRows, $stitchingAssignedRows, $npReturnedRows, $npAssignedByDesign) {
+        $catalogue->designs->each(function ($design) use ($receivedRows, $stitchingAssignedRows, $npReturnedRows, $npAssignedByDesign, $demandBySizeRows, $stitchingAssignedBySizeRows) {
             $stitchingAssigned = (int) ($stitchingAssignedRows[$design->id] ?? 0);
             $received          = (int) ($receivedRows[$design->id] ?? 0);
             if ($design->needs_naeem_pakki) {
@@ -114,6 +142,19 @@ class ProductionAssignmentController extends Controller
                 $design->available_qty    = max(0, $received - $stitchingAssigned);
                 $design->np_available_qty = 0;
             }
+
+            // How many pieces of each size are still needed to cover current
+            // order demand, net of what's already been assigned to stitching.
+            // Purely a reference/warning signal — never blocks submission.
+            $demandRow      = $demandBySizeRows[$design->id] ?? null;
+            $assignedBySize = collect($stitchingAssignedBySizeRows[$design->id] ?? [])->pluck('qty', 'size');
+            $remainingBySize = [];
+            foreach (['xs', 's', 'm', 'l', 'xl'] as $size) {
+                $needed  = (int) ($demandRow->{$size} ?? 0);
+                $already = (int) ($assignedBySize[$size] ?? 0);
+                $remainingBySize[$size] = max(0, $needed - $already);
+            }
+            $design->remaining_by_size = $remainingBySize;
         });
 
         $stitchingUnits = StitchingUnit::where('is_active', true)->orderBy('number')->get();
@@ -286,6 +327,44 @@ class ProductionAssignmentController extends Controller
         }
         // ────────────────────────────────────────────────────────────────
 
+        // ── Per-size demand check — flagged for review, never blocks ─────
+        // Computed independently of the client's acknowledgment checkbox so
+        // the flag lands in the activity log even if a request bypasses the
+        // browser form. Catches splits where the total matches available
+        // fabric but individual sizes don't match what customers ordered.
+        $demandBySize = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.catalogue_id', $request->catalogue_id)
+            ->where('order_items.design_id', $validated['design_id'])
+            ->where('orders.status', '!=', 'cancelled')
+            ->selectRaw('SUM(qty_xs) as xs, SUM(qty_s) as s, SUM(qty_m) as m, SUM(qty_l) as l, SUM(qty_xl) as xl')
+            ->first();
+
+        $assignedBySizeSoFar = DB::table('production_assignment_items')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
+            ->where('production_assignments.catalogue_id', $request->catalogue_id)
+            ->where('production_assignments.design_id', $validated['design_id'])
+            ->where('production_assignments.destination', 'stitching_unit')
+            ->select('production_assignment_items.size', DB::raw('SUM(production_assignment_items.quantity) as qty'))
+            ->groupBy('production_assignment_items.size')
+            ->pluck('qty', 'size');
+
+        $sizeMismatches = [];
+        foreach ($validated['items'] as $item) {
+            $size = $item['size'];
+            $qty  = (int) $item['qty'];
+            if ($qty <= 0) continue;
+
+            $demandForSize   = (int) ($demandBySize->{$size} ?? 0);
+            $alreadyForSize  = (int) ($assignedBySizeSoFar[$size] ?? 0);
+            $newTotalForSize = $alreadyForSize + $qty;
+
+            if ($newTotalForSize > $demandForSize) {
+                $sizeMismatches[] = strtoupper($size) . ": {$newTotalForSize} assigned vs {$demandForSize} ordered (+" . ($newTotalForSize - $demandForSize) . ')';
+            }
+        }
+        // ────────────────────────────────────────────────────────────────
+
         $assignment = ProductionAssignment::create([
             'catalogue_id'     => $request->catalogue_id,
             'design_id'        => $validated['design_id'],
@@ -310,19 +389,25 @@ class ProductionAssignmentController extends Controller
             'size' => strtoupper($i->size),
             'qty'  => $i->quantity,
         ])->toArray();
+        $logProperties = [
+            'catalogue'      => $assignment->catalogue->name ?? '—',
+            'design'         => $assignment->design->name ?? '—',
+            'stitching_unit' => $assignment->stitchingUnit->name ?? '—',
+            'assigned_date'  => $assignment->assignment_date->format('d M Y'),
+            'total_pieces'   => $assignment->items->sum('quantity'),
+            'items'          => $itemDetails,
+        ];
+        if (!empty($sizeMismatches)) {
+            $logProperties['size_mismatch'] = $sizeMismatches;
+        }
         activity()
             ->performedOn($assignment)
             ->causedBy(Auth::user())
             ->event('detail')
-            ->withProperties([
-                'catalogue'      => $assignment->catalogue->name ?? '—',
-                'design'         => $assignment->design->name ?? '—',
-                'stitching_unit' => $assignment->stitchingUnit->name ?? '—',
-                'assigned_date'  => $assignment->assignment_date->format('d M Y'),
-                'total_pieces'   => $assignment->items->sum('quantity'),
-                'items'          => $itemDetails,
-            ])
-            ->log('Production assignment (Stitching) created');
+            ->withProperties($logProperties)
+            ->log(empty($sizeMismatches)
+                ? 'Production assignment (Stitching) created'
+                : 'Production assignment (Stitching) created — size mismatch vs order demand');
 
         return redirect()->route('production-assignments.show', $assignment)
             ->with('success', 'Stitching assignment created.');
@@ -331,7 +416,14 @@ class ProductionAssignmentController extends Controller
     public function show(ProductionAssignment $productionAssignment)
     {
         $productionAssignment->load(['catalogue', 'design', 'items', 'stitchingUnit', 'npDesigns.design', 'npDesigns.returnItems', 'loggedBy']);
-        return view('production.assignments.show', compact('productionAssignment'));
+
+        $activity = Activity::where('subject_type', ProductionAssignment::class)
+            ->where('subject_id', $productionAssignment->id)
+            ->latest('id')
+            ->first();
+        $sizeMismatch = $activity?->properties['size_mismatch'] ?? null;
+
+        return view('production.assignments.show', compact('productionAssignment', 'sizeMismatch'));
     }
 
     public function updateNpRate(Request $request, ProductionAssignment $productionAssignment, ProductionAssignmentNpDesign $npDesign)

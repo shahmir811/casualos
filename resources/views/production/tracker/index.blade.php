@@ -37,7 +37,7 @@
         </div>
 
         <div class="overflow-x-auto">
-        <table class="apple-table tracker-table w-full" style="min-width:1120px;">
+        <table class="apple-table tracker-table w-full" style="min-width:1320px;">
             <thead>
                 {{-- Group header row --}}
                 <tr style="background:#FAFAFA; border-bottom:1px solid #E8E8ED;">
@@ -50,7 +50,7 @@
                     <th colspan="2" class="text-center" style="color:#FF6B35; {{ $gb }} border-bottom:1px solid #FFD0C0; padding-bottom:4px;">Tarpai</th>
                     <th colspan="2" class="text-center" style="color:#1D1D1F; {{ $gb }} border-bottom:1px solid #E8E8ED; padding-bottom:4px;">Press</th>
                     <th class="text-right" rowspan="2" style="{{ $gb }} color:#34C759;">Dispatched</th>
-                    <th class="text-center" rowspan="2">Status</th>
+                    <th class="text-center" rowspan="2" style="min-width:280px;">Status</th>
                 </tr>
                 {{-- Sub-header row --}}
                 <tr style="background:#FAFAFA;">
@@ -151,6 +151,24 @@
                             <span class="badge" style="background:#FFF5E6;color:#FF9500;">In Progress</span>
                         @else
                             <span class="badge" style="background:#F0F7FF;color:#0071E3;">Assigned</span>
+                        @endif
+                        @if(!empty($row->sizeMismatches))
+                        <div class="mt-1.5 text-left">
+                            <span class="badge" style="background:#FFF0EF;color:#FF3B30;white-space:nowrap;">⚠ Size Mismatch</span>
+                            <div class="mt-1 space-y-0.5">
+                                @foreach($row->sizeMismatches as $size => $m)
+                                <p class="text-[11px] leading-tight" style="color:#FF3B30;white-space:nowrap;">
+                                    <span class="font-semibold">{{ strtoupper($size) }}:</span>
+                                    {{ $m['ordered'] }} ordered · {{ $m['produced'] }} produced ·
+                                    @if($m['diff'] < 0)
+                                        short {{ abs($m['diff']) }}
+                                    @else
+                                        surplus {{ $m['diff'] }}
+                                    @endif
+                                </p>
+                                @endforeach
+                            </div>
+                        </div>
                         @endif
                     </td>
                 </tr>

@@ -90,6 +90,18 @@
     {{-- ── Main panel ───────────────────────────────────────────────── --}}
     <div class="lg:col-span-2 space-y-5">
 
+        @if(!empty($sizeMismatch))
+        <div class="p-4 bg-[#FFF8EE] border border-[#FFD699] rounded-xl">
+            <p class="text-sm font-semibold text-[#C67500] mb-1">⚠ Size mismatch vs order demand</p>
+            <ul class="text-xs text-[#C67500] list-disc list-inside space-y-0.5">
+                @foreach($sizeMismatch as $m)
+                <li>{{ $m }}</li>
+                @endforeach
+            </ul>
+            <p class="text-[11px] text-[#C67500] opacity-75 mt-1.5">This batch assigned more of a size than current customer orders need — flagged when saved, for review.</p>
+        </div>
+        @endif
+
         @if($isNewStyleNP)
         {{-- ═══ New-style NP batch: per-design breakdown ════════════════ --}}
         <div class="card">

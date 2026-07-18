@@ -61,6 +61,19 @@
             return this.availableQty !== null && this.totalQty > this.availableQty;
         },
 
+        /* Per-size demand check — warns, never blocks by itself */
+        remainingFor(size) {
+            return this.selectedDesign?.remaining_by_size?.[size] ?? 0;
+        },
+        get sizeOverages() {
+            if (!this.selectedDesign) return [];
+            return ['xs', 's', 'm', 'l', 'xl']
+                .map(sz => ({ size: sz, entered: parseInt(this.sizes[sz]) || 0, needed: this.remainingFor(sz) }))
+                .filter(o => o.entered > o.needed);
+        },
+        get hasSizeOverage() { return this.sizeOverages.length > 0; },
+        acknowledgeSizeMismatch: false,
+
         /* NP helpers */
         npQtyFor(id)  { return parseInt(this.npQty[id] || 0); },
         npOverFor(id) {
@@ -85,7 +98,7 @@
         get canProceed() {
             if (!this.selectedDestination) return false;
             if (this.isNaeemPakki)    return this.npDesigns.length > 0 && this.npHasAnyQty && !this.npAnyOverLimit;
-            if (this.isStitchingUnit) return this.selectedDesignId !== '' && !this.nothingAvailable && this.selectedUnit !== '' && !this.isOverLimit && this.totalQty > 0;
+            if (this.isStitchingUnit) return this.selectedDesignId !== '' && !this.nothingAvailable && this.selectedUnit !== '' && !this.isOverLimit && this.totalQty > 0 && (!this.hasSizeOverage || this.acknowledgeSizeMismatch);
             return false;
         },
 
@@ -101,6 +114,7 @@
                 if (this.nothingAvailable) return 'No pieces available in factory for this design.';
                 if (this.selectedUnit === '') return 'Select a stitching unit.';
                 if (this.isOverLimit) return 'Total pieces exceed what\'s available. Please reduce.';
+                if (this.hasSizeOverage && !this.acknowledgeSizeMismatch) return 'A size exceeds current order demand. Check the acknowledgment below, or adjust the split.';
                 return 'Enter at least one piece quantity.';
             }
             return '';
@@ -364,7 +378,12 @@
                     <input type="number" name="items[{{ $loop->index }}][qty]"
                            min="0"
                            x-model.number="sizes.{{ $size }}"
-                           class="apple-input text-center">
+                           class="apple-input text-center"
+                           :class="(parseInt(sizes.{{ $size }}) || 0) > remainingFor('{{ $size }}') ? 'border-[#FF9500] bg-[#FFF8EE]' : ''">
+                    <p class="mt-1 text-[10px] text-center"
+                       :class="(parseInt(sizes.{{ $size }}) || 0) > remainingFor('{{ $size }}') ? 'text-[#C67500] font-semibold' : 'text-[#86868B]'">
+                        needs <span x-text="remainingFor('{{ $size }}')"></span>
+                    </p>
                 </div>
                 @endforeach
             </div>
@@ -392,6 +411,26 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                     </svg>
                     <span>Within available limit — <strong x-text="availableQty - totalQty"></strong> pieces will remain in factory after assignment</span>
+                </div>
+
+                {{-- Per-size demand mismatch — warns, doesn't block by itself --}}
+                <div x-show="hasSizeOverage" x-cloak
+                     class="mt-2 px-3 py-2.5 bg-[#FFF8EE] border border-[#FFD699] rounded-xl text-xs text-[#C67500]">
+                    <div class="flex items-start gap-2 font-medium">
+                        <svg class="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        </svg>
+                        <span>Size split doesn't match remaining customer demand:</span>
+                    </div>
+                    <ul class="mt-1.5 ml-5 list-disc space-y-0.5">
+                        <template x-for="o in sizeOverages" :key="o.size">
+                            <li><span x-text="o.size.toUpperCase()"></span>: entering <strong x-text="o.entered"></strong>, only <strong x-text="o.needed"></strong> still needed based on current orders</li>
+                        </template>
+                    </ul>
+                    <label class="mt-2 flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" x-model="acknowledgeSizeMismatch" name="acknowledge_size_mismatch" value="1">
+                        <span>I understand this split doesn't match order demand — save anyway</span>
+                    </label>
                 </div>
             </div>
         </div>

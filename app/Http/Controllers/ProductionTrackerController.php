@@ -178,6 +178,36 @@ class ProductionTrackerController extends Controller
             ->pluck('qty', 'design_id');
 
         /* ----------------------------------------------------------------
+         | 9. Order demand per design, per size (non-cancelled orders) —
+         |    used only to flag a per-size split mismatch once fabric for
+         |    a design has been fully assigned (see $sizeShortfalls below).
+         * -------------------------------------------------------------- */
+        $demandBySize = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.catalogue_id', $catId)
+            ->where('orders.status', '!=', 'cancelled')
+            ->select(
+                'order_items.design_id',
+                DB::raw('SUM(order_items.qty_xs) as xs'),
+                DB::raw('SUM(order_items.qty_s) as s'),
+                DB::raw('SUM(order_items.qty_m) as m'),
+                DB::raw('SUM(order_items.qty_l) as l'),
+                DB::raw('SUM(order_items.qty_xl) as xl')
+            )
+            ->groupBy('order_items.design_id')
+            ->get()
+            ->keyBy('design_id');
+
+        $assignedBySize = DB::table('production_assignment_items')
+            ->join('production_assignments', 'production_assignments.id', '=', 'production_assignment_items.production_assignment_id')
+            ->where('production_assignments.catalogue_id', $catId)
+            ->where('production_assignments.destination', 'stitching_unit')
+            ->select('production_assignments.design_id', 'production_assignment_items.size', DB::raw('SUM(production_assignment_items.quantity) as qty'))
+            ->groupBy('production_assignments.design_id', 'production_assignment_items.size')
+            ->get()
+            ->groupBy('design_id');
+
+        /* ----------------------------------------------------------------
          | Build per-design rows
          * -------------------------------------------------------------- */
         $allDesigns = Catalogue::find($catId)
@@ -189,7 +219,8 @@ class ProductionTrackerController extends Controller
             $fabricReceived, $outsourcedReceived, $assignmentDestination,
             $assigned, $npSent, $npReturned,
             $stitchingReturned, $stitchingReturnedByComponent,
-            $tarpaiSent, $tarpaiReturned, $pressSent, $packed, $dispatched, $catalogue
+            $tarpaiSent, $tarpaiReturned, $pressSent, $packed, $dispatched, $catalogue,
+            $demandBySize, $assignedBySize
         ) {
             $d           = $design->id;
             $isInHouse   = $design->manufacturing_type === 'in_house';
@@ -238,6 +269,31 @@ class ProductionTrackerController extends Controller
                 ? $npReturnedQty
                 : ($isInHouse ? $assignedQty : 0);
 
+            // Per-size demand vs assigned mismatch — only meaningful once this
+            // design's fabric has been fully committed to stitching (no fabric
+            // left to correct a wrong-size split with). Reports every size
+            // where ordered != produced, both the shortfall (e.g. XL short 1)
+            // and the matching surplus that caused it (e.g. XS over by 1) —
+            // seeing both sides is what actually tells someone where the
+            // piece went, not just that one size came up short.
+            $sizeMismatches = [];
+            if ($isInHouse && $fabricQty > 0 && $assignedQty >= $fabricQty) {
+                $demandRow    = $demandBySize[$d] ?? null;
+                $assignedRows = $assignedBySize[$d] ?? collect();
+                $assignedMap  = $assignedRows->pluck('qty', 'size');
+                foreach (['xs', 's', 'm', 'l', 'xl'] as $size) {
+                    $ordered  = (int) ($demandRow->{$size} ?? 0);
+                    $produced = (int) ($assignedMap[$size] ?? 0);
+                    if ($produced !== $ordered) {
+                        $sizeMismatches[$size] = [
+                            'ordered'  => $ordered,
+                            'produced' => $produced,
+                            'diff'     => $produced - $ordered, // negative = short, positive = surplus
+                        ];
+                    }
+                }
+            }
+
             return (object) [
                 'id'                => $design->id,
                 'name'              => $design->name,
@@ -263,6 +319,7 @@ class ProductionTrackerController extends Controller
                 'inFactory'         => $inFactory,
                 'atTarpai'          => $atTarpai,
                 'postTarpai'        => $postTarpai,
+                'sizeMismatches'    => $sizeMismatches,
             ];
         });
 
