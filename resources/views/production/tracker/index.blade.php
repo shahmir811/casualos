@@ -25,6 +25,35 @@
         $gb = 'border-left: 2px solid #E8E8ED;'; // group separator
     @endphp
 
+    {{-- ── STALE ASSIGNMENT ALERTS ───────────────────────────────── --}}
+    @if($alerts->isNotEmpty())
+    <div class="card p-5" style="background:#FFF0EF;border:1px solid #FFD0CC;">
+        <div class="flex items-center gap-2 mb-3">
+            <span class="text-sm font-semibold" style="color:#C0271E;">⚠ Order changed after assignment was locked in</span>
+            <span class="badge" style="background:#FFFFFF;color:#C0271E;">{{ $alerts->count() }}</span>
+        </div>
+        <div class="space-y-2">
+            @foreach($alerts as $alert)
+            <div class="flex items-start justify-between gap-3 rounded-lg p-3" style="background:#FFFFFF;">
+                <div>
+                    <p class="text-sm font-medium" style="color:#1D1D1F;">{{ $alert->design->name ?? 'Design #' . $alert->design_id }}</p>
+                    <p class="text-xs mt-0.5" style="color:#6E6E73;">{{ $alert->message }}</p>
+                    <p class="text-[11px] mt-1" style="color:#9A9AA0;">{{ $alert->created_at->format('d M Y, g:i A') }}</p>
+                </div>
+                @if(Auth::user()->role !== 'creative_head')
+                <form method="POST" action="{{ route('production-alerts.resolve', $alert) }}" class="shrink-0">
+                    @csrf
+                    <button type="submit" class="btn-secondary" style="white-space:nowrap;padding:0.4rem 0.85rem;font-size:0.75rem;">
+                        Resolve
+                    </button>
+                </form>
+                @endif
+            </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
     {{-- ── IN-HOUSE PRODUCTION TABLE ─────────────────────────────── --}}
     @if($inHouseDesigns->count())
     <div class="card overflow-hidden">

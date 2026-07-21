@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Catalogue;
+use App\Models\ProductionAlert;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -25,6 +26,7 @@ class ProductionTrackerController extends Controller
                 'catalogue' => null,
                 'designs'   => collect(),
                 'summary'   => null,
+                'alerts'    => collect(),
             ]);
         }
 
@@ -340,8 +342,14 @@ class ProductionTrackerController extends Controller
             'dispatched'     => $designs->sum('dispatchedQty'),
         ];
 
+        $alerts = ProductionAlert::with('design')
+            ->where('catalogue_id', $catId)
+            ->whereNull('resolved_at')
+            ->latest()
+            ->get();
+
         return view('production.tracker.index', compact(
-            'catalogue', 'designs', 'summary'
+            'catalogue', 'designs', 'summary', 'alerts'
         ));
     }
 }

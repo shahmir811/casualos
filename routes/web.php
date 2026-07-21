@@ -28,6 +28,7 @@ use App\Http\Controllers\StitchingUnitController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProductionAlertController;
 use App\Http\Controllers\ProductionTrackerController;
 use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\ActiveCatalogueController;
@@ -269,6 +270,11 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Production Tracker (manager + admin)
     Route::get('production-tracker', [ProductionTrackerController::class, 'index'])->name('production.tracker');
+
+    // Production Alerts — resolving a stale-assignment alert is a write action (admin + production_manager only)
+    Route::middleware('role:admin|production_manager|creative_head')->group(function () {
+        Route::post('production-alerts/{alert}/resolve', [ProductionAlertController::class, 'resolve'])->name('production-alerts.resolve');
+    });
 
     /*
     |------------------------------------------------------------------
