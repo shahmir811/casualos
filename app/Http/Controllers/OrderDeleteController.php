@@ -172,6 +172,8 @@ class OrderDeleteController extends Controller
                     Refund::create([
                         'order_id'           => $lockedOrder->id,
                         'order_reduction_id' => null,
+                        'order_number'       => $lockedOrder->order_number,
+                        'catalogue_name'     => $lockedOrder->catalogue->name,
                         'customer_id'        => $customer->id,
                         'amount'             => $refundableAmount,
                         'refund_method'      => $request->refund_method,

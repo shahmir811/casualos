@@ -71,6 +71,9 @@ class CustomerController extends Controller
         $customer->load([
             'orders' => fn($q) => $q->latest()->take(10),
             'advancePayments.bankAccount',
+            'refunds.refundedBy',
+            'refunds.order',
+            'refunds.reduction',
         ]);
         $bankAccounts = BankAccount::where('is_active', true)->orderBy('title')->get();
         $hideFinancials = Auth::user()->role === 'production_manager';

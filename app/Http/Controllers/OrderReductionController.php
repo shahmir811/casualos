@@ -140,6 +140,8 @@ class OrderReductionController extends Controller
                     $refund = Refund::create([
                         'order_id'           => $order->id,
                         'order_reduction_id' => $reduction->id,
+                        'order_number'       => $order->order_number,
+                        'catalogue_name'     => $order->catalogue->name,
                         'customer_id'        => $customer->id,
                         'amount'             => $surplus,
                         'refund_method'      => $request->refund_method,
