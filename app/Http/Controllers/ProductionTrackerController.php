@@ -348,6 +348,23 @@ class ProductionTrackerController extends Controller
             ->latest()
             ->get();
 
+        // Auto-resolve: if this design's live Size Mismatch (computed above, same
+        // "fully assigned" gate the alert was created from) has since cleared —
+        // e.g. later free-piece assignments brought demand back in line with what
+        // was already committed to stitching — the alert is stale and clears itself
+        // rather than waiting on a manual Resolve click. A manual Resolve still
+        // exists for cases the live check can't see (e.g. fixed outside the system).
+        $designsById = $designs->keyBy('id');
+
+        $alerts = $alerts->reject(function ($alert) use ($designsById) {
+            $designRow = $designsById->get($alert->design_id);
+            if ($designRow && empty($designRow->sizeMismatches)) {
+                $alert->update(['resolved_at' => now(), 'resolved_by' => null]);
+                return true;
+            }
+            return false;
+        })->values();
+
         return view('production.tracker.index', compact(
             'catalogue', 'designs', 'summary', 'alerts'
         ));
