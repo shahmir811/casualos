@@ -22,9 +22,11 @@ use Illuminate\Support\Facades\DB;
 class ProductionAssignmentAlertService
 {
     private const REASON_LABELS = [
-        'order_adjusted'  => 'adjusted',
-        'order_reduced'   => 'reduced',
-        'order_cancelled' => 'reduced to zero and cancelled',
+        'order_adjusted'       => 'adjusted',
+        'order_reduced'        => 'reduced',
+        'order_cancelled'      => 'reduced to zero and cancelled',
+        'order_deleted'        => 'permanently deleted',
+        'free_pieces_assigned' => 'given newly assigned free pieces',
     ];
 
     public function checkOrder(Order $order, array $designIds, string $trigger): void

@@ -54,8 +54,27 @@ class Order extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['status', 'total_amount', 'total_paid', 'outstanding_balance'])
+            ->logOnly(['order_number', 'status', 'total_amount', 'total_paid', 'outstanding_balance'])
             ->logOnlyDirty();
+    }
+
+    public function getDescriptionForEvent(string $eventName): string
+    {
+        if ($eventName !== 'deleted') {
+            return $eventName;
+        }
+
+        $description = "Order #{$this->order_number}";
+
+        if ($catalogueName = $this->catalogue?->name) {
+            $description .= " on the {$catalogueName} catalogue";
+        }
+
+        if ($customerName = $this->customer?->name) {
+            $description .= " from {$customerName}";
+        }
+
+        return $description . ' has been deleted';
     }
 
     // Status helpers

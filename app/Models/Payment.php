@@ -22,7 +22,41 @@ class Payment extends Model
 
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logAll();
+        // 'order_number' isn't a real column — it's the virtual accessor below.
+        // Adding it alongside '*' snapshots the parent order_number straight into
+        // this log entry's own attribute_changes, since Payment's real columns only
+        // hold order_id (a raw FK) and the parent Order row may itself be gone by
+        // the time anyone reads this log (e.g. Delete Order removes both).
+        return LogOptions::defaults()->logOnly(['*', 'order_number']);
+    }
+
+    public function getOrderNumberAttribute(): ?string
+    {
+        return $this->order?->order_number;
+    }
+
+    public function getDescriptionForEvent(string $eventName): string
+    {
+        if ($eventName !== 'deleted') {
+            return $eventName;
+        }
+
+        $order       = $this->order;
+        $orderNumber = $order?->order_number;
+
+        $description = $orderNumber
+            ? "Payment #{$orderNumber}p{$this->sequence_number} on the Order #{$orderNumber}"
+            : "Payment #{$this->id}";
+
+        if ($catalogueName = $order?->catalogue?->name) {
+            $description .= " on the {$catalogueName} catalogue";
+        }
+
+        if ($customerName = $order?->customer?->name) {
+            $description .= " from {$customerName}";
+        }
+
+        return $description . ' has been deleted';
     }
 
     public function customer(): \Illuminate\Database\Eloquent\Relations\BelongsTo

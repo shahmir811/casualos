@@ -80,10 +80,14 @@ class AdvancePaymentController extends Controller
                 'logged_by'       => Auth::id(),
             ]);
 
+            // Negative — this is money in the customer's favour, same convention as
+            // payment_received/credit_applied. A positive amount here would make the
+            // ledger's SUM() (and the "Outstanding Balance" it drives) read as if the
+            // customer owes more, when an advance payment is the opposite.
             CustomerLedger::create([
                 'customer_id'             => $lockedCustomer->id,
                 'transaction_type'        => 'advance_received',
-                'amount'                  => $request->amount,
+                'amount'                  => -$request->amount,
                 'running_advance_balance' => $lockedCustomer->advance_credit_balance,
                 'reference_type'          => AdvancePayment::class,
                 'reference_id'            => $advancePayment->id,
@@ -184,11 +188,11 @@ class AdvancePaymentController extends Controller
                 'receipt_image'   => $finalReceipts->isNotEmpty() ? $finalReceipts->toArray() : null,
             ]);
 
-            // Step 3 — reapply the NEW contribution.
+            // Step 3 — reapply the NEW contribution. Negative amount — see store().
             CustomerLedger::create([
                 'customer_id'             => $lockedCustomer->id,
                 'transaction_type'        => 'advance_received',
-                'amount'                  => $request->amount,
+                'amount'                  => -$request->amount,
                 'running_advance_balance' => $lockedCustomer->advance_credit_balance,
                 'reference_type'          => AdvancePayment::class,
                 'reference_id'            => $advancePayment->id,

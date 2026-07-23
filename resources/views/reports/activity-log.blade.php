@@ -114,6 +114,7 @@
             $modelShort   = $log->subject_type ? class_basename($log->subject_type) : '—';
             $subjectType  = $log->subject_type ? ltrim($log->subject_type, '\\') : null;
             $props        = $log->properties->toArray();
+            $changes      = $log->attribute_changes?->toArray() ?? [];
             $isDetail     = $log->event === 'detail';
             $hasProps     = !empty($props) && ($isDetail || isset($props['attributes']) || isset($props['old']));
 
@@ -121,10 +122,12 @@
             $subjectLabel = match($subjectType) {
                 'App\Models\Order' => $log->subject
                     ? 'Order #' . $log->subject->order_number . ($log->subject->catalogue ? ' · ' . $log->subject->catalogue->name : '')
-                    : "Order #{$log->subject_id} (deleted)",
+                    : 'Order #' . ($changes['old']['order_number'] ?? $log->subject_id) . ' (deleted)',
                 'App\Models\Payment' => $log->subject
                     ? 'Payment #' . $log->subject_id . ($log->subject->order ? ' · Order #' . $log->subject->order->order_number : '')
-                    : "Payment #{$log->subject_id} (deleted)",
+                    : (isset($changes['old']['order_number'], $changes['old']['sequence_number'])
+                        ? 'Payment #' . $changes['old']['order_number'] . 'p' . $changes['old']['sequence_number'] . ' (deleted)'
+                        : "Payment #{$log->subject_id} (deleted)"),
                 'App\Models\Catalogue' => $log->subject
                     ? 'Catalogue · ' . $log->subject->name
                     : "Catalogue #{$log->subject_id} (deleted)",

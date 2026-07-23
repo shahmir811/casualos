@@ -26,8 +26,11 @@ class PaymentController extends Controller
      * from its linked ledger entry, not the full amount) — an advance payment
      * split into credit + payment portions (rule 5.19) only ever consumed the
      * credit portion, so only that much should ever be given back.
+     *
+     * Public so OrderDeleteController can reuse it when hard-deleting an order
+     * with payments recorded against it.
      */
-    private function reversePaymentContribution(Order $order, Payment $payment, Customer $customer): void
+    public function reversePaymentContribution(Order $order, Payment $payment, Customer $customer): void
     {
         $oldSurplus = max(0, $order->total_paid - $order->total_amount);
 

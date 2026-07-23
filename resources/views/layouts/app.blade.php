@@ -300,6 +300,16 @@
                 </svg>
                 Orders
             </a>
+
+            @if(in_array($r, ['admin','accountant']))
+            <a href="{{ route('free-pieces.index') }}"
+               class="nav-item {{ request()->routeIs('free-pieces.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 12a8 8 0 11-16 0 8 8 0 0116 0zM12 8v4l3 2"/>
+                </svg>
+                Free Pieces
+            </a>
+            @endif
             @endif
 
             {{-- Production --}}

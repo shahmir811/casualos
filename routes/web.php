@@ -38,6 +38,8 @@ use App\Http\Controllers\CronLogController;
 use App\Http\Controllers\OrderBankAssignmentController;
 use App\Http\Controllers\BankCollectionReportController;
 use App\Http\Controllers\OrderAdjustController;
+use App\Http\Controllers\OrderDeleteController;
+use App\Http\Controllers\FreePieceController;
 use App\Http\Controllers\DesignCountryPriceController;
 use App\Http\Controllers\PieceTagController;
 use App\Http\Controllers\DispatchOptimizerController;
@@ -183,6 +185,17 @@ Route::middleware(['auth', 'active'])->group(function () {
         // Adjust Order (admin + accountant — change size quantities before dispatch)
         Route::get('orders/{order}/adjust',  [OrderAdjustController::class, 'create'])->name('orders.adjust');
         Route::post('orders/{order}/adjust', [OrderAdjustController::class, 'store'])->name('orders.adjust.store');
+
+        // Delete Order — refund/credit only; freed pieces go to the Free Pieces pool
+        // (admin + accountant, any status except dispatched/partially_dispatched)
+        Route::get('orders/{order}/delete',  [OrderDeleteController::class, 'create'])->name('orders.delete.create');
+        Route::post('orders/{order}/delete', [OrderDeleteController::class, 'store'])->name('orders.delete.store');
+
+        // Free Pieces — pool of quantities freed by deleted orders, assignable later
+        // to an existing order or a brand-new order for a customer without one
+        Route::get('free-pieces',         [FreePieceController::class, 'index'])->name('free-pieces.index');
+        Route::get('free-pieces/assign',  [FreePieceController::class, 'assign'])->name('free-pieces.assign');
+        Route::post('free-pieces/assign', [FreePieceController::class, 'store'])->name('free-pieces.store');
     });
 
     // Piece Reassignment (admin only)
