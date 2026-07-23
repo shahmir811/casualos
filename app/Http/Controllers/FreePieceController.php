@@ -8,6 +8,7 @@ use App\Models\CustomerLedger;
 use App\Models\Design;
 use App\Models\FreePiece;
 use App\Models\Order;
+use App\Services\AdvanceCreditAutoApplyService;
 use App\Services\ProductionAssignmentAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -277,6 +278,27 @@ class FreePieceController extends Controller
                         'notes'                   => "Order #{$order->order_number} — created from free pieces ({$catalogue->name})",
                         'created_by'              => Auth::id(),
                     ]);
+
+                    // Same auto-apply PublicOrderController::submit() does for a brand-new
+                    // order — uses up any advance credit the customer already holds and
+                    // auto-confirms if the applied amount clears the configured threshold.
+                    $autoAppliedPayment = app(AdvanceCreditAutoApplyService::class)->apply($order, $customer);
+
+                    if ($autoAppliedPayment) {
+                        activity()
+                            ->performedOn($order)
+                            ->causedBy(Auth::user())
+                            ->event('detail')
+                            ->withProperties([
+                                'order'          => 'Order #' . $order->order_number,
+                                'customer'       => $customer->name,
+                                'amount'         => 'PKR ' . number_format((float) $autoAppliedPayment->amount, 0),
+                                'auto_confirmed' => $order->status === 'confirmed' ? 'Yes' : 'No',
+                            ])
+                            ->log('Payment #' . $order->order_number . 'p' . $autoAppliedPayment->sequence_number
+                                . ' of PKR ' . number_format((float) $autoAppliedPayment->amount, 0)
+                                . ' auto-applied from advance credit on Order #' . $order->order_number);
+                    }
 
                     app(ProductionAssignmentAlertService::class)
                         ->checkOrder($order, $designIds, 'free_pieces_assigned');
