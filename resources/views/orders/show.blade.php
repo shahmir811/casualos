@@ -84,22 +84,28 @@
             Download Invoice
         </a>
 
-        @if($order->status === 'received' && $order->total_paid == 0 && in_array(Auth::user()->role, ['admin', 'accountant']))
-        <form id="form-delete-order" method="POST" action="{{ route('orders.destroy', $order) }}">
-            @csrf
-            @method('DELETE')
-        </form>
-        <button type="button"
-                class="btn-secondary text-[#FF3B30] border-[#FF3B30] hover:bg-[#FFF0EF]"
-                @click="$store.confirm.show({
-                    title: 'Delete Order',
-                    message: 'This will permanently remove Order #{{ $order->order_number }} and all related records from the system. This cannot be undone.',
-                    formId: 'form-delete-order',
-                    confirmText: 'Delete Order',
-                    danger: true
-                })">
-            Delete Order
-        </button>
+        @if(in_array(Auth::user()->role, ['admin', 'accountant']) && !in_array($order->status, ['dispatched', 'partially_dispatched']))
+            @if($order->status === 'received' && $order->total_paid == 0 && $order->reductions->isEmpty() && $order->refunds->isEmpty())
+            <form id="form-delete-order" method="POST" action="{{ route('orders.destroy', $order) }}">
+                @csrf
+                @method('DELETE')
+            </form>
+            <button type="button"
+                    class="btn-secondary text-[#FF3B30] border-[#FF3B30] hover:bg-[#FFF0EF]"
+                    @click="$store.confirm.show({
+                        title: 'Delete Order',
+                        message: 'This will permanently remove Order #{{ $order->order_number }} and all related records from the system. This cannot be undone.',
+                        formId: 'form-delete-order',
+                        confirmText: 'Delete Order',
+                        danger: true
+                    })">
+                Delete Order
+            </button>
+            @else
+            <a href="{{ route('orders.delete.create', $order) }}" class="btn-secondary text-[#FF3B30] border-[#FF3B30] hover:bg-[#FFF0EF]">
+                Delete Order
+            </a>
+            @endif
         @endif
     </div>
 </div>

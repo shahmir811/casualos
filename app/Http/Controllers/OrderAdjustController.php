@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Services\ProductionAssignmentAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -119,6 +120,12 @@ class OrderAdjustController extends Controller
                 ])
                 ->log("Order #{$order->order_number} quantities adjusted by " . Auth::user()->name);
         });
+
+        app(ProductionAssignmentAlertService::class)->checkOrder(
+            $order,
+            $order->items->pluck('design_id')->all(),
+            'order_adjusted'
+        );
 
         return redirect()->route('orders.show', $order)
             ->with('success', 'Order quantities adjusted successfully.');

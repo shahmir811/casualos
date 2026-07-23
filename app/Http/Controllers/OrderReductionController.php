@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderReduction;
 use App\Models\Refund;
 use App\Services\OrderStatusNotificationService;
+use App\Services\ProductionAssignmentAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -139,6 +140,8 @@ class OrderReductionController extends Controller
                     $refund = Refund::create([
                         'order_id'           => $order->id,
                         'order_reduction_id' => $reduction->id,
+                        'order_number'       => $order->order_number,
+                        'catalogue_name'     => $order->catalogue->name,
                         'customer_id'        => $customer->id,
                         'amount'             => $surplus,
                         'refund_method'      => $request->refund_method,
@@ -220,6 +223,13 @@ class OrderReductionController extends Controller
             $order->loadMissing('customer');
             app(OrderStatusNotificationService::class)->notify($order, $order->status);
         }
+
+        $wasAutoCancelled = $order->status === 'cancelled' && $statusBeforeReduction !== 'cancelled';
+        app(ProductionAssignmentAlertService::class)->checkOrder(
+            $order,
+            collect($nonZeroItems)->pluck('design_id')->all(),
+            $wasAutoCancelled ? 'order_cancelled' : 'order_reduced'
+        );
 
         return redirect()->route('orders.show', $order)
             ->with('success', 'Order reduction logged successfully.');

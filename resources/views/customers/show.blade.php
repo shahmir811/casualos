@@ -384,6 +384,130 @@
 </div>
 @endif
 
+{{-- Refunds --}}
+@if(!$hideFinancials && $customer->refunds->count())
+<div class="card mb-5">
+    <div class="px-6 py-4 border-b border-[#F2F2F7]">
+        <h2 class="text-[#1D1D1F] text-sm font-semibold">Refunds ({{ $customer->refunds->count() }})</h2>
+    </div>
+    {{-- Mobile card list --}}
+    <div class="divide-y divide-[#F2F2F7] sm:hidden">
+        @foreach($customer->refunds as $refund)
+        @php
+            $docExt = $refund->refund_document ? strtolower(pathinfo($refund->refund_document, PATHINFO_EXTENSION)) : null;
+        @endphp
+        <div class="px-5 py-4 space-y-2">
+            <div class="flex items-start justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="badge bg-red-100 text-red-700">{{ $refund->refund_method === 'bank_transfer' ? 'Bank Transfer' : 'Cash' }}</span>
+                    @if($refund->refund_method === 'bank_transfer' && $refund->refund_reference)
+                    <span class="text-xs text-[#6E6E73]">· {{ $refund->refund_reference }}</span>
+                    @endif
+                </div>
+                <span class="text-[#FF3B30] font-mono font-semibold text-sm whitespace-nowrap">− PKR {{ number_format($refund->amount, 0) }}</span>
+            </div>
+            <div class="text-xs text-[#6E6E73]">
+                @if($refund->order_reduction_id && $refund->order)
+                    <a href="{{ route('orders.reductions.show', [$refund->order, $refund->order_reduction_id]) }}" class="text-[#0066CC] hover:underline">Order #{{ $refund->order_number ?? $refund->order->order_number }}</a>
+                @elseif($refund->order)
+                    <a href="{{ route('orders.show', $refund->order) }}" class="text-[#0066CC] hover:underline">Order #{{ $refund->order_number ?? $refund->order->order_number }}</a>
+                @else
+                    <span>Order #{{ $refund->order_number ?? '—' }} <span class="text-[#C7C7CC]">(deleted)</span></span>
+                @endif
+                @if($refund->catalogue_name)
+                    · {{ $refund->catalogue_name }}
+                @endif
+            </div>
+            <div class="flex items-center justify-between gap-3">
+                <span class="text-[#86868B] text-xs">{{ $refund->refund_date->format('d M Y') }}{{ $refund->refundedBy ? ' · By: ' . $refund->refundedBy->name : '' }}</span>
+                @if($refund->refund_document)
+                <a href="{{ Storage::url($refund->refund_document) }}" target="_blank"
+                   class="inline-flex w-8 h-8 rounded-lg border {{ in_array($docExt, ['jpg','jpeg','png']) ? 'border-[#E8E8ED]' : 'border-[#FFCDD0] bg-[#FFF0EF]' }} items-center justify-center overflow-hidden"
+                   title="View transfer proof">
+                    @if(in_array($docExt, ['jpg', 'jpeg', 'png']))
+                    <img src="{{ Storage::url($refund->refund_document) }}" class="w-full h-full object-cover">
+                    @else
+                    <svg class="w-4 h-4 text-[#FF3B30]" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                    </svg>
+                    @endif
+                </a>
+                @endif
+            </div>
+            @if($refund->notes)
+            <p class="text-[#6E6E73] text-xs">{{ $refund->notes }}</p>
+            @endif
+        </div>
+        @endforeach
+    </div>
+
+    {{-- Desktop table --}}
+    <div class="hidden sm:block overflow-x-auto">
+    <table class="w-full apple-table">
+        <thead>
+            <tr>
+                <th class="text-left">Date</th>
+                <th class="text-left">Method</th>
+                <th class="text-left">Source</th>
+                <th class="text-left">Notes</th>
+                <th class="text-left">Refunded By</th>
+                <th class="text-right">Amount</th>
+                <th class="text-right">Slip</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($customer->refunds as $refund)
+            @php
+                $docExt = $refund->refund_document ? strtolower(pathinfo($refund->refund_document, PATHINFO_EXTENSION)) : null;
+            @endphp
+            <tr>
+                <td class="text-[#6E6E73] text-xs whitespace-nowrap">{{ $refund->refund_date->format('d M Y') }}</td>
+                <td>
+                    <span class="badge bg-red-100 text-red-700">{{ $refund->refund_method === 'bank_transfer' ? 'Bank Transfer' : 'Cash' }}</span>
+                    @if($refund->refund_method === 'bank_transfer' && $refund->refund_reference)
+                    <span class="ml-1 text-xs text-[#6E6E73]">· {{ $refund->refund_reference }}</span>
+                    @endif
+                </td>
+                <td class="text-sm whitespace-nowrap">
+                    @if($refund->order_reduction_id && $refund->order)
+                        <a href="{{ route('orders.reductions.show', [$refund->order, $refund->order_reduction_id]) }}" class="text-[#0066CC] hover:underline">#{{ $refund->order_number ?? $refund->order->order_number }}</a>
+                    @elseif($refund->order)
+                        <a href="{{ route('orders.show', $refund->order) }}" class="text-[#0066CC] hover:underline">#{{ $refund->order_number ?? $refund->order->order_number }}</a>
+                    @else
+                        <span class="text-[#6E6E73]">#{{ $refund->order_number ?? '—' }} <span class="text-[#C7C7CC] text-xs">(deleted)</span></span>
+                    @endif
+                    @if($refund->catalogue_name)
+                    <span class="block text-[#86868B] text-xs">{{ $refund->catalogue_name }}</span>
+                    @endif
+                </td>
+                <td class="text-[#6E6E73] text-sm">{{ $refund->notes ?? '—' }}</td>
+                <td class="text-[#6E6E73] text-xs whitespace-nowrap">{{ $refund->refundedBy->name ?? '—' }}</td>
+                <td class="text-right text-[#FF3B30] font-mono font-medium whitespace-nowrap">− PKR {{ number_format($refund->amount, 0) }}</td>
+                <td class="text-right">
+                    @if($refund->refund_document)
+                    <a href="{{ Storage::url($refund->refund_document) }}" target="_blank"
+                       class="inline-flex w-9 h-9 rounded-lg border {{ in_array($docExt, ['jpg','jpeg','png']) ? 'border-[#E8E8ED] hover:border-[#0071E3]' : 'border-[#FFCDD0] hover:border-[#FF3B30] bg-[#FFF0EF]' }} transition-colors items-center justify-center overflow-hidden"
+                       title="View transfer proof">
+                        @if(in_array($docExt, ['jpg', 'jpeg', 'png']))
+                        <img src="{{ Storage::url($refund->refund_document) }}" class="w-full h-full object-cover">
+                        @else
+                        <svg class="w-4 h-4 text-[#FF3B30]" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                        </svg>
+                        @endif
+                    </a>
+                    @else
+                    <span class="text-[#C7C7CC] text-xs">—</span>
+                    @endif
+                </td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+    </div>
+</div>
+@endif
+
 {{-- Recent Orders --}}
 <div class="card">
     <div class="px-6 py-4 border-b border-[#F2F2F7] flex items-center justify-between">

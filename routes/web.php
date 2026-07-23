@@ -28,6 +28,7 @@ use App\Http\Controllers\StitchingUnitController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProductionAlertController;
 use App\Http\Controllers\ProductionTrackerController;
 use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\ActiveCatalogueController;
@@ -37,6 +38,8 @@ use App\Http\Controllers\CronLogController;
 use App\Http\Controllers\OrderBankAssignmentController;
 use App\Http\Controllers\BankCollectionReportController;
 use App\Http\Controllers\OrderAdjustController;
+use App\Http\Controllers\OrderDeleteController;
+use App\Http\Controllers\FreePieceController;
 use App\Http\Controllers\DesignCountryPriceController;
 use App\Http\Controllers\PieceTagController;
 use App\Http\Controllers\DispatchOptimizerController;
@@ -182,6 +185,17 @@ Route::middleware(['auth', 'active'])->group(function () {
         // Adjust Order (admin + accountant — change size quantities before dispatch)
         Route::get('orders/{order}/adjust',  [OrderAdjustController::class, 'create'])->name('orders.adjust');
         Route::post('orders/{order}/adjust', [OrderAdjustController::class, 'store'])->name('orders.adjust.store');
+
+        // Delete Order — refund/credit only; freed pieces go to the Free Pieces pool
+        // (admin + accountant, any status except dispatched/partially_dispatched)
+        Route::get('orders/{order}/delete',  [OrderDeleteController::class, 'create'])->name('orders.delete.create');
+        Route::post('orders/{order}/delete', [OrderDeleteController::class, 'store'])->name('orders.delete.store');
+
+        // Free Pieces — pool of quantities freed by deleted orders, assignable later
+        // to an existing order or a brand-new order for a customer without one
+        Route::get('free-pieces',         [FreePieceController::class, 'index'])->name('free-pieces.index');
+        Route::get('free-pieces/assign',  [FreePieceController::class, 'assign'])->name('free-pieces.assign');
+        Route::post('free-pieces/assign', [FreePieceController::class, 'store'])->name('free-pieces.store');
     });
 
     // Piece Reassignment (admin only)
@@ -269,6 +283,11 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Production Tracker (manager + admin)
     Route::get('production-tracker', [ProductionTrackerController::class, 'index'])->name('production.tracker');
+
+    // Production Alerts — resolving a stale-assignment alert is a write action (admin + production_manager only)
+    Route::middleware('role:admin|production_manager|creative_head')->group(function () {
+        Route::post('production-alerts/{alert}/resolve', [ProductionAlertController::class, 'resolve'])->name('production-alerts.resolve');
+    });
 
     /*
     |------------------------------------------------------------------
