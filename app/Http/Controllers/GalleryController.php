@@ -21,15 +21,24 @@ class GalleryController extends Controller
     }
 
     /**
-     * Streamed download (not a direct S3 link) so the browser can track byte-level
-     * download progress on a same-origin request — a cross-origin fetch() against the
-     * S3 URL directly would need bucket CORS just to read the response body for progress.
+     * Redirects straight to a short-lived presigned S3 URL instead of proxying
+     * the file through PHP — the browser downloads directly from S3, same as
+     * any other direct-link download, with no server-side timeout or
+     * metadata-lookup delay in the way.
      */
     public function download(string $token, CatalogueHdImage $hdImage)
     {
         $catalogue = Catalogue::where('hd_gallery_token', $token)->firstOrFail();
         abort_unless($hdImage->catalogue_id === $catalogue->id, 404);
 
-        return Storage::disk('s3')->download($hdImage->s3_path, $hdImage->original_filename);
+        $filename = str_replace('"', '', $hdImage->original_filename);
+
+        $url = Storage::disk('s3')->temporaryUrl(
+            $hdImage->s3_path,
+            now()->addMinutes(5),
+            ['ResponseContentDisposition' => 'attachment; filename="'.$filename.'"']
+        );
+
+        return redirect()->away($url);
     }
 }
