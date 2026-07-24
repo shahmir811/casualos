@@ -257,6 +257,15 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                                 </svg>
                             </a>
+
+                            <div x-data="{ copied: false }" class="text-center">
+                                <button type="button"
+                                    @click="navigator.clipboard.writeText('{{ route('gallery.show', $order->catalogue->hd_gallery_token) }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                    class="text-[#0071E3] text-xs font-medium">
+                                    <span x-show="!copied">HD Gallery Link</span>
+                                    <span x-show="copied" class="text-[#34C759]">Link copied</span>
+                                </button>
+                            </div>
                             @endif
 
                             {{-- Payment summary --}}
