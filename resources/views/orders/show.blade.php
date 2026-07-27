@@ -25,7 +25,7 @@
 
 <div x-data="{ reductionModal: false, activeReductionId: null }">
 
-<div class="flex items-start justify-between mb-7">
+<div class="mb-7">
     <div>
         <a href="{{ route('orders.index') }}" class="text-[#0066CC] text-sm hover:underline">← Orders</a>
         <div class="flex flex-wrap items-center gap-2.5 mt-3">
@@ -42,9 +42,9 @@
         </p>
     </div>
 
-    <div class="flex flex-wrap items-center gap-2.5">
+    <div class="flex flex-wrap items-center gap-2.5 mt-4">
         @if($order->status === 'received')
-        <form id="form-confirm-order" method="POST" action="{{ route('orders.confirm', $order) }}">@csrf</form>
+        <form id="form-confirm-order" method="POST" action="{{ route('orders.confirm', $order) }}" class="hidden">@csrf</form>
         <button type="button" class="btn-primary"
                 @click="$store.confirm.show({
                     title: 'Confirm Order',
@@ -80,13 +80,26 @@
         </a>
         @endif
 
+        @if(Auth::user()->role === 'admin' && $order->status !== 'cancelled')
+        <form id="form-recalculate-price" method="POST" action="{{ route('orders.recalculate-price', $order) }}" class="hidden">@csrf</form>
+        <button type="button" class="btn-secondary"
+                @click="$store.confirm.show({
+                    title: 'Recalculate Order Amount',
+                    message: 'This will re-price Order #{{ $order->order_number }} using the catalogue benchmark and design prices currently in effect, and update the total, outstanding balance, advance credit, and ledger if anything has changed.',
+                    formId: 'form-recalculate-price',
+                    confirmText: 'Recalculate'
+                })">
+            Recalculate Order Amount
+        </button>
+        @endif
+
         <a href="{{ route('orders.invoice', $order) }}" class="btn-secondary" target="_blank">
             Download Invoice
         </a>
 
         @if(in_array(Auth::user()->role, ['admin', 'accountant']) && !in_array($order->status, ['dispatched', 'partially_dispatched']))
             @if($order->status === 'received' && $order->total_paid == 0 && $order->reductions->isEmpty() && $order->refunds->isEmpty())
-            <form id="form-delete-order" method="POST" action="{{ route('orders.destroy', $order) }}">
+            <form id="form-delete-order" method="POST" action="{{ route('orders.destroy', $order) }}" class="hidden">
                 @csrf
                 @method('DELETE')
             </form>

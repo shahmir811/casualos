@@ -610,6 +610,15 @@
         </div>
         @endif
 
+        @if(session('warning'))
+        <div class="mx-4 sm:mx-6 mt-4 flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl" x-data x-init="setTimeout(() => $el.remove(), 6000)">
+            <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.518 11.59c.75 1.334-.213 2.987-1.742 2.987H3.48c-1.53 0-2.493-1.653-1.743-2.987L8.257 3.1zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-.25-6.25a.75.75 0 00-1.5 0v3.5a.75.75 0 001.5 0v-3.5z" clip-rule="evenodd"/>
+            </svg>
+            {{ session('warning') }}
+        </div>
+        @endif
+
         {{-- Page Content --}}
         <main class="flex-1 p-4 sm:p-6 overflow-x-hidden">
             @yield('content')
