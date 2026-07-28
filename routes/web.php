@@ -38,6 +38,7 @@ use App\Http\Controllers\CronLogController;
 use App\Http\Controllers\OrderBankAssignmentController;
 use App\Http\Controllers\BankCollectionReportController;
 use App\Http\Controllers\OrderAdjustController;
+use App\Http\Controllers\OrderPriceRecalculationController;
 use App\Http\Controllers\OrderDeleteController;
 use App\Http\Controllers\FreePieceController;
 use App\Http\Controllers\DesignCountryPriceController;
@@ -202,6 +203,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('orders/{order}/reassign-pieces',  [OrderPieceReassignmentController::class, 'create'])->name('orders.reassign.create');
         Route::post('orders/{order}/reassign-pieces', [OrderPieceReassignmentController::class, 'store'])->name('orders.reassign.store');
+
+        // Recalculate Order Amount — re-prices the order against the catalogue's
+        // current benchmark and design prices (admin only)
+        Route::post('orders/{order}/recalculate-price', [OrderPriceRecalculationController::class, 'store'])->name('orders.recalculate-price');
     });
 
     /*
