@@ -21,7 +21,7 @@
 
 @forelse($catalogues as $catalogue)
 <div class="card mb-3 hover:shadow-md transition-shadow">
-    <div class="flex items-center justify-between px-5 py-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4">
 
         {{-- Cover Photo + Info — fully clickable as View link --}}
         <a href="{{ route('catalogues.show', $catalogue) }}"
@@ -38,7 +38,7 @@
                 @endif
             </div>
 
-            <div>
+            <div class="min-w-0">
                 <div class="flex items-center gap-2.5 mb-1">
                     <h2 class="text-[#1D1D1F] text-sm font-semibold group-hover:text-[#0066CC] transition-colors">{{ $catalogue->name }}</h2>
                     <span class="badge {{ $catalogue->status === 'open' ? 'bg-green-100 text-green-700' : 'bg-[#F5F5F7] text-[#6E6E73]' }}">
@@ -48,13 +48,14 @@
                 <p class="text-[#6E6E73] text-xs">
                     {{ $catalogue->designs_count }} designs ·
                     {{ number_format($catalogue->qty_per_design) }} qty/design ·
-                    {{ $catalogue->orders_count }} orders
+                    {{ $catalogue->orders_count }} orders ·
+                    Discount Benchmark: {{ $catalogue->quantity_benchmark !== null ? number_format($catalogue->quantity_benchmark) . ' qty' : 'Not Set' }}
                 </p>
             </div>
         </a>
 
         {{-- Actions --}}
-        <div class="flex items-center gap-3">
+        <div class="flex items-center flex-wrap gap-3 pl-[72px] sm:pl-0">
             <a href="{{ route('catalogues.show', $catalogue) }}"
                class="text-[#0066CC] text-xs font-medium hover:underline">
                 View →
@@ -78,7 +79,7 @@
                 Edit
             </a>
             @if($catalogue->status === 'open')
-            <form id="form-close-cat-{{ $catalogue->id }}" method="POST" action="{{ route('catalogues.close', $catalogue) }}">@csrf</form>
+            <form id="form-close-cat-{{ $catalogue->id }}" method="POST" action="{{ route('catalogues.close', $catalogue) }}" class="hidden">@csrf</form>
             <button type="button"
                     class="text-[#FF9500] text-xs font-medium hover:text-[#FF6D00] transition-colors"
                     @click="$store.confirm.show({
