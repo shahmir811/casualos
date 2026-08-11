@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Order;
+use App\Notifications\Channels\ExpoPushChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -49,7 +50,7 @@ class OrderStatusChanged extends Notification implements ShouldQueue
 
     public function via(mixed $notifiable): array
     {
-        return [WebPushChannel::class];
+        return [WebPushChannel::class, ExpoPushChannel::class];
     }
 
     public function toWebPush(mixed $notifiable, mixed $notification): WebPushMessage
@@ -63,5 +64,23 @@ class OrderStatusChanged extends Notification implements ShouldQueue
             ->badge($iconUrl)
             ->body(sprintf($content['body'], $this->order->order_number))
             ->data(['url' => route('portal.show', $this->order->customer->portal_token) . '#order-' . $this->order->id]);
+    }
+
+    /**
+     * @return array{title: string, body: string, sound: string, data: array}
+     */
+    public function toExpoPush(mixed $notifiable): array
+    {
+        $content = self::CONTENT[$this->newStatus];
+
+        return [
+            'title' => $content['title'],
+            'body'  => sprintf($content['body'], $this->order->order_number),
+            'sound' => 'default',
+            'data'  => [
+                'order_id'     => $this->order->id,
+                'order_number' => $this->order->order_number,
+            ],
+        ];
     }
 }

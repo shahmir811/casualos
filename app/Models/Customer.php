@@ -99,4 +99,12 @@ class Customer extends Model implements AuthenticatableContract
     {
         return $this->hasMany(CustomerDevice::class);
     }
+
+    // Native mobile push (Expo) — separate from pushSubscriptions() (web
+    // push, from HasPushSubscriptions), since an Expo token is a single
+    // opaque string, structurally unlike a WebPush endpoint+keys subscription.
+    public function expoPushTokens(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ExpoPushToken::class);
+    }
 }

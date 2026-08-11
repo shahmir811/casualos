@@ -48,15 +48,17 @@ class TestPushNotification extends Command
         }
 
         $subscriptionCount = $customer->pushSubscriptions()->count();
+        $expoTokenCount    = $customer->expoPushTokens()->count();
 
-        if ($subscriptionCount === 0) {
-            $this->warn("{$customer->name} has no push subscriptions — they haven't tapped \"Enable Order Updates\" on any device yet, or the subscription was cleared. The command will still run but nothing will actually arrive.");
+        if ($subscriptionCount === 0 && $expoTokenCount === 0) {
+            $this->warn("{$customer->name} has no web push subscriptions and no registered Expo push tokens — they haven't tapped \"Enable Order Updates\" on the portal, or opened the RN app with notifications enabled. The command will still run but nothing will actually arrive.");
         }
 
         $notificationService->notify($order, $status);
 
         $this->info("Queued \"{$status}\" push notification for {$customer->name} ({$customer->email}) referencing Order #{$order->order_number}.");
-        $this->line("Active push subscriptions: {$subscriptionCount}");
+        $this->line("Active web push subscriptions: {$subscriptionCount}");
+        $this->line("Registered Expo push tokens: {$expoTokenCount}");
         $this->line('Note: QUEUE_CONNECTION=database, so this sends on the next queue:work tick (runs every minute via the scheduler) — not instantly.');
 
         return self::SUCCESS;

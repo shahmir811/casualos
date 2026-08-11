@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogueController;
 use App\Http\Controllers\Api\LedgerController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PushTokenController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/verify', [AuthController::class, 'verify'])->name('api.auth.verify');
@@ -20,4 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/catalogues', [CatalogueController::class, 'index'])->name('api.catalogues.index');
     Route::get('/catalogues/{catalogue}', [CatalogueController::class, 'show'])->name('api.catalogues.show');
     Route::post('/catalogues/{catalogue}/quote', [CatalogueController::class, 'quote'])->name('api.catalogues.quote');
+
+    Route::post('/push-tokens', [PushTokenController::class, 'store'])->name('api.push-tokens.store');
+    Route::delete('/push-tokens', [PushTokenController::class, 'destroy'])->name('api.push-tokens.destroy');
 });
