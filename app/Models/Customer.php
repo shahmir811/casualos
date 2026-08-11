@@ -2,15 +2,25 @@
 
 namespace App\Models;
 
+use Illuminate\Auth\Authenticatable;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 
-class Customer extends Model
+/**
+ * Customers authenticate via Sanctum bearer tokens (mobile app), never a
+ * password — the customer never sets or knows a password. A token is only
+ * issued after proving ownership of the permanent portal_token link *and*
+ * confirming the email on file, mirroring CustomerPortalController::verify()
+ * for the web PWA. See Api\AuthController.
+ */
+class Customer extends Model implements AuthenticatableContract
 {
-    use HasFactory, Notifiable, HasPushSubscriptions;
+    use Authenticatable, HasApiTokens, HasFactory, Notifiable, HasPushSubscriptions;
 
     public const COUNTRIES = [
         'Australia', 'Bangladesh', 'Canada', 'Kuwait', 'Oman', 'Pakistan',

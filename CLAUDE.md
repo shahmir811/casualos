@@ -78,6 +78,8 @@ The `Catalogue::availablePieces()` method returns `totalPieces() - sum(all order
 6. On submit, the system looks up the email in the Customer Master List
 7. Each saved order gets a sequential `order_number` starting from **1005335**, auto-incremented using the `order_number_sequence` table. This is displayed everywhere instead of the database `id`. Existing orders placed before this change retain their original random numbers (100000–999999 range); new sequential numbers (1005335+) can never collide with them.
 
+**Implementation note (2026-08-10):** the pricing math and write logic behind steps 3–6 no longer live inline in `PublicOrderController::submit()` — they were extracted into `App\Services\OrderPlacementService` (`quote()` for pricing, `place()` for the actual writes), with business failures raised as `App\Exceptions\OrderPlacementException`. This was done ahead of the mobile app's `POST /api/orders` endpoint (see this project's mobile-app branch), so both the web form and the app compute identical totals from one place instead of two copies drifting apart. `PublicOrderController::submit()` is now a thin adapter: validate → call the service → map exceptions to redirects. See "Order placement service" under Section 10 for the convention this establishes, and rule 5.32 for the strict `>` benchmark comparison now pinned as `OrderPlacementService::BENCHMARK_IS_EXCLUSIVE`. Every other place in this file that references `PublicOrderController::submit()` doing pricing/ledger/order-creation work is still accurate in effect — it does that work, just by delegating to the service — but the actual code to read or change is in `OrderPlacementService`, not the controller.
+
 ### Bank Accounts
 
 Bank accounts are managed in the `bank_accounts` table (admin-only). Each has:
@@ -616,7 +618,7 @@ Both only surfaced when forcing `page-break-after: always` between many small pa
 
 **Purpose:** eliminate the manual step where an accountant/admin had to open a brand-new order and record an "Advance" payment by hand whenever the customer already held `advance_credit_balance`. Now this happens automatically the moment the order is submitted through the public order form.
 
-**Where it runs:** `PublicOrderController::submit()`, inside the same `DB::transaction()` that creates the `Order`, its `OrderItem`s, and the `order_charged` ledger entry — immediately after the ledger entry, via `AdvanceCreditAutoApplyService::apply($order, $customer)`.
+**Where it runs:** inside the same `DB::transaction()` that creates the `Order`, its `OrderItem`s, and the `order_charged` ledger entry — immediately after the ledger entry, via `AdvanceCreditAutoApplyService::apply($order, $customer)`. As of 2026-08-10 this transaction lives in `OrderPlacementService::place()`, called by `PublicOrderController::submit()` — see the "Order placement service" convention in Section 10.
 
 **Amount applied:** `min($customer->advance_credit_balance, $order->total_amount)`. Nothing happens if the balance is 0. Because the order is brand new (`total_paid` starts at 0), the applied amount can never exceed `total_amount` — there is never a surplus and never a "payment portion" to split off, unlike the manual advance-payment flow in rule 5.19. This is deliberately simpler than `PaymentController::store()`'s `advance` branch and does not reuse it — that method is built around an HTTP request/response/receipt-upload cycle that doesn't apply to a system-triggered call.
 
@@ -1148,6 +1150,14 @@ Without `->with('designs')`, `Js::from($catalogues)` produces `undefined` for
 `.env.example`, expose it via `config/casualite.php` (`env('VAR_NAME', $default)`), and
 read it elsewhere via `config('casualite.key')`. Never call `env()` outside a config file —
 this project follows that convention strictly everywhere else.
+
+### Order placement service — the pattern for any logic two callers must share
+
+**`App\Services\OrderPlacementService`** (introduced 2026-08-10, ahead of the mobile app's `POST /api/orders`) is the first instance of this pattern in the codebase and is the model to copy when a second caller (mobile API, a future integration, etc.) needs to reuse business logic currently living in a web controller:
+
+- **Pure calculation is separated from writes.** `quote($catalogue, $sizes)` prices an order and returns a plain array — safe to call on every keystroke for a live total, no DB writes, no side effects. `place(...)` calls `quote()` internally and then writes (`Order`, `OrderItem`s, ledger entry, advance-credit auto-apply) inside `DB::transaction()`. Any future mobile endpoint should call `quote()` to drive its own live total and `place()` to actually submit — never reimplement the pricing math client-side or in a second PHP copy.
+- **Business failures are a typed exception, not a controller-shaped response.** `App\Exceptions\OrderPlacementException` carries a `reason()` (`NO_QUANTITY`, `CUSTOMER_NOT_FOUND`, `DUPLICATE_ORDER`, `CATALOGUE_CLOSED` — treat these as a stable contract, since a future mobile client will switch on them) and a human-readable message. The service never knows how a caller wants to respond — `PublicOrderController::submit()` catches it and maps each reason to a Blade redirect/flash; a JSON API controller would catch the same exception and map reasons to HTTP status codes instead. Follow this split (service throws typed reasons, controller decides response shape) for any other logic that ends up needing a second caller.
+- **Guard ordering is a business decision baked into the service's method order, not incidental.** `place()` prices first (so an empty order is rejected before looking up the customer), then resolves the customer, then checks for a duplicate order. Do not reorder these calls without confirming the guard-ordering is still intentional.
 
 ### Blade views
 
