@@ -244,10 +244,17 @@ class OrderPlacementService
         return $customer;
     }
 
-    /** @throws OrderPlacementException */
+    /**
+     * Both callers share this guard specifically so the two surfaces can't
+     * drift: fixing Catalogue::isSoldOut() to also check availablePieces()
+     * (not just status) automatically closes the same gap here and on the
+     * public order page — see "Catalogue Sold-Out" in CLAUDE.md Section 2.
+     *
+     * @throws OrderPlacementException
+     */
     public function assertCatalogueOpen(Catalogue $catalogue): void
     {
-        if ($catalogue->status !== 'open') {
+        if ($catalogue->isSoldOut()) {
             throw OrderPlacementException::catalogueClosed();
         }
     }

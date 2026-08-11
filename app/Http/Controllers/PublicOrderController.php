@@ -18,8 +18,7 @@ class PublicOrderController extends Controller
             ->with(['designs' => fn($q) => $q->orderBy('sort_order')])
             ->firstOrFail();
 
-        // Sold-out: only when admin explicitly closes the catalogue
-        $soldOut = $catalogue->status !== 'open';
+        $soldOut = $catalogue->isSoldOut();
 
         return view('public.order', compact('catalogue', 'soldOut'));
     }
@@ -36,8 +35,9 @@ class PublicOrderController extends Controller
             ->with(['designs'])
             ->firstOrFail();
 
-        // Guard: reject submission if catalogue has been closed by admin
-        if ($catalogue->status !== 'open') {
+        // Early exit before validation/lookups — place() below re-checks this
+        // via assertCatalogueOpen() regardless, so this is just an optimization.
+        if ($catalogue->isSoldOut()) {
             return redirect()->route('order.public', $token);
         }
 
