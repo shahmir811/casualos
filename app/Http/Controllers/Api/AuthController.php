@@ -55,6 +55,18 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Revokes only the token used for this request, not every session the
+     * customer has — signing out on one device shouldn't sign them out
+     * everywhere.
+     */
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json(['message' => 'Signed out.']);
+    }
+
     protected function customerPayload(Customer $customer): array
     {
         return [

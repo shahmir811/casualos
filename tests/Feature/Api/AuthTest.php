@@ -162,4 +162,46 @@ class AuthTest extends TestCase
             ->assertOk()
             ->assertJsonPath('customer.id', $customer->id);
     }
+
+    public function test_logout_requires_a_bearer_token(): void
+    {
+        $this->postJson('/api/auth/logout')->assertStatus(401);
+    }
+
+    public function test_logout_revokes_only_the_token_used_for_the_request(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $tokenA = $this->postJson('/api/auth/verify', [
+            'portal_token' => $customer->portal_token,
+            'email'        => $customer->email,
+        ])->json('token');
+
+        $tokenB = $this->postJson('/api/auth/verify', [
+            'portal_token' => $customer->portal_token,
+            'email'        => $customer->email,
+        ])->json('token');
+
+        $this->withHeader('Authorization', "Bearer {$tokenA}")
+            ->postJson('/api/auth/logout')
+            ->assertOk();
+
+        $this->assertDatabaseCount('personal_access_tokens', 1);
+
+        // The sanctum guard memoizes the resolved user on itself once per
+        // request cycle, and this test's app container isn't rebooted
+        // between calls, so without this the previous request's resolved
+        // user would leak into the next assertion regardless of the delete.
+        $this->app['auth']->forgetGuards();
+
+        $this->withHeader('Authorization', "Bearer {$tokenA}")
+            ->getJson('/api/me')
+            ->assertStatus(401);
+
+        $this->app['auth']->forgetGuards();
+
+        $this->withHeader('Authorization', "Bearer {$tokenB}")
+            ->getJson('/api/me')
+            ->assertOk();
+    }
 }
