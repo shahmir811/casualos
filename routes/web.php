@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CatalogueController;
@@ -348,6 +349,16 @@ Route::middleware(['auth', 'active'])->group(function () {
         // Country pricing for tags (per design, per destination country)
         Route::get('country-pricing', [DesignCountryPriceController::class, 'index'])->name('country-pricing.index');
         Route::post('country-pricing/{catalogue}', [DesignCountryPriceController::class, 'store'])->name('country-pricing.store');
+    });
+
+    /*
+    |------------------------------------------------------------------
+    | ANNOUNCEMENTS / TIMELINE (admin only)
+    |------------------------------------------------------------------
+    */
+    Route::middleware('role:admin')->group(function () {
+        Route::get('announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+        Route::post('announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
     });
 
     /*

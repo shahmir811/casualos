@@ -2,17 +2,15 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Customer;
-use App\Notifications\AnnouncementNotification;
+use App\Services\AnnouncementService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * Minimal way to send a real announcement end to end while the CasualOS
- * admin compose UI (form, image upload, history view) is still separate
- * follow-up work. Loops every customer and calls Customer::notify(), which
- * both writes the in-app history row and pushes via Expo.
+ * CLI entry point for sending an announcement, alongside the CasualOS admin
+ * compose screen (AnnouncementController) — both call AnnouncementService,
+ * which creates the broadcast record and notifies every customer.
  */
 class SendAnnouncement extends Command
 {
@@ -21,9 +19,9 @@ class SendAnnouncement extends Command
                             {body : Announcement body text}
                             {--image= : Local file path to an image to attach; uploaded to S3 under announcements/}';
 
-    protected $description = 'Send an announcement to every customer (in-app history + Expo push) for manual end-to-end testing.';
+    protected $description = 'Send an announcement to every customer (in-app history + Expo push) from the command line.';
 
-    public function handle(): int
+    public function handle(AnnouncementService $announcements): int
     {
         $title = $this->argument('title');
         $body  = $this->argument('body');
@@ -41,19 +39,15 @@ class SendAnnouncement extends Command
             Storage::disk('s3')->put($imagePath, file_get_contents($localPath));
         }
 
-        $customers = Customer::all();
+        $announcement = $announcements->send($title, $body, $imagePath, null);
 
-        if ($customers->isEmpty()) {
-            $this->warn('No customers found — nothing sent.');
+        if ($announcement->recipient_count === 0) {
+            $this->warn('No customers found — announcement recorded, but nothing was sent.');
 
             return self::SUCCESS;
         }
 
-        foreach ($customers as $customer) {
-            $customer->notify(new AnnouncementNotification($title, $body, $imagePath));
-        }
-
-        $this->info("Queued announcement \"{$title}\" for {$customers->count()} customer(s).");
+        $this->info("Queued announcement \"{$title}\" for {$announcement->recipient_count} customer(s).");
         $this->line('Note: QUEUE_CONNECTION=database, so delivery happens on the next queue:work tick (runs every minute via the scheduler) — not instantly.');
 
         return self::SUCCESS;
