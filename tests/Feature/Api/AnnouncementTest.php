@@ -187,12 +187,15 @@ class AnnouncementTest extends TestCase
             'notifiable_type' => Customer::class,
         ]);
 
-        Http::assertSent(function ($request) {
+        $notificationId = $customer->notifications()->first()->id;
+
+        Http::assertSent(function ($request) use ($notificationId) {
             $body = $request->data();
 
             return $request->url() === 'https://exp.host/--/api/v2/push/send'
                 && $body[0]['to'] === 'tokenA'
-                && $body[0]['title'] === 'Sale';
+                && $body[0]['title'] === 'Sale'
+                && $body[0]['data']['announcement_id'] === $notificationId;
         });
     }
 }

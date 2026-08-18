@@ -49,7 +49,7 @@ class AnnouncementNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * @return array{title: string, body: string, sound: string, data: array}
+     * @return array{title: string, body: string, sound: string, data: array{type: string, announcement_id: ?string}}
      */
     public function toExpoPush(mixed $notifiable): array
     {
