@@ -60,7 +60,7 @@ class AnnouncementServiceTest extends TestCase
             $table->id();
             $table->string('title');
             $table->text('body');
-            $table->string('image_path')->nullable();
+            $table->text('image_paths')->nullable();
             $table->foreignId('sent_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('sent_at');
             $table->unsignedInteger('recipient_count')->default(0);
@@ -94,7 +94,7 @@ class AnnouncementServiceTest extends TestCase
 
         $admin = User::forceCreate(['id' => 1]);
 
-        $announcement = app(AnnouncementService::class)->send('Sale', 'Everything 20% off.', null, $admin);
+        $announcement = app(AnnouncementService::class)->send('Sale', 'Everything 20% off.', [], $admin);
 
         $this->assertInstanceOf(Announcement::class, $announcement);
         $this->assertSame(3, $announcement->recipient_count);
@@ -107,7 +107,7 @@ class AnnouncementServiceTest extends TestCase
         $customerA = $this->makeCustomer();
         $customerB = $this->makeCustomer();
 
-        app(AnnouncementService::class)->send('New Catalogue', 'Check it out.', null, null);
+        app(AnnouncementService::class)->send('New Catalogue', 'Check it out.', [], null);
 
         $this->assertDatabaseCount('notifications', 2);
         $this->assertDatabaseHas('notifications', [
@@ -124,7 +124,7 @@ class AnnouncementServiceTest extends TestCase
 
     public function test_send_with_no_customers_still_creates_a_record_with_zero_recipients(): void
     {
-        $announcement = app(AnnouncementService::class)->send('Nobody Yet', 'Body', null, null);
+        $announcement = app(AnnouncementService::class)->send('Nobody Yet', 'Body', [], null);
 
         $this->assertSame(0, $announcement->recipient_count);
         $this->assertDatabaseCount('notifications', 0);

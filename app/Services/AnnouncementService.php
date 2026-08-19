@@ -15,19 +15,19 @@ use App\Notifications\AnnouncementNotification;
  */
 class AnnouncementService
 {
-    public function send(string $title, string $body, ?string $imagePath, ?User $sentBy): Announcement
+    public function send(string $title, string $body, array $imagePaths, ?User $sentBy): Announcement
     {
         $announcement = Announcement::create([
             'title'           => $title,
             'body'            => $body,
-            'image_path'      => $imagePath,
+            'image_paths'     => $imagePaths,
             'sent_by'         => $sentBy?->id,
             'sent_at'         => now(),
             'recipient_count' => Customer::count(),
         ]);
 
         foreach (Customer::all() as $customer) {
-            $customer->notify(new AnnouncementNotification($title, $body, $imagePath));
+            $customer->notify(new AnnouncementNotification($title, $body, $imagePaths));
         }
 
         return $announcement;

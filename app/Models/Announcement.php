@@ -12,10 +12,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Announcement extends Model
 {
-    protected $fillable = ['title', 'body', 'image_path', 'sent_by', 'sent_at', 'recipient_count'];
+    protected $fillable = ['title', 'body', 'image_paths', 'sent_by', 'sent_at', 'recipient_count'];
 
     protected $casts = [
-        'sent_at' => 'datetime',
+        'sent_at'      => 'datetime',
+        'image_paths'  => 'array',
     ];
 
     public function sentBy(): BelongsTo

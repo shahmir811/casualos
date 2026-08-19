@@ -123,21 +123,27 @@ class AnnouncementTest extends TestCase
         $this->assertNull($announcements[0]['read_at']);
     }
 
-    public function test_index_includes_image_url_when_an_image_path_was_set(): void
+    public function test_index_includes_image_urls_when_image_paths_were_set(): void
     {
         Storage::fake('s3');
 
         $customer = $this->makeCustomer();
-        $customer->notify(new AnnouncementNotification('With Image', 'Body text', 'announcements/abc.jpg'));
+        $customer->notify(new AnnouncementNotification('With Image', 'Body text', ['announcements/abc.jpg', 'announcements/def.jpg']));
 
         $token = $this->bearerToken($customer);
 
         $response = $this->withHeader('Authorization', "Bearer {$token}")
             ->getJson('/api/announcements');
 
+        // 'image_url' stays the first image, for older app builds that only read one.
         $imageUrl = $response->json('announcements.0.image_url');
         $this->assertNotNull($imageUrl);
         $this->assertStringContainsString('announcements/abc.jpg', $imageUrl);
+
+        $imageUrls = $response->json('announcements.0.image_urls');
+        $this->assertCount(2, $imageUrls);
+        $this->assertStringContainsString('announcements/abc.jpg', $imageUrls[0]);
+        $this->assertStringContainsString('announcements/def.jpg', $imageUrls[1]);
     }
 
     public function test_mark_read_sets_read_at_and_is_scoped_to_the_authenticated_customer(): void

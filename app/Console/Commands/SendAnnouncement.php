@@ -17,7 +17,7 @@ class SendAnnouncement extends Command
     protected $signature = 'announcements:send
                             {title : Announcement title}
                             {body : Announcement body text}
-                            {--image= : Local file path to an image to attach; uploaded to S3 under announcements/}';
+                            {--image=* : Local file path to an image to attach; repeat --image for multiple; each is uploaded to S3 under announcements/}';
 
     protected $description = 'Send an announcement to every customer (in-app history + Expo push) from the command line.';
 
@@ -25,9 +25,9 @@ class SendAnnouncement extends Command
     {
         $title = $this->argument('title');
         $body  = $this->argument('body');
-        $imagePath = null;
+        $imagePaths = [];
 
-        if ($localPath = $this->option('image')) {
+        foreach ($this->option('image') as $localPath) {
             if (! file_exists($localPath)) {
                 $this->error("Image file not found: {$localPath}");
 
@@ -35,11 +35,12 @@ class SendAnnouncement extends Command
             }
 
             $extension = pathinfo($localPath, PATHINFO_EXTENSION) ?: 'jpg';
-            $imagePath = 'announcements/' . Str::uuid() . '.' . $extension;
-            Storage::disk('s3')->put($imagePath, file_get_contents($localPath));
+            $path = 'announcements/' . Str::uuid() . '.' . $extension;
+            Storage::disk('s3')->put($path, file_get_contents($localPath));
+            $imagePaths[] = $path;
         }
 
-        $announcement = $announcements->send($title, $body, $imagePath, null);
+        $announcement = $announcements->send($title, $body, $imagePaths, null);
 
         if ($announcement->recipient_count === 0) {
             $this->warn('No customers found — announcement recorded, but nothing was sent.');

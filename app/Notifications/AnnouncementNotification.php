@@ -28,7 +28,7 @@ class AnnouncementNotification extends Notification implements ShouldQueue
     public function __construct(
         private readonly string $title,
         private readonly string $body,
-        private readonly ?string $imagePath = null,
+        private readonly array $imagePaths = [],
     ) {}
 
     public function via(mixed $notifiable): array
@@ -37,14 +37,14 @@ class AnnouncementNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * @return array{title: string, body: string, image_path: ?string}
+     * @return array{title: string, body: string, image_paths: array<int, string>}
      */
     public function toDatabase(mixed $notifiable): array
     {
         return [
-            'title'      => $this->title,
-            'body'       => $this->body,
-            'image_path' => $this->imagePath,
+            'title'       => $this->title,
+            'body'        => $this->body,
+            'image_paths' => $this->imagePaths,
         ];
     }
 
