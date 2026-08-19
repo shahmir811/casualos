@@ -298,19 +298,9 @@ When a customer submits the order form:
 
 ### 5.2 Dispatch Rules
 
-The `DispatchController::store()` **must** check `outstanding_balance` before dispatching.
+**Correction (2026-08-18):** this section previously stated that `DispatchController::store()` must block dispatch when `outstanding_balance > 0`. That was wrong — confirmed directly with the Casualite owner that dispatch is intentionally allowed to proceed even when a customer has an outstanding balance (e.g. the customer is trusted to settle later, or partial payment is acceptable to release goods). `DispatchController::store()` has no `outstanding_balance` guard, and it should not have one. This was previously tracked as an open bug (Known Bugs #2) — it is not a bug, and no guard should be added.
 
-```php
-if ($order->outstanding_balance > 0) {
-    return back()->with('error',
-        'Order cannot be dispatched — outstanding balance: PKR ' .
-        number_format($order->outstanding_balance) . '.');
-}
-```
-
-If the balance is not cleared, dispatch is blocked. The production manager sees this message clearly.
-
-**This check only gates *new* dispatch actions — it does not retroactively hold once dispatch has happened.** Editing a payment on an already-`dispatched` order (see rule 5.21) can lower `total_paid` enough to reintroduce a positive `outstanding_balance`. This is allowed — the edit form shows a non-blocking warning, but does not reverse the dispatch, revert the order status, or restore packed inventory. Do not assume `dispatched` implies `outstanding_balance == 0` always holds.
+**Editing a payment on an already-`dispatched` order (see rule 5.21) can lower `total_paid` enough to introduce or increase a positive `outstanding_balance`.** This is expected and allowed — the edit form shows a non-blocking warning, but does not reverse the dispatch, revert the order status, or restore packed inventory. Do not assume `dispatched` implies `outstanding_balance == 0`, and do not add a balance check anywhere in the dispatch flow without re-confirming with the owner first.
 
 ### 5.3 Cargo Document Is a File Upload (Not Text)
 
@@ -860,7 +850,7 @@ PressSend → PressReturn (= Packed Inventory)
     ↓
 [Outsourced designs arrive separately as OutsourcedBatch → also enters Packed Inventory]
     ↓
-Dispatch (batch-wise, full payment required, deducts packed inventory)
+Dispatch (batch-wise, no payment requirement — outstanding balance does not block dispatch, see rule 5.2 — deducts packed inventory)
     → Order status = dispatched only when fully dispatched
 ```
 
@@ -1134,7 +1124,6 @@ returns that cause discrepancies — it flags them for review.
 ### Known Bugs / Incomplete Features (must fix)
 
 1. **`order.show` route name used in controller** — ✅ Fixed (2026-06-23): `PublicOrderController::submit()` now redirects to `order.public` instead of the non-existent `order.show`
-2. **Dispatch payment check missing** — `DispatchController::store()` has no outstanding balance guard. Confirmed still open (2026-08-18 audit) — no `outstanding_balance` check exists anywhere in `store()`; rule 5.2's required guard is genuinely absent.
 4. **Cargo document is text, not file** — ✅ Fixed: `DispatchController::store()` validates `'cargo_document' => 'nullable|file|mimes:pdf,jpeg,jpg,png|max:10240'` and stores it via `$request->file('cargo_document')->store('cargo-documents', 's3')`, matching rule 5.3. Bullet had never been marked fixed even though rule 5.3 already documented it as implemented — corrected 2026-08-18.
 5. **Packed inventory not deducted after dispatch** — ✅ Fixed: `DispatchController::store()` has a "Deduct dispatched quantities from packed inventory (FIFO)" block that decrements `PressReturnItem`/`OutsourcedBatchItem` rows. Corrected 2026-08-18 — same as bullet 4, the fix predated this note.
 6. **Order status auto-transition to stitching** — ✅ Fixed: `FabricBatchController::store()` auto-transitions confirmed orders on fabric batch creation
