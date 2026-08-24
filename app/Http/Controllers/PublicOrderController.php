@@ -2,36 +2,42 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\OrderPlacementException;
 use App\Models\Catalogue;
-use App\Models\Customer;
 use App\Models\Order;
-use App\Models\CustomerLedger;
-use App\Services\AdvanceCreditAutoApplyService;
+use App\Services\OrderPlacementService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class PublicOrderController extends Controller
 {
+    public function __construct(protected OrderPlacementService $orders) {}
+
     public function show(string $token)
     {
         $catalogue = Catalogue::where('order_token', $token)
             ->with(['designs' => fn($q) => $q->orderBy('sort_order')])
             ->firstOrFail();
 
-        // Sold-out: only when admin explicitly closes the catalogue
-        $soldOut = $catalogue->status !== 'open';
+        $soldOut = $catalogue->isSoldOut();
 
         return view('public.order', compact('catalogue', 'soldOut'));
     }
 
+    /**
+     * All order maths and writes live in OrderPlacementService so that the
+     * mobile app's POST /api/orders produces identical totals. This method is
+     * only responsible for turning the form request into service arguments,
+     * and turning service failures into redirects.
+     */
     public function submit(Request $request, string $token)
     {
         $catalogue = Catalogue::where('order_token', $token)
             ->with(['designs'])
             ->firstOrFail();
 
-        // Guard: reject submission if catalogue has been closed by admin
-        if ($catalogue->status !== 'open') {
+        // Early exit before validation/lookups — place() below re-checks this
+        // via assertCatalogueOpen() regardless, so this is just an optimization.
+        if ($catalogue->isSoldOut()) {
             return redirect()->route('order.public', $token);
         }
 
@@ -48,142 +54,43 @@ class PublicOrderController extends Controller
             'qty_xl'          => 'nullable|integer|min:0',
         ]);
 
-        // Collective sizes — same quantity applied to every design
-        $qtyXS = max(0, (int) $request->input('qty_xs', 0));
-        $qtyS  = max(0, (int) $request->input('qty_s',  0));
-        $qtyM  = max(0, (int) $request->input('qty_m',  0));
-        $qtyL  = max(0, (int) $request->input('qty_l',  0));
-        $qtyXL = max(0, (int) $request->input('qty_xl', 0));
+        $sizes = $this->orders->normaliseSizes($request->all());
 
-        $piecesPerDesign = $qtyXS + $qtyS + $qtyM + $qtyL + $qtyXL;
+        try {
+            // Priced first so an empty order is rejected before we go looking
+            // for the customer — preserves the original guard ordering.
+            $this->orders->quote($catalogue, $sizes);
 
-        if ($piecesPerDesign === 0) {
-            return back()
-                ->withErrors(['qty_s' => 'Please enter at least one piece quantity to place an order.'])
-                ->withInput();
-        }
+            $customer = $this->orders->resolveCustomerByEmail($request->input('submitted_email'));
 
-        // Determine pricing tier: discount applies when total qty exceeds benchmark
-        $benchmark      = $catalogue->quantity_benchmark;
-        $useDiscount    = $benchmark !== null && $piecesPerDesign > $benchmark;
+            $this->orders->assertNotAlreadyOrdered($catalogue, $customer);
 
-        // Calculate total amount across all designs using the effective price
-        $totalAmount = (int) round($catalogue->designs->sum(function ($design) use ($piecesPerDesign, $useDiscount) {
-            $price = ($useDiscount && $design->discount_price !== null)
-                ? round((float) $design->discount_price)
-                : round((float) $design->selling_price);
-            return $piecesPerDesign * $price;
-        }));
-
-        // Verify the customer exists in the system — new customers must be registered by admin first
-        $customer = Customer::where('email', $request->input('submitted_email'))->first();
-
-        if (! $customer) {
-            return back()
-                ->withInput()
-                ->with('customer_not_found', true);
-        }
-
-        // Prevent duplicate orders — one order per customer per catalogue
-        $alreadyOrdered = Order::where('customer_id', $customer->id)
-            ->where('catalogue_id', $catalogue->id)
-            ->exists();
-
-        if ($alreadyOrdered) {
-            return back()
-                ->withInput()
-                ->with('duplicate_order', true);
-        }
-
-        $orderId = null;
-        $autoAppliedPayment = null;
-
-        DB::transaction(function () use ($request, $catalogue, $customer, $qtyXS, $qtyS, $qtyM, $qtyL, $qtyXL, $piecesPerDesign, $totalAmount, $useDiscount, &$orderId, &$autoAppliedPayment) {
-
-            // Create the order
-            $order = Order::create([
-                'catalogue_id'        => $catalogue->id,
-                'customer_id'         => $customer->id,
-                'status'              => 'received',
-                'total_amount'        => $totalAmount,
-                'total_paid'          => 0,
-                'outstanding_balance' => $totalAmount,
-                'submitted_name'      => $request->input('customer_name'),
-                'submitted_city'      => $request->input('city'),
-                'submitted_email'     => $request->input('submitted_email'),
-                'submitted_at'        => now(),
-                'notes'               => $request->input('notes'),
+            $order = $this->orders->place($catalogue, $customer, $sizes, [
+                'name'  => $request->input('customer_name'),
+                'city'  => $request->input('city'),
+                'email' => $request->input('submitted_email'),
+                'notes' => $request->input('notes'),
             ]);
+        } catch (OrderPlacementException $e) {
+            return match ($e->reason()) {
+                OrderPlacementException::NO_QUANTITY => back()
+                    ->withErrors(['qty_s' => $e->getMessage()])
+                    ->withInput(),
 
-            // Create one OrderItem per design — same sizes for every design
-            $designItems = [];
-            foreach ($catalogue->designs as $design) {
-                $unitPrice  = (int) round(($useDiscount && $design->discount_price !== null)
-                    ? (float) $design->discount_price
-                    : (float) $design->selling_price);
-                $lineAmount = $piecesPerDesign * $unitPrice;
+                OrderPlacementException::CUSTOMER_NOT_FOUND => back()
+                    ->withInput()
+                    ->with('customer_not_found', true),
 
-                $order->items()->create([
-                    'design_id'    => $design->id,
-                    'qty_xs'       => $qtyXS,
-                    'qty_s'        => $qtyS,
-                    'qty_m'        => $qtyM,
-                    'qty_l'        => $qtyL,
-                    'qty_xl'       => $qtyXL,
-                    'unit_price'   => $unitPrice,
-                    'total_amount' => $lineAmount,
-                ]);
+                OrderPlacementException::DUPLICATE_ORDER => back()
+                    ->withInput()
+                    ->with('duplicate_order', true),
 
-                $designItems[] = [
-                    'design'     => $design->name,
-                    'unit_price' => 'PKR ' . number_format($unitPrice, 0),
-                    'xs'         => $qtyXS,
-                    's'          => $qtyS,
-                    'm'          => $qtyM,
-                    'l'          => $qtyL,
-                    'xl'         => $qtyXL,
-                    'line_total' => 'PKR ' . number_format($lineAmount, 0),
-                ];
-            }
-
-            // Customer ledger entry — debit the order amount
-            // 'order_charged' is the correct ENUM value for a new order debit
-            CustomerLedger::create([
-                'customer_id'             => $customer->id,
-                'transaction_type'        => 'order_charged',
-                'amount'                  => $totalAmount,
-                'running_advance_balance' => $customer->advance_credit_balance ?? 0,
-                'reference_type'          => 'App\Models\Order',
-                'reference_id'            => $order->id,
-                'notes'                   => "Order #{$order->order_number} — {$catalogue->name}",
-                'created_by'              => null, // nullable — see migration
-            ]);
-
-            // Auto-apply any existing advance credit the customer holds to this new order
-            $autoAppliedPayment = app(AdvanceCreditAutoApplyService::class)->apply($order, $customer);
-
-            $orderId = $order->id;
-        });
-
-        if ($autoAppliedPayment) {
-            $order = Order::find($orderId);
-
-            activity()
-                ->performedOn($order)
-                ->event('detail')
-                ->withProperties([
-                    'order'          => 'Order #' . $order->order_number,
-                    'customer'       => $customer->name,
-                    'amount'         => 'PKR ' . number_format((float) $autoAppliedPayment->amount, 0),
-                    'auto_confirmed' => $order->status === 'confirmed' ? 'Yes' : 'No',
-                ])
-                ->log('Payment #' . $order->order_number . 'p' . $autoAppliedPayment->sequence_number
-                    . ' of PKR ' . number_format((float) $autoAppliedPayment->amount, 0)
-                    . ' auto-applied from advance credit on Order #' . $order->order_number);
+                default => redirect()->route('order.public', $token),
+            };
         }
 
         // Store order ID in session for the thank-you page
-        session(['last_order_id' => $orderId]);
+        session(['last_order_id' => $order->id]);
 
         return redirect()->route('order.thankyou', $token);
     }

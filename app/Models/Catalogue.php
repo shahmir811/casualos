@@ -44,6 +44,17 @@ class Catalogue extends Model
     public function isClosed(): bool { return $this->status === 'closed'; }
 
     /**
+     * Sold out when EITHER the admin manually closed it OR available pieces
+     * have hit zero (Section 2, "Catalogue Sold-Out"). The single source of
+     * truth for this — order placement, the public order page, and the
+     * mobile catalogue endpoints all call this rather than re-deriving it.
+     */
+    public function isSoldOut(): bool
+    {
+        return $this->isClosed() || $this->availablePieces() <= 0;
+    }
+
+    /**
      * Pieces still available for ordering.
      *
      * Total production  = qty_per_design × number_of_designs

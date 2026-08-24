@@ -43,4 +43,12 @@ return [
         'private_key' => env('VAPID_PRIVATE_KEY'),
     ],
 
+    // Optional — Expo's push API works without one, but an access token
+    // avoids their stricter unauthenticated rate limit. Generate from the
+    // Expo dashboard (Account Settings > Access Tokens) for the project the
+    // React Native app is built under.
+    'expo' => [
+        'access_token' => env('EXPO_ACCESS_TOKEN'),
+    ],
+
 ];

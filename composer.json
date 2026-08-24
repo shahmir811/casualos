@@ -11,6 +11,7 @@
         "intervention/image": "^4.1",
         "laravel-notification-channels/webpush": "^11.0",
         "laravel/framework": "^13.0",
+        "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "league/flysystem-aws-s3-v3": "^3.0",
         "phpoffice/phpspreadsheet": "^5.7",

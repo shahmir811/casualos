@@ -13,14 +13,41 @@
     <p class="text-[#6E6E73] text-sm mt-1">Full payment and credit history per customer</p>
 </div>
 
-<form method="GET" class="flex items-center gap-3 mb-6">
-    <select name="customer_id" class="apple-input" style="max-width:300px;">
-        <option value="">— Select a customer —</option>
-        @foreach($customers as $c)
-        <option value="{{ $c->id }}" {{ request('customer_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
-        @endforeach
-    </select>
-    <button type="submit" class="btn-primary">Load Ledger</button>
+<form method="GET"
+      class="flex items-center gap-3 mb-6"
+      x-data="{
+        customers: {{ Js::from($customers->map(fn($c) => ['id' => $c->id, 'label' => $c->name])) }},
+        customerId: '{{ request('customer_id', '') }}',
+        search: @js(optional($selectedCustomer)->name ?? ''),
+        open: false,
+        get filtered() {
+            const s = this.search.toLowerCase();
+            return this.customers.filter(c => c.label.toLowerCase().includes(s));
+        },
+        selectCustomer(c) {
+            this.customerId = c.id; this.search = c.label; this.open = false;
+        }
+      }">
+    <div class="relative" style="width:300px;" @click.outside="open = false">
+        <input type="text"
+               x-model="search"
+               @focus="open = true"
+               @input="open = true; customerId = ''"
+               autocomplete="off"
+               placeholder="Type customer name..."
+               class="apple-input w-full">
+        <input type="hidden" name="customer_id" :value="customerId">
+        <div x-show="open" x-cloak
+             class="absolute z-20 mt-1 w-full bg-white border border-[#E5E5E7] rounded-lg shadow-lg max-h-56 overflow-y-auto">
+            <template x-for="c in filtered" :key="c.id">
+                <div @click="selectCustomer(c)"
+                     class="px-4 py-2 text-sm text-[#1D1D1F] cursor-pointer hover:bg-[#F5F5F7]"
+                     x-text="c.label"></div>
+            </template>
+            <p x-show="filtered.length === 0" class="px-4 py-2 text-sm text-[#6E6E73]">No matches</p>
+        </div>
+    </div>
+    <button type="submit" class="btn-primary" :disabled="!customerId" :style="customerId ? '' : 'opacity:0.5;cursor:not-allowed;'">Load Ledger</button>
     @if(request('customer_id'))
     <a href="{{ route('reports.customer-ledger') }}" class="btn-secondary">Clear</a>
     @endif
@@ -30,8 +57,8 @@
 
 {{-- Balance Summary --}}
 @php
-    $credits = $entries->whereIn('entry_type', ['advance_received', 'payment_received', 'credit_applied', 'surplus_to_advance'])->sum(fn($e) => abs($e->amount));
-    $debits  = $entries->whereIn('entry_type', ['order_charged', 'order_reduced'])->sum(fn($e) => abs($e->amount));
+    $credits = $entries->whereIn('transaction_type', ['advance_received', 'payment_received', 'credit_applied'])->sum(fn($e) => abs($e->amount));
+    $debits  = $entries->whereIn('transaction_type', ['order_charged', 'order_reduced'])->sum(fn($e) => abs($e->amount));
     $netBalance = $balance; // signed balance from controller
 @endphp
 <div class="grid grid-cols-3 gap-4 mb-6">
@@ -69,7 +96,7 @@
                     'payment_received'  => 'bg-green-100 text-green-700',
                     'credit_applied'    => 'bg-blue-100 text-blue-700',
                     'order_reduced'     => 'bg-yellow-100 text-yellow-700',
-                    'surplus_to_advance'=> 'bg-purple-100 text-purple-700',
+                    'refund_issued'     => 'bg-purple-100 text-purple-700',
                 ];
                 $typeLabels = [
                     'advance_received'  => 'Advance Received',
@@ -77,12 +104,12 @@
                     'payment_received'  => 'Payment Received',
                     'credit_applied'    => 'Credit Applied',
                     'order_reduced'     => 'Order Reduced',
-                    'surplus_to_advance'=> 'Surplus → Advance',
+                    'refund_issued'     => 'Refund Issued',
                 ];
             @endphp
             <tr>
                 <td class="text-[#6E6E73] text-xs">{{ $entry->created_at->format('d M Y') }}</td>
-                <td><span class="badge {{ $typeColors[$entry->entry_type] ?? 'bg-[#F5F5F7] text-[#6E6E73]' }}">{{ $typeLabels[$entry->entry_type] ?? $entry->entry_type }}</span></td>
+                <td><span class="badge {{ $typeColors[$entry->transaction_type] ?? 'bg-[#F5F5F7] text-[#6E6E73]' }}">{{ $typeLabels[$entry->transaction_type] ?? $entry->transaction_type }}</span></td>
                 <td class="text-[#6E6E73] text-xs font-mono">
                     @if($entry->transaction_type === 'payment_received' && !empty($paymentMap[$entry->reference_id]))
                         #{{ $paymentMap[$entry->reference_id] }}
