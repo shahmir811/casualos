@@ -60,8 +60,8 @@
             </div>
             <div class="flex items-center gap-3 shrink-0">
                 <button type="button"
-                    onclick="copyPortalLink('{{ route('portal.show', $customer->portal_token) }}', this)"
-                    title="Copy portal link"
+                    onclick="copyPortalLink('{{ route('portal.show', $customer->portal_token) }}', '{{ $customer->email }}', this)"
+                    title="Copy portal link + email"
                     class="text-[#0066CC] text-xs font-medium hover:underline flex items-center gap-1 transition-colors">
                     <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
@@ -132,8 +132,8 @@
                 <td>
                     <div class="flex items-center gap-3">
                         <button type="button"
-                            onclick="copyPortalLink('{{ route('portal.show', $customer->portal_token) }}', this)"
-                            title="Copy customer portal link"
+                            onclick="copyPortalLink('{{ route('portal.show', $customer->portal_token) }}', '{{ $customer->email }}', this)"
+                            title="Copy customer portal link + email"
                             class="text-[#0066CC] text-xs font-medium hover:underline flex items-center gap-1 transition-colors">
                             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
@@ -159,8 +159,9 @@
 <div class="mt-5">{{ $customers->links() }}</div>
 
 <script>
-function copyPortalLink(url, btn) {
-    navigator.clipboard.writeText(url).then(() => {
+function copyPortalLink(url, email, btn) {
+    const text = `Portal Link: ${url}\nEmail: ${email}`;
+    navigator.clipboard.writeText(text).then(() => {
         const orig = btn.innerHTML;
         btn.innerHTML = `<svg class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Copied!`;
         btn.classList.add('text-[#30D158]');
