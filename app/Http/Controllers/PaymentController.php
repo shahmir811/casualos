@@ -72,7 +72,7 @@ class PaymentController extends Controller
         $request->validate([
             'amount'            => 'required|numeric|min:1',
             'payment_type'      => 'required|in:cash,bank_transfer,advance',
-            'bank_account_id'   => 'required_unless:payment_type,advance|nullable|exists:bank_accounts,id',
+            'bank_account_id'   => 'required_if:payment_type,bank_transfer|nullable|exists:bank_accounts,id',
             'payment_date'      => 'required|date',
             'notes'             => 'nullable|string',
             'receipt_images'    => 'required_if:payment_type,bank_transfer|nullable|array|min:1',
@@ -318,7 +318,7 @@ class PaymentController extends Controller
         $request->validate([
             'amount'            => 'required|numeric|min:1',
             'payment_type'      => 'required|in:cash,bank_transfer,advance',
-            'bank_account_id'   => 'required_unless:payment_type,advance|nullable|exists:bank_accounts,id',
+            'bank_account_id'   => 'required_if:payment_type,bank_transfer|nullable|exists:bank_accounts,id',
             'payment_date'      => 'required|date',
             'notes'             => 'nullable|string',
             'remove_receipts'   => 'nullable|array',

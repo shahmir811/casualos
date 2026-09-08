@@ -34,7 +34,8 @@ class PaymentSheetExport
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle(substr($this->catalogue->name, 0, 31));
+        $sheetTitle = str_replace([':', '\\', '/', '?', '*', '[', ']'], '-', $this->catalogue->name);
+        $sheet->setTitle(substr($sheetTitle, 0, 31));
 
         $bankHeaders = $this->bankAccounts->pluck('title')->toArray();
 

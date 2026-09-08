@@ -325,7 +325,7 @@
               action="{{ route('orders.payments.store', $order) }}"
               enctype="multipart/form-data"
               x-data="{
-                paymentType: '{{ old('payment_type', 'cash') }}',
+                paymentType: '{{ old('payment_type', 'bank_transfer') }}',
                 amountDisplay: '{{ old('amount') ? number_format((int) old('amount'), 0) : '' }}',
                 amountRaw: '{{ old('amount') ?? '' }}',
                 advanceBalance: {{ (float) ($order->customer?->advance_credit_balance ?? 0) }},
@@ -335,7 +335,8 @@
                 lightboxOpen: false,
                 get isBankTransfer() { return this.paymentType === 'bank_transfer'; },
                 get isAdvance() { return this.paymentType === 'advance'; },
-                get needsBank() { return this.paymentType === 'cash' || this.paymentType === 'bank_transfer'; },
+                get showBank() { return this.paymentType === 'cash' || this.paymentType === 'bank_transfer'; },
+                get bankRequired() { return this.paymentType === 'bank_transfer'; },
                 get creditPortion() { return Math.min(Number(this.amountRaw || 0), this.advanceBalance); },
                 get paymentPortion() { return Math.max(Number(this.amountRaw || 0) - this.advanceBalance, 0); },
                 formatAmount(e) {
@@ -397,12 +398,13 @@
                     </select>
                 </div>
 
-                {{-- Bank account — required for Cash and Bank Transfer --}}
-                <div x-show="needsBank" x-cloak class="sm:col-span-2">
+                {{-- Bank account — required for Bank Transfer, optional for Cash --}}
+                <div x-show="showBank" x-cloak class="sm:col-span-2">
                     <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
-                        Bank Account <span class="text-[#FF3B30]">*</span>
+                        Bank Account <span x-show="bankRequired" class="text-[#FF3B30]">*</span>
+                        <span x-show="!bankRequired" class="font-normal normal-case">(optional)</span>
                     </label>
-                    <select name="bank_account_id" class="apple-input" :required="needsBank">
+                    <select name="bank_account_id" class="apple-input" :required="bankRequired">
                         <option value="">— Select bank account —</option>
                         @foreach($bankAccounts as $bank)
                         <option value="{{ $bank->id }}"
