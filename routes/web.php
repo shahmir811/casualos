@@ -48,6 +48,7 @@ use App\Http\Controllers\DispatchOptimizerController;
 use App\Http\Controllers\CostEstimationController;
 use App\Http\Controllers\CatalogueHdImageController;
 use App\Http\Controllers\GalleryController;
+use App\Http\Controllers\MobileLoginController;
 
 /*
 |--------------------------------------------------------------------------
@@ -59,6 +60,9 @@ use App\Http\Controllers\GalleryController;
 Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+
+// Staff mobile-app login handoff — single-use token minted by Api\AuthController::verify()
+Route::get('/mobile-login/{token}', [MobileLoginController::class, 'consume'])->name('mobile-login.consume');
 
 // Public catalogue order form (shared via WhatsApp)
 Route::get('/og-image/{token}', [OgImageController::class, 'show'])->name('og.image');

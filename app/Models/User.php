@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Activitylog\Models\Concerns\CausesActivity;
 
@@ -14,6 +15,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'password', 'role', 'is_active', 'created_by', 'last_login_at',
+        'mobile_login_token',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -22,6 +24,16 @@ class User extends Authenticatable
         'is_active'     => 'boolean',
         'last_login_at' => 'datetime',
     ];
+
+    // Auto-generate mobile_login_token on creation (UUID, permanent — never changes).
+    // Used by Api\AuthController::verify() to let staff sign into the mobile app;
+    // distinct from Customer::portal_token, which is the customer-facing portal link.
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            $user->mobile_login_token = Str::uuid()->toString();
+        });
+    }
 
     // Relationships
     public function createdBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
@@ -32,6 +44,11 @@ class User extends Authenticatable
     public function createdUsers(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(User::class, 'created_by');
+    }
+
+    public function staffMobileLoginTokens(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(StaffMobileLoginToken::class);
     }
 
     // Role helpers
