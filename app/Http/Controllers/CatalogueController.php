@@ -94,6 +94,7 @@ class CatalogueController extends Controller
             'designs' => fn($q) => $q->orderBy('sort_order'),
             'designs.costEstimation',
             'createdBy',
+            'catalogueBookUploadedBy',
         ]);
 
         $ordersCount  = $catalogue->orders()->count();

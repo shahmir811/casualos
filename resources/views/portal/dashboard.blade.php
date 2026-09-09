@@ -268,6 +268,27 @@
                             </div>
                             @endif
 
+                            {{-- Catalog Book — only shown once the admin has uploaded one for this catalogue --}}
+                            @if($order->catalogue && $order->catalogue->catalogue_book_path)
+                            <a href="{{ route('portal.catalogue-book', [$customer->portal_token, $order]) }}" target="_blank" rel="noopener"
+                               class="flex items-center justify-between gap-3 bg-[#F5F5F7] rounded-xl p-3 hover:bg-[#EFEFF4] transition-colors">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center flex-shrink-0 border border-[#E8E8ED]">
+                                        <svg class="w-4 h-4 text-[#FF3B30]" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-[#1D1D1F] text-xs font-semibold">Catalog Book</p>
+                                        <p class="text-[#86868B] text-[10px] mt-0.5">View the full lookbook PDF</p>
+                                    </div>
+                                </div>
+                                <svg class="w-4 h-4 text-[#C7C7CC] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </a>
+                            @endif
+
                             {{-- Payment summary --}}
                             <div class="bg-[#F5F5F7] rounded-xl p-3 grid grid-cols-2 gap-3">
                                 <div>

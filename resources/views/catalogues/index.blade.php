@@ -61,6 +61,14 @@
                 View →
             </a>
 
+            {{-- View Catalog Book --}}
+            @if($catalogue->catalogue_book_path && in_array(Auth::user()->role, ['admin', 'production_manager', 'creative_head']))
+            <a href="{{ route('catalogues.book.view', $catalogue) }}" target="_blank" rel="noopener"
+               class="text-[#0066CC] text-xs font-medium hover:underline">
+                Book
+            </a>
+            @endif
+
             {{-- Copy Order Link --}}
             @if($catalogue->status === 'open')
             <button type="button"
