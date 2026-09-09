@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\CustomerSignupRequest;
+use App\Models\StaffMobileLoginToken;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -14,14 +17,24 @@ use Illuminate\Support\Str;
  * CustomerPortalController::verify() does for the web PWA. That controller's
  * cookie + customer_devices flow is untouched; this is a parallel credential
  * store (Sanctum's personal_access_tokens) for the app only.
+ *
+ * Staff (admin/accountant/production_manager/creative_head) authenticate
+ * through this same endpoint using their own permanent User::mobile_login_token
+ * + email, but never receive a Sanctum bearer token — they never call another
+ * /api/* endpoint. Instead a single-use, short-lived handoff token
+ * (StaffMobileLoginToken) is minted so the app can open an embedded WebView
+ * at MobileLoginController::consume(), which starts a real Laravel web
+ * session. The existing Spatie role middleware on routes/web.php then governs
+ * exactly what that staff member can see, with no new permission logic here.
  */
 class AuthController extends Controller
 {
     /**
-     * Accepts either a bare portal_token (UUID) or a full pasted portal link
-     * (e.g. https://casualiteos.com/portal/{uuid}) — customers will naturally
-     * copy the whole WhatsApp link rather than extracting the token
-     * themselves, so every client is spared reimplementing that parsing.
+     * Accepts either a bare portal_token/mobile_login_token (UUID) or a full
+     * pasted link (e.g. https://casualiteos.com/portal/{uuid}) — customers
+     * and staff will naturally copy the whole shared link rather than
+     * extracting the token themselves, so every client is spared
+     * reimplementing that parsing.
      */
     public function verify(Request $request)
     {
@@ -34,18 +47,104 @@ class AuthController extends Controller
 
         $customer = Customer::where('portal_token', $token)->first();
 
-        if (! $customer || strtolower($customer->email) !== strtolower($validated['email'])) {
+        if ($customer && strtolower($customer->email) === strtolower($validated['email'])) {
+            $apiToken = $customer->createToken('mobile-app')->plainTextToken;
+
             return response()->json([
-                'message' => 'We could not verify those details. Check your portal link and email address.',
+                'account_type' => 'customer',
+                'token'        => $apiToken,
+                'customer'     => $this->customerPayload($customer),
+            ]);
+        }
+
+        $user = User::where('mobile_login_token', $token)->first();
+
+        if ($user && strtolower($user->email) === strtolower($validated['email']) && $user->is_active) {
+            return response()->json([
+                'account_type' => 'staff',
+                'redirect_url' => $this->buildStaffRedirectUrl($user, $request),
+            ]);
+        }
+
+        // Same vague message regardless of which branch almost matched — never
+        // leak whether a token belongs to a customer, a staff account, or a
+        // disabled staff account.
+        return response()->json([
+            'message' => 'We could not verify those details. Check your portal link and email address.',
+        ], 422);
+    }
+
+    /**
+     * Mints a single-use handoff token and returns the URL the app's
+     * embedded WebView should open. Only a hash of the raw token is ever
+     * stored — see StaffMobileLoginToken / MobileLoginController::consume().
+     */
+    protected function buildStaffRedirectUrl(User $user, Request $request): string
+    {
+        $rawToken = Str::random(64);
+
+        StaffMobileLoginToken::create([
+            'user_id'    => $user->id,
+            'token_hash' => hash('sha256', $rawToken),
+            'expires_at' => now()->addSeconds(config('casualite.staff_mobile_login_token_ttl')),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        return rtrim(config('casualite.web_app_url'), '/') . '/mobile-login/' . $rawToken;
+    }
+
+    /**
+     * Self-service signup for someone with no portal_token at all — see
+     * rule 5.34. Never creates a Customer directly; it queues a
+     * CustomerSignupRequest for admin review at /pending-signups. Field
+     * rules mirror CustomerController::store() exactly (minus the
+     * unique:customers,email check, which is handled explicitly below so
+     * the response can distinguish "already a customer" from "already
+     * pending" rather than a generic validation error).
+     */
+    public function signup(Request $request)
+    {
+        $validated = $request->validate([
+            'name'           => 'required|string|max:255',
+            'contact_number' => 'required|string|max:30',
+            'city'           => 'required|string|max:100',
+            'country'        => 'required|string|in:' . implode(',', Customer::COUNTRIES),
+            'address'        => 'nullable|string|max:255',
+            'email'          => 'required|email|max:255',
+        ]);
+
+        $alreadyCustomer = Customer::where('email', $validated['email'])->exists();
+
+        $signup = CustomerSignupRequest::firstOrNew(['email' => $validated['email']]);
+
+        if ($alreadyCustomer || ($signup->exists && $signup->status === 'approved')) {
+            return response()->json([
+                'message' => 'An account already exists for this email. Please contact Casual Lite for your portal link.',
             ], 422);
         }
 
-        $apiToken = $customer->createToken('mobile-app')->plainTextToken;
+        if ($signup->exists && $signup->status === 'pending') {
+            return response()->json([
+                'status'  => 'pending',
+                'message' => 'You already have a signup request pending review.',
+            ]);
+        }
+
+        // New request, or a previously rejected one being resubmitted —
+        // reuse the same row (unique on email) rather than accumulating
+        // duplicate rows per rejection.
+        $signup->fill(array_merge($validated, [
+            'status'       => 'pending',
+            'customer_id'  => null,
+            'reviewed_by'  => null,
+            'reviewed_at'  => null,
+        ]))->save();
 
         return response()->json([
-            'token'    => $apiToken,
-            'customer' => $this->customerPayload($customer),
-        ]);
+            'status'  => 'pending',
+            'message' => 'Your details have been submitted. Casual Lite will review them and send you your portal link once approved.',
+        ], 201);
     }
 
     public function me(Request $request)

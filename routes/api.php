@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\PushTokenController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/verify', [AuthController::class, 'verify'])->name('api.auth.verify');
+Route::post('/auth/signup', [AuthController::class, 'signup'])->name('api.auth.signup');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me'])->name('api.me');

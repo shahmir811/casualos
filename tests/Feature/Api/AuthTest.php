@@ -3,6 +3,8 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Customer;
+use App\Models\CustomerSignupRequest;
+use App\Models\StaffMobileLoginToken;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -29,6 +31,22 @@ class AuthTest extends TestCase
 
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->string('name')->nullable();
+            $table->string('email')->nullable()->unique();
+            $table->string('mobile_login_token', 64)->nullable()->unique();
+            $table->boolean('is_active')->default(true);
+            $table->timestamp('last_login_at')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('staff_mobile_login_tokens', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained('users');
+            $table->string('token_hash', 64)->unique();
+            $table->timestamp('expires_at');
+            $table->timestamp('used_at')->nullable();
+            $table->string('ip_address', 45)->nullable();
+            $table->string('user_agent')->nullable();
             $table->timestamps();
         });
 
@@ -55,11 +73,28 @@ class AuthTest extends TestCase
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });
+
+        Schema::create('customer_signup_requests', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('contact_number', 30);
+            $table->string('city', 100);
+            $table->string('country', 50);
+            $table->string('address')->nullable();
+            $table->string('email')->unique();
+            $table->string('status')->default('pending');
+            $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();
+            $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('reviewed_at')->nullable();
+            $table->timestamps();
+        });
     }
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('customer_signup_requests');
         Schema::dropIfExists('personal_access_tokens');
+        Schema::dropIfExists('staff_mobile_login_tokens');
         Schema::dropIfExists('customers');
         Schema::dropIfExists('users');
 
@@ -75,6 +110,14 @@ class AuthTest extends TestCase
             'city'         => 'Lahore',
             'email'        => 'ayesha@example.com',
             'created_by'   => $admin->id,
+        ], $attributes));
+    }
+
+    protected function makeStaff(array $attributes = []): User
+    {
+        return User::create(array_merge([
+            'name'  => 'Bilal Accountant',
+            'email' => 'bilal@example.com',
         ], $attributes));
     }
 
@@ -203,5 +246,145 @@ class AuthTest extends TestCase
         $this->withHeader('Authorization', "Bearer {$tokenB}")
             ->getJson('/api/me')
             ->assertOk();
+    }
+
+    public function test_staff_token_and_email_returns_a_redirect_url_and_issues_no_bearer_token(): void
+    {
+        $staff = $this->makeStaff();
+
+        $response = $this->postJson('/api/auth/verify', [
+            'portal_token' => $staff->mobile_login_token,
+            'email'        => $staff->email,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('account_type', 'staff')
+            ->assertJsonStructure(['account_type', 'redirect_url']);
+
+        $this->assertStringContainsString(
+            rtrim(config('casualite.web_app_url'), '/') . '/mobile-login/',
+            $response->json('redirect_url')
+        );
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+        $this->assertDatabaseCount('staff_mobile_login_tokens', 1);
+    }
+
+    public function test_staff_handoff_token_is_stored_hashed_not_raw(): void
+    {
+        $staff = $this->makeStaff();
+
+        $response = $this->postJson('/api/auth/verify', [
+            'portal_token' => $staff->mobile_login_token,
+            'email'        => $staff->email,
+        ]);
+
+        $redirectUrl = $response->json('redirect_url');
+        $rawToken = last(explode('/mobile-login/', $redirectUrl));
+
+        $record = StaffMobileLoginToken::first();
+
+        $this->assertNotNull($record);
+        $this->assertNotEquals($rawToken, $record->token_hash);
+        $this->assertEquals(hash('sha256', $rawToken), $record->token_hash);
+        $this->assertTrue($record->expires_at->isFuture());
+    }
+
+    public function test_inactive_staff_user_is_rejected_with_the_generic_message(): void
+    {
+        $staff = $this->makeStaff(['is_active' => false]);
+
+        $response = $this->postJson('/api/auth/verify', [
+            'portal_token' => $staff->mobile_login_token,
+            'email'        => $staff->email,
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseCount('staff_mobile_login_tokens', 0);
+    }
+
+    public function test_staff_token_with_mismatched_email_is_rejected(): void
+    {
+        $staff = $this->makeStaff();
+
+        $response = $this->postJson('/api/auth/verify', [
+            'portal_token' => $staff->mobile_login_token,
+            'email'        => 'someone-else@example.com',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseCount('staff_mobile_login_tokens', 0);
+    }
+
+    protected function validSignupPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'name'           => 'Sana Malik',
+            'contact_number' => '03001234567',
+            'city'           => 'Karachi',
+            'country'        => 'Pakistan',
+            'address'        => '123 Clifton Road',
+            'email'          => 'sana@example.com',
+        ], $overrides);
+    }
+
+    public function test_new_signup_creates_a_pending_request(): void
+    {
+        $response = $this->postJson('/api/auth/signup', $this->validSignupPayload());
+
+        $response->assertCreated()->assertJsonPath('status', 'pending');
+
+        $this->assertDatabaseHas('customer_signup_requests', [
+            'email'  => 'sana@example.com',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_signup_is_rejected_when_email_already_belongs_to_a_customer(): void
+    {
+        $this->makeCustomer(['email' => 'sana@example.com']);
+
+        $response = $this->postJson('/api/auth/signup', $this->validSignupPayload());
+
+        $response->assertStatus(422);
+        $this->assertDatabaseCount('customer_signup_requests', 0);
+    }
+
+    public function test_resubmitting_while_pending_does_not_create_a_duplicate_row(): void
+    {
+        $this->postJson('/api/auth/signup', $this->validSignupPayload())->assertCreated();
+
+        $response = $this->postJson('/api/auth/signup', $this->validSignupPayload());
+
+        $response->assertOk()->assertJsonPath('status', 'pending');
+        $this->assertDatabaseCount('customer_signup_requests', 1);
+    }
+
+    public function test_a_rejected_request_can_be_resubmitted_on_the_same_row(): void
+    {
+        $signup = CustomerSignupRequest::create(array_merge($this->validSignupPayload(), [
+            'status'       => 'rejected',
+            'reviewed_by'  => null,
+            'reviewed_at'  => now(),
+        ]));
+
+        $response = $this->postJson('/api/auth/signup', $this->validSignupPayload(['name' => 'Sana Malik Updated']));
+
+        $response->assertCreated()->assertJsonPath('status', 'pending');
+
+        $this->assertDatabaseCount('customer_signup_requests', 1);
+        $this->assertDatabaseHas('customer_signup_requests', [
+            'id'          => $signup->id,
+            'name'        => 'Sana Malik Updated',
+            'status'      => 'pending',
+            'reviewed_at' => null,
+        ]);
+    }
+
+    public function test_signup_validates_country_against_the_fixed_list(): void
+    {
+        $response = $this->postJson('/api/auth/signup', $this->validSignupPayload(['country' => 'Narnia']));
+
+        $response->assertStatus(422)->assertJsonValidationErrors('country');
     }
 }

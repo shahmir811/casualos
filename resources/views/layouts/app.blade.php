@@ -490,6 +490,18 @@
                 Announcements
             </a>
 
+            @php $pendingSignupCount = \App\Models\CustomerSignupRequest::where('status', 'pending')->count(); @endphp
+            <a href="{{ route('pending-signups.index') }}"
+               class="nav-item {{ request()->routeIs('pending-signups.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-7a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                </svg>
+                <span class="flex-1">Pending Signups</span>
+                @if($pendingSignupCount > 0)
+                <span class="badge bg-[#FF3B30] text-white text-[10px] leading-none px-1.5 py-0.5">{{ $pendingSignupCount }}</span>
+                @endif
+            </a>
+
             <a href="{{ route('stitching-units.index') }}"
                class="nav-item {{ request()->routeIs('stitching-units.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">

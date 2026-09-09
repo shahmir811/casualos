@@ -21,6 +21,7 @@ class PushTokenTest extends TestCase
 
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->string('mobile_login_token', 64)->nullable();
             $table->timestamps();
         });
 

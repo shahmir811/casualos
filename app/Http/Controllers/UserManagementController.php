@@ -20,7 +20,11 @@ class UserManagementController extends Controller
 {
     public function index()
     {
-        $users = User::where('role', '!=', 'admin')
+        // Admin is included (previously excluded) so the admin's own
+        // mobile_login_token can be copied from this screen too — see
+        // resetPassword()'s isAdmin() guard below for why Disable/Reset
+        // Password still can't touch that row even though it's now visible.
+        $users = User::orderByRaw("role = 'admin' desc")
             ->orderBy('role')
             ->orderBy('name')
             ->get();
@@ -117,6 +121,13 @@ class UserManagementController extends Controller
 
     public function resetPassword(Request $request, User $user)
     {
+        // Same protection disable() already has — the admin row is now
+        // visible on this screen (for its mobile_login_token copy button),
+        // but this form was built for admin to manage other staff, not itself.
+        if ($user->isAdmin()) {
+            return back()->with('error', 'Admin passwords cannot be reset from this screen.');
+        }
+
         $validated = $request->validate([
             'password' => ['required', 'confirmed', Rules\Password::min(8)],
         ]);

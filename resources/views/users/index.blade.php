@@ -37,7 +37,8 @@
                     <td class="text-[#6E6E73] text-sm">{{ $user->email }}</td>
                     <td>
                         <span class="badge
-                            @if($user->role === 'accountant') bg-yellow-100 text-yellow-700
+                            @if($user->role === 'admin') bg-[#1D1D1F] text-white
+                            @elseif($user->role === 'accountant') bg-yellow-100 text-yellow-700
                             @elseif($user->role === 'production_manager') bg-blue-100 text-blue-700
                             @else bg-purple-100 text-purple-700
                             @endif">
@@ -57,35 +58,50 @@
                     </td>
                     <td>
                         <div class="flex items-center gap-4">
-                            @if($user->is_active)
-                            <form id="form-disable-{{ $user->id }}" method="POST" action="{{ route('users.disable', $user) }}">@csrf</form>
                             <button type="button"
-                                    class="text-[#FF3B30] text-xs font-medium hover:underline"
-                                    @click="$store.confirm.show({
-                                        title: 'Disable Account',
-                                        message: `Disable {{ $user->name }}'s account? They will not be able to log in until re-enabled.`,
-                                        formId: 'form-disable-{{ $user->id }}',
-                                        confirmText: 'Disable',
-                                        danger: true
-                                    })">
-                                Disable
+                                    onclick="copyStaffLoginToken('{{ $user->mobile_login_token }}', '{{ $user->email }}', this)"
+                                    title="Copy mobile app login token + email"
+                                    class="text-[#0066CC] text-xs font-medium hover:underline flex items-center gap-1 transition-colors">
+                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                                Login Token
                             </button>
-                            @else
-                            <form method="POST" action="{{ route('users.enable', $user) }}">
-                                @csrf
-                                <button type="submit" class="text-[#30D158] text-xs font-medium hover:underline">
-                                    Enable
-                                </button>
-                            </form>
-                            @endif
 
-                            <button @click="showReset = !showReset"
-                                class="text-[#0066CC] text-xs font-medium hover:underline">
-                                Reset Password
-                            </button>
+                            @if($user->isAdmin())
+                            <span class="text-[#86868B] text-xs">Protected</span>
+                            @else
+                                @if($user->is_active)
+                                <form id="form-disable-{{ $user->id }}" method="POST" action="{{ route('users.disable', $user) }}">@csrf</form>
+                                <button type="button"
+                                        class="text-[#FF3B30] text-xs font-medium hover:underline"
+                                        @click="$store.confirm.show({
+                                            title: 'Disable Account',
+                                            message: `Disable {{ $user->name }}'s account? They will not be able to log in until re-enabled.`,
+                                            formId: 'form-disable-{{ $user->id }}',
+                                            confirmText: 'Disable',
+                                            danger: true
+                                        })">
+                                    Disable
+                                </button>
+                                @else
+                                <form method="POST" action="{{ route('users.enable', $user) }}">
+                                    @csrf
+                                    <button type="submit" class="text-[#30D158] text-xs font-medium hover:underline">
+                                        Enable
+                                    </button>
+                                </form>
+                                @endif
+
+                                <button @click="showReset = !showReset"
+                                    class="text-[#0066CC] text-xs font-medium hover:underline">
+                                    Reset Password
+                                </button>
+                            @endif
                         </div>
 
                         {{-- Inline Reset Password Form --}}
+                        @unless($user->isAdmin())
                         <div x-show="showReset" x-cloak class="mt-3">
                             <form method="POST" action="{{ route('users.reset-password', $user) }}" class="flex flex-wrap items-center gap-2">
                                 @csrf
@@ -98,6 +114,7 @@
                                 </button>
                             </form>
                         </div>
+                        @endunless
                     </td>
                 </tr>
                 @empty
@@ -128,7 +145,8 @@
 
         <div class="mb-3">
             <span class="badge
-                @if($user->role === 'accountant') bg-yellow-100 text-yellow-700
+                @if($user->role === 'admin') bg-[#1D1D1F] text-white
+                @elseif($user->role === 'accountant') bg-yellow-100 text-yellow-700
                 @elseif($user->role === 'production_manager') bg-blue-100 text-blue-700
                 @else bg-purple-100 text-purple-700
                 @endif">
@@ -141,35 +159,50 @@
         </div>
 
         <div class="flex items-center gap-4 pt-3 border-t border-[#E8E8ED]">
-            @if($user->is_active)
-            <form id="form-disable-mobile-{{ $user->id }}" method="POST" action="{{ route('users.disable', $user) }}">@csrf</form>
             <button type="button"
-                    class="text-[#FF3B30] text-xs font-medium hover:underline"
-                    @click="$store.confirm.show({
-                        title: 'Disable Account',
-                        message: `Disable {{ $user->name }}'s account? They will not be able to log in until re-enabled.`,
-                        formId: 'form-disable-mobile-{{ $user->id }}',
-                        confirmText: 'Disable',
-                        danger: true
-                    })">
-                Disable
+                    onclick="copyStaffLoginToken('{{ $user->mobile_login_token }}', '{{ $user->email }}', this)"
+                    title="Copy mobile app login token + email"
+                    class="text-[#0066CC] text-xs font-medium hover:underline flex items-center gap-1 transition-colors">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                Login Token
             </button>
-            @else
-            <form method="POST" action="{{ route('users.enable', $user) }}">
-                @csrf
-                <button type="submit" class="text-[#30D158] text-xs font-medium hover:underline">
-                    Enable
-                </button>
-            </form>
-            @endif
 
-            <button @click="showReset = !showReset"
-                class="text-[#0066CC] text-xs font-medium hover:underline">
-                Reset Password
-            </button>
+            @if($user->isAdmin())
+            <span class="text-[#86868B] text-xs">Protected</span>
+            @else
+                @if($user->is_active)
+                <form id="form-disable-mobile-{{ $user->id }}" method="POST" action="{{ route('users.disable', $user) }}">@csrf</form>
+                <button type="button"
+                        class="text-[#FF3B30] text-xs font-medium hover:underline"
+                        @click="$store.confirm.show({
+                            title: 'Disable Account',
+                            message: `Disable {{ $user->name }}'s account? They will not be able to log in until re-enabled.`,
+                            formId: 'form-disable-mobile-{{ $user->id }}',
+                            confirmText: 'Disable',
+                            danger: true
+                        })">
+                    Disable
+                </button>
+                @else
+                <form method="POST" action="{{ route('users.enable', $user) }}">
+                    @csrf
+                    <button type="submit" class="text-[#30D158] text-xs font-medium hover:underline">
+                        Enable
+                    </button>
+                </form>
+                @endif
+
+                <button @click="showReset = !showReset"
+                    class="text-[#0066CC] text-xs font-medium hover:underline">
+                    Reset Password
+                </button>
+            @endif
         </div>
 
         {{-- Inline Reset Password Form --}}
+        @unless($user->isAdmin())
         <div x-show="showReset" x-cloak class="mt-3 pt-3 border-t border-[#E8E8ED]">
             <form method="POST" action="{{ route('users.reset-password', $user) }}" class="flex flex-col gap-2">
                 @csrf
@@ -182,10 +215,28 @@
                 </button>
             </form>
         </div>
+        @endunless
     </div>
     @empty
     <div class="card p-8 text-center text-[#86868B] text-sm">No team accounts yet.</div>
     @endforelse
 </div>
+
+<script>
+function copyStaffLoginToken(token, email, btn) {
+    const text = `Login Token: ${token}\nEmail: ${email}`;
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = `<svg class="w-3 h-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Copied!`;
+        btn.classList.add('text-[#30D158]');
+        btn.classList.remove('text-[#0066CC]');
+        setTimeout(() => {
+            btn.innerHTML = orig;
+            btn.classList.remove('text-[#30D158]');
+            btn.classList.add('text-[#0066CC]');
+        }, 2000);
+    });
+}
+</script>
 
 @endsection
