@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Customer;
+use App\Models\CustomerSignupRequest;
 use App\Models\StaffMobileLoginToken;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
@@ -72,10 +73,26 @@ class AuthTest extends TestCase
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });
+
+        Schema::create('customer_signup_requests', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('contact_number', 30);
+            $table->string('city', 100);
+            $table->string('country', 50);
+            $table->string('address')->nullable();
+            $table->string('email')->unique();
+            $table->string('status')->default('pending');
+            $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();
+            $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('reviewed_at')->nullable();
+            $table->timestamps();
+        });
     }
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('customer_signup_requests');
         Schema::dropIfExists('personal_access_tokens');
         Schema::dropIfExists('staff_mobile_login_tokens');
         Schema::dropIfExists('customers');
@@ -297,5 +314,77 @@ class AuthTest extends TestCase
 
         $response->assertStatus(422);
         $this->assertDatabaseCount('staff_mobile_login_tokens', 0);
+    }
+
+    protected function validSignupPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'name'           => 'Sana Malik',
+            'contact_number' => '03001234567',
+            'city'           => 'Karachi',
+            'country'        => 'Pakistan',
+            'address'        => '123 Clifton Road',
+            'email'          => 'sana@example.com',
+        ], $overrides);
+    }
+
+    public function test_new_signup_creates_a_pending_request(): void
+    {
+        $response = $this->postJson('/api/auth/signup', $this->validSignupPayload());
+
+        $response->assertCreated()->assertJsonPath('status', 'pending');
+
+        $this->assertDatabaseHas('customer_signup_requests', [
+            'email'  => 'sana@example.com',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_signup_is_rejected_when_email_already_belongs_to_a_customer(): void
+    {
+        $this->makeCustomer(['email' => 'sana@example.com']);
+
+        $response = $this->postJson('/api/auth/signup', $this->validSignupPayload());
+
+        $response->assertStatus(422);
+        $this->assertDatabaseCount('customer_signup_requests', 0);
+    }
+
+    public function test_resubmitting_while_pending_does_not_create_a_duplicate_row(): void
+    {
+        $this->postJson('/api/auth/signup', $this->validSignupPayload())->assertCreated();
+
+        $response = $this->postJson('/api/auth/signup', $this->validSignupPayload());
+
+        $response->assertOk()->assertJsonPath('status', 'pending');
+        $this->assertDatabaseCount('customer_signup_requests', 1);
+    }
+
+    public function test_a_rejected_request_can_be_resubmitted_on_the_same_row(): void
+    {
+        $signup = CustomerSignupRequest::create(array_merge($this->validSignupPayload(), [
+            'status'       => 'rejected',
+            'reviewed_by'  => null,
+            'reviewed_at'  => now(),
+        ]));
+
+        $response = $this->postJson('/api/auth/signup', $this->validSignupPayload(['name' => 'Sana Malik Updated']));
+
+        $response->assertCreated()->assertJsonPath('status', 'pending');
+
+        $this->assertDatabaseCount('customer_signup_requests', 1);
+        $this->assertDatabaseHas('customer_signup_requests', [
+            'id'          => $signup->id,
+            'name'        => 'Sana Malik Updated',
+            'status'      => 'pending',
+            'reviewed_at' => null,
+        ]);
+    }
+
+    public function test_signup_validates_country_against_the_fixed_list(): void
+    {
+        $response = $this->postJson('/api/auth/signup', $this->validSignupPayload(['country' => 'Narnia']));
+
+        $response->assertStatus(422)->assertJsonValidationErrors('country');
     }
 }

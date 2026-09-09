@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\PendingSignupController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CatalogueController;
@@ -363,6 +364,17 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
         Route::post('announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
+    });
+
+    /*
+    |------------------------------------------------------------------
+    | PENDING SIGNUPS (admin only)
+    |------------------------------------------------------------------
+    */
+    Route::middleware('role:admin')->group(function () {
+        Route::get('pending-signups', [PendingSignupController::class, 'index'])->name('pending-signups.index');
+        Route::post('pending-signups/{signup}/approve', [PendingSignupController::class, 'approve'])->name('pending-signups.approve');
+        Route::post('pending-signups/{signup}/reject', [PendingSignupController::class, 'reject'])->name('pending-signups.reject');
     });
 
     /*

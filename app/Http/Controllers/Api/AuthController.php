@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\CustomerSignupRequest;
 use App\Models\StaffMobileLoginToken;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -91,6 +92,59 @@ class AuthController extends Controller
         ]);
 
         return rtrim(config('casualite.web_app_url'), '/') . '/mobile-login/' . $rawToken;
+    }
+
+    /**
+     * Self-service signup for someone with no portal_token at all — see
+     * rule 5.34. Never creates a Customer directly; it queues a
+     * CustomerSignupRequest for admin review at /pending-signups. Field
+     * rules mirror CustomerController::store() exactly (minus the
+     * unique:customers,email check, which is handled explicitly below so
+     * the response can distinguish "already a customer" from "already
+     * pending" rather than a generic validation error).
+     */
+    public function signup(Request $request)
+    {
+        $validated = $request->validate([
+            'name'           => 'required|string|max:255',
+            'contact_number' => 'required|string|max:30',
+            'city'           => 'required|string|max:100',
+            'country'        => 'required|string|in:' . implode(',', Customer::COUNTRIES),
+            'address'        => 'nullable|string|max:255',
+            'email'          => 'required|email|max:255',
+        ]);
+
+        $alreadyCustomer = Customer::where('email', $validated['email'])->exists();
+
+        $signup = CustomerSignupRequest::firstOrNew(['email' => $validated['email']]);
+
+        if ($alreadyCustomer || ($signup->exists && $signup->status === 'approved')) {
+            return response()->json([
+                'message' => 'An account already exists for this email. Please contact Casual Lite for your portal link.',
+            ], 422);
+        }
+
+        if ($signup->exists && $signup->status === 'pending') {
+            return response()->json([
+                'status'  => 'pending',
+                'message' => 'You already have a signup request pending review.',
+            ]);
+        }
+
+        // New request, or a previously rejected one being resubmitted —
+        // reuse the same row (unique on email) rather than accumulating
+        // duplicate rows per rejection.
+        $signup->fill(array_merge($validated, [
+            'status'       => 'pending',
+            'customer_id'  => null,
+            'reviewed_by'  => null,
+            'reviewed_at'  => null,
+        ]))->save();
+
+        return response()->json([
+            'status'  => 'pending',
+            'message' => 'Your details have been submitted. Casual Lite will review them and send you your portal link once approved.',
+        ], 201);
     }
 
     public function me(Request $request)
