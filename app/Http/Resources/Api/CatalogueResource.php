@@ -26,6 +26,7 @@ class CatalogueResource extends JsonResource
             'available_pieces'   => $this->availablePieces(),
             'sold_out'           => $this->isSoldOut(),
             'already_ordered'    => (bool) $this->already_ordered,
+            'has_catalogue_book' => $this->hasCatalogueBook(),
             'designs'            => DesignResource::collection($this->designs),
         ];
     }

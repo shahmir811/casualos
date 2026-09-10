@@ -10,6 +10,7 @@ use App\Models\Catalogue;
 use App\Models\Order;
 use App\Services\OrderPlacementService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CatalogueController extends Controller
 {
@@ -64,6 +65,29 @@ class CatalogueController extends Controller
         }
 
         return response()->json(['quote' => $quote]);
+    }
+
+    /**
+     * Fresh short-lived presigned S3 URL for the catalogue's book PDF —
+     * generated on demand rather than embedded in the list/show payload, so
+     * a link the app opens minutes after loading the catalogue screen hasn't
+     * already expired. `has_catalogue_book` on the list/show resources is
+     * what the app uses to decide whether to show a "View Catalog Book"
+     * action at all.
+     */
+    public function book(Catalogue $catalogue)
+    {
+        abort_unless($catalogue->catalogue_book_path, 404);
+
+        $filename = str_replace('"', '', $catalogue->catalogue_book_original_filename ?? 'catalogue-book.pdf');
+
+        $url = Storage::disk('s3')->temporaryUrl(
+            $catalogue->catalogue_book_path,
+            now()->addMinutes(10),
+            ['ResponseContentDisposition' => 'inline; filename="'.$filename.'"']
+        );
+
+        return response()->json(['url' => $url]);
     }
 
     /**

@@ -27,6 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/catalogues', [CatalogueController::class, 'index'])->name('api.catalogues.index');
     Route::get('/catalogues/{catalogue}', [CatalogueController::class, 'show'])->name('api.catalogues.show');
     Route::post('/catalogues/{catalogue}/quote', [CatalogueController::class, 'quote'])->name('api.catalogues.quote');
+    Route::get('/catalogues/{catalogue}/book', [CatalogueController::class, 'book'])->name('api.catalogues.book');
 
     Route::post('/push-tokens', [PushTokenController::class, 'store'])->name('api.push-tokens.store');
     Route::delete('/push-tokens', [PushTokenController::class, 'destroy'])->name('api.push-tokens.destroy');

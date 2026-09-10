@@ -48,6 +48,7 @@ use App\Http\Controllers\PieceTagController;
 use App\Http\Controllers\DispatchOptimizerController;
 use App\Http\Controllers\CostEstimationController;
 use App\Http\Controllers\CatalogueHdImageController;
+use App\Http\Controllers\CatalogueBookController;
 use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\MobileLoginController;
 
@@ -76,6 +77,7 @@ Route::get('/portal/{token}',              [CustomerPortalController::class, 'sh
 Route::post('/portal/{token}/verify',      [CustomerPortalController::class, 'verify'])->name('portal.verify');
 Route::get('/portal/{token}/manifest.json',[CustomerPortalController::class, 'manifest'])->name('portal.manifest');
 Route::post('/portal/{token}/push-subscribe',[CustomerPortalController::class, 'pushSubscribe'])->name('portal.push-subscribe');
+Route::get('/portal/{token}/orders/{order}/catalogue-book', [CustomerPortalController::class, 'catalogueBook'])->name('portal.catalogue-book');
 
 // Piece tag barcode scan result (read by any barcode scanner/phone camera)
 Route::get('/tags/{barcode}', [PieceTagController::class, 'scan'])->name('tags.scan');
@@ -116,6 +118,14 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('catalogues/{catalogue}/hd-images/presign', [CatalogueHdImageController::class, 'presign'])->name('catalogues.hd-images.presign');
         Route::post('catalogues/{catalogue}/hd-images',   [CatalogueHdImageController::class, 'store'])->name('catalogues.hd-images.store');
         Route::delete('catalogues/{catalogue}/hd-images/{hdImage}', [CatalogueHdImageController::class, 'destroy'])->name('catalogues.hd-images.destroy');
+    });
+
+    // Catalog Book (per-catalogue lookbook PDF) — same access tier as catalogue management
+    Route::middleware('role:admin|production_manager|creative_head')->group(function () {
+        Route::post('catalogues/{catalogue}/book/presign', [CatalogueBookController::class, 'presign'])->name('catalogues.book.presign');
+        Route::post('catalogues/{catalogue}/book',         [CatalogueBookController::class, 'store'])->name('catalogues.book.store');
+        Route::get('catalogues/{catalogue}/book/view',     [CatalogueBookController::class, 'view'])->name('catalogues.book.view');
+        Route::delete('catalogues/{catalogue}/book',       [CatalogueBookController::class, 'destroy'])->name('catalogues.book.destroy');
     });
 
     /*

@@ -98,6 +98,73 @@
 </div>
 @endif
 
+{{-- Catalog Book (PDF) --}}
+@if(in_array(Auth::user()->role, ['admin', 'production_manager', 'creative_head']))
+<div class="card p-5 mb-7" x-data="catalogBookUploader({
+        presignUrl: '{{ route('catalogues.book.presign', $catalogue) }}',
+        storeUrl: '{{ route('catalogues.book.store', $catalogue) }}',
+        csrfToken: '{{ csrf_token() }}',
+     })">
+    <p class="text-[#6E6E73] text-xs font-medium uppercase tracking-widest mb-3">Catalog Book</p>
+
+    <div x-show="status === 'idle'">
+        @if($catalogue->catalogue_book_path)
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-9 h-9 rounded-lg bg-[#F5F5F7] flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-[#FF3B30]" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-[#1D1D1F] text-sm font-medium truncate">{{ $catalogue->catalogue_book_original_filename }}</p>
+                    <p class="text-[#86868B] text-xs mt-0.5">
+                        {{ number_format($catalogue->catalogue_book_file_size / 1048576, 1) }} MB
+                        @if($catalogue->catalogueBookUploadedBy)
+                            · uploaded by {{ $catalogue->catalogueBookUploadedBy->name }}
+                        @endif
+                        @if($catalogue->catalogue_book_uploaded_at)
+                            · {{ $catalogue->catalogue_book_uploaded_at->format('d M Y') }}
+                        @endif
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <a href="{{ route('catalogues.book.view', $catalogue) }}" target="_blank" rel="noopener" class="btn-secondary">View</a>
+                <button type="button" class="text-[#0066CC] text-xs font-medium" @click="$refs.bookFileInput.click()">Replace</button>
+                <form id="form-delete-book" method="POST" action="{{ route('catalogues.book.destroy', $catalogue) }}">@csrf @method('DELETE')</form>
+                <button type="button" class="text-[#FF3B30] text-xs font-medium"
+                        @click="$store.confirm.show({
+                            title: 'Delete Catalog Book',
+                            message: 'This will permanently remove the catalog book PDF for {{ addslashes($catalogue->name) }}.',
+                            formId: 'form-delete-book',
+                            confirmText: 'Delete',
+                            danger: true
+                        })">
+                    Delete
+                </button>
+            </div>
+        </div>
+        @else
+        <button type="button" class="btn-secondary" @click="$refs.bookFileInput.click()">Upload Catalog Book (PDF)</button>
+        <p class="text-[#86868B] text-xs mt-2">PDF, up to 300MB.</p>
+        @endif
+    </div>
+
+    <input type="file" x-ref="bookFileInput" accept="application/pdf" class="hidden"
+           @change="onFile($event.target.files); $event.target.value = ''">
+
+    <div x-show="status === 'uploading' || status === 'saving'" x-cloak class="mt-1">
+        <p class="text-[#1D1D1F] text-xs font-medium mb-1.5" x-text="status === 'saving' ? 'Finalizing…' : `Uploading… ${progress}%`"></p>
+        <div class="h-1.5 bg-[#F2F2F7] rounded-full overflow-hidden">
+            <div class="h-full bg-[#0071E3] rounded-full transition-all duration-200" :style="`width:${status === 'saving' ? 100 : progress}%`"></div>
+        </div>
+    </div>
+
+    <p x-show="status === 'error'" x-cloak class="text-[#FF3B30] text-xs mt-2" x-text="error"></p>
+</div>
+@endif
+
 {{-- Additional Info --}}
 @if($catalogue->notes)
 <div class="card p-5 mb-7">
@@ -224,3 +291,95 @@
 @endif
 
 @endsection
+
+@push('scripts')
+<script>
+function catalogBookUploader({ presignUrl, storeUrl, csrfToken }) {
+    return {
+        status: 'idle', // idle | uploading | saving | error
+        progress: 0,
+        error: '',
+
+        onFile(fileList) {
+            const file = fileList[0];
+            if (!file) return;
+
+            if (file.type !== 'application/pdf') {
+                this.status = 'error';
+                this.error = 'Only PDF files are allowed.';
+                return;
+            }
+            if (file.size > 314572800) {
+                this.status = 'error';
+                this.error = 'File exceeds the 300MB limit.';
+                return;
+            }
+
+            this.upload(file);
+        },
+
+        async upload(file) {
+            this.status = 'uploading';
+            this.progress = 0;
+            this.error = '';
+            try {
+                const uuid = crypto.randomUUID();
+
+                const presign = await this.presign(uuid);
+                await this.putToS3(presign, file, pct => { this.progress = Math.round(pct); });
+
+                this.status = 'saving';
+
+                const res = await fetch(storeUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ uuid, original_filename: file.name }),
+                });
+
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body.message || 'Could not save the catalog book.');
+                }
+
+                window.location.reload();
+            } catch (e) {
+                this.status = 'error';
+                this.error = e.message || 'Upload failed.';
+            }
+        },
+
+        async presign(uuid) {
+            const res = await fetch(presignUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ uuid }),
+            });
+            if (!res.ok) throw new Error('Could not get an upload URL.');
+            return res.json();
+        },
+
+        putToS3({ url, headers }, blob, onProgress) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('PUT', url);
+                Object.entries(headers || {}).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+                xhr.upload.onprogress = e => {
+                    if (e.lengthComputable) onProgress((e.loaded / e.total) * 100);
+                };
+                xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error('Upload to storage failed.'));
+                xhr.onerror = () => reject(new Error('Upload to storage failed.'));
+                xhr.send(blob);
+            });
+        },
+    };
+}
+</script>
+@endpush

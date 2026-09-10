@@ -15,6 +15,12 @@ class Catalogue extends Model
     protected $fillable = [
         'name', 'cover_photo', 'cover_photo_og', 'qty_per_design', 'number_of_designs',
         'quantity_benchmark', 'notes', 'status', 'order_token', 'hd_gallery_token', 'created_by',
+        'catalogue_book_path', 'catalogue_book_original_filename', 'catalogue_book_file_size',
+        'catalogue_book_uploaded_by', 'catalogue_book_uploaded_at',
+    ];
+
+    protected $casts = [
+        'catalogue_book_uploaded_at' => 'datetime',
     ];
 
     // Auto-generate order_token and hd_gallery_token on creation
@@ -100,5 +106,15 @@ class Catalogue extends Model
     public function createdBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function catalogueBookUploadedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'catalogue_book_uploaded_by');
+    }
+
+    public function hasCatalogueBook(): bool
+    {
+        return ! is_null($this->catalogue_book_path);
     }
 }

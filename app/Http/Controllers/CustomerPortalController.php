@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\CustomerDevice;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CustomerPortalController extends Controller
@@ -120,6 +122,36 @@ class CustomerPortalController extends Controller
         );
 
         return response()->json(['status' => 'subscribed']);
+    }
+
+    // Redirects to a short-lived presigned S3 URL (inline disposition, so the
+    // browser renders the PDF instead of downloading it) for the catalog book
+    // belonging to this order's catalogue. Only reachable by an already-verified
+    // device, and only for an order that actually belongs to this customer —
+    // a customer must not be able to view another customer's catalogue book by
+    // guessing an order id.
+    public function catalogueBook(Request $request, string $token, Order $order)
+    {
+        $customer = Customer::where('portal_token', $token)->firstOrFail();
+
+        if (! $this->resolveDevice($request, $customer)) {
+            abort(403);
+        }
+
+        abort_unless($order->customer_id === $customer->id, 404);
+
+        $catalogue = $order->catalogue;
+        abort_unless($catalogue && $catalogue->catalogue_book_path, 404);
+
+        $filename = str_replace('"', '', $catalogue->catalogue_book_original_filename ?? 'catalogue-book.pdf');
+
+        $url = Storage::disk('s3')->temporaryUrl(
+            $catalogue->catalogue_book_path,
+            now()->addMinutes(10),
+            ['ResponseContentDisposition' => 'inline; filename="'.$filename.'"']
+        );
+
+        return redirect()->away($url);
     }
 
     // Resolves the customer_devices row for the cookie on this request, scoped
