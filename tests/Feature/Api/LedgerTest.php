@@ -290,6 +290,34 @@ class LedgerTest extends TestCase
         $response->assertOk()->assertJsonPath('advance_credit_balance', '2500.00');
     }
 
+    public function test_ledger_includes_outstanding_balance_as_the_raw_sum_of_entries(): void
+    {
+        $customer = $this->makeCustomer();
+        $order    = $this->makeOrder($customer);
+
+        CustomerLedger::create([
+            'customer_id'      => $customer->id,
+            'transaction_type' => 'order_charged',
+            'amount'           => 180000,
+            'reference_type'   => Order::class,
+            'reference_id'     => $order->id,
+            'created_by'       => 1,
+        ]);
+
+        CustomerLedger::create([
+            'customer_id'      => $customer->id,
+            'transaction_type' => 'payment_received',
+            'amount'           => -100000,
+            'reference_type'   => Payment::class,
+            'reference_id'     => 1,
+            'created_by'       => 1,
+        ]);
+
+        $response = $this->withHeaders($this->authHeaders($customer))->getJson('/api/ledger');
+
+        $response->assertOk()->assertJsonPath('outstanding_balance', '80000.00');
+    }
+
     public function test_ledger_requires_authentication(): void
     {
         $this->getJson('/api/ledger')->assertStatus(401);

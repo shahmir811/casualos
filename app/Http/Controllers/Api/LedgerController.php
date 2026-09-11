@@ -28,6 +28,11 @@ class LedgerController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Same computation as \App\Http\Controllers\LedgerController::show()'s
+        // $balance — raw SUM(amount) per Section 7's sign convention (positive =
+        // customer owes / Debit, negative = customer is in credit).
+        $outstandingBalance = CustomerLedger::where('customer_id', $customer->id)->sum('amount');
+
         $orderNumberMap = [];
         $paymentIdMap   = [];
 
@@ -106,6 +111,7 @@ class LedgerController extends Controller
 
         return response()->json([
             'advance_credit_balance' => $customer->advance_credit_balance,
+            'outstanding_balance'    => number_format($outstandingBalance, 2, '.', ''),
             'ledger'                 => LedgerEntryResource::collection($rows),
         ]);
     }
