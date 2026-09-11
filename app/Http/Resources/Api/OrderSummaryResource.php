@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class OrderSummaryResource extends JsonResource
 {
@@ -14,8 +15,9 @@ class OrderSummaryResource extends JsonResource
             'order_number'         => $this->order_number,
             'status'               => $this->status,
             'catalogue'            => [
-                'id'   => $this->catalogue?->id,
-                'name' => $this->catalogue?->name,
+                'id'              => $this->catalogue?->id,
+                'name'            => $this->catalogue?->name,
+                'cover_photo_url' => $this->catalogue?->cover_photo ? Storage::url($this->catalogue->cover_photo) : null,
             ],
             'total_pieces'         => (int) $this->items->sum('total_qty'),
             'total_amount'         => $this->total_amount,

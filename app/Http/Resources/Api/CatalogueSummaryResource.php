@@ -18,6 +18,7 @@ class CatalogueSummaryResource extends JsonResource
         return [
             'id'                 => $this->id,
             'name'               => $this->name,
+            'status'             => $this->status,
             'cover_photo_url'    => $this->cover_photo ? Storage::url($this->cover_photo) : null,
             'quantity_benchmark' => $this->quantity_benchmark,
             'qty_per_design'     => $this->qty_per_design,
