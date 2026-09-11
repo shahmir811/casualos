@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogueController;
+use App\Http\Controllers\Api\CountryController;
 use App\Http\Controllers\Api\LedgerController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PushTokenController;
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/verify', [AuthController::class, 'verify'])->name('api.auth.verify');
 Route::post('/auth/signup', [AuthController::class, 'signup'])->name('api.auth.signup');
+Route::get('/countries', [CountryController::class, 'index'])->name('api.countries.index');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me'])->name('api.me');

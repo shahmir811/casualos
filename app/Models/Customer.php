@@ -23,8 +23,8 @@ class Customer extends Model implements AuthenticatableContract
     use Authenticatable, HasApiTokens, HasFactory, Notifiable, HasPushSubscriptions;
 
     public const COUNTRIES = [
-        'Australia', 'Bangladesh', 'Canada', 'Kuwait', 'Oman', 'Pakistan',
-        'Qatar', 'Saudi Arabia', 'UAE', 'UK', 'USA',
+        'Australia', 'Bangladesh', 'Canada', 'Kuwait', 'Malaysia', 'Norway',
+        'Oman', 'Pakistan', 'Qatar', 'Saudi Arabia', 'UAE', 'UK', 'USA',
     ];
 
     // Currency symbol shown on piece tags for each destination country
@@ -33,6 +33,8 @@ class Customer extends Model implements AuthenticatableContract
         'Bangladesh'   => 'TK',
         'Canada'       => 'CAD $',
         'Kuwait'       => 'KWD',
+        'Malaysia'     => 'RM',
+        'Norway'       => 'NOK',
         'Oman'         => 'OMR',
         'Pakistan'     => 'Rs.',
         'Qatar'        => 'QAR',

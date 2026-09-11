@@ -18,7 +18,12 @@ class CatalogueController extends Controller
 
     public function index(Request $request)
     {
-        $catalogues = Catalogue::where('status', 'open')->latest()->get();
+        // Both open and closed catalogues — the app shows a full browsing
+        // history ("all previous catalogues"), not just what can currently
+        // be ordered from. ->latest() (created_at desc) is enough ordering
+        // on its own: open catalogues are naturally recent, closed ones
+        // naturally older, no separate grouping needed.
+        $catalogues = Catalogue::latest()->get();
 
         $this->markAlreadyOrdered($catalogues, $request->user());
 

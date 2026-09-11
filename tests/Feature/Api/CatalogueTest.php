@@ -171,18 +171,24 @@ class CatalogueTest extends TestCase
         return $catalogue->fresh();
     }
 
-    public function test_index_lists_only_open_catalogues(): void
+    public function test_index_lists_open_and_closed_catalogues_newest_first(): void
     {
         $customer = $this->makeCustomer();
-        $open     = $this->makeCatalogue([['selling' => 1000, 'discount' => null]], ['name' => 'OPEN-ONE']);
-        $this->makeCatalogue([['selling' => 1000, 'discount' => null]], ['name' => 'CLOSED-ONE', 'status' => 'closed']);
+        $closed = $this->makeCatalogue([['selling' => 1000, 'discount' => null]], ['name' => 'CLOSED-ONE', 'status' => 'closed']);
+        $closed->forceFill(['created_at' => now()->subDay()])->save();
+
+        $open = $this->makeCatalogue([['selling' => 1000, 'discount' => null]], ['name' => 'OPEN-ONE', 'status' => 'open']);
+        $open->forceFill(['created_at' => now()])->save();
 
         $response = $this->withHeaders($this->authHeaders($customer))->getJson('/api/catalogues');
 
         $response->assertOk();
         $catalogues = $response->json('catalogues');
-        $this->assertCount(1, $catalogues);
+        $this->assertCount(2, $catalogues);
         $this->assertSame($open->id, $catalogues[0]['id']);
+        $this->assertSame('open', $catalogues[0]['status']);
+        $this->assertSame($closed->id, $catalogues[1]['id']);
+        $this->assertSame('closed', $catalogues[1]['status']);
     }
 
     public function test_index_marks_already_ordered_for_a_catalogue_the_customer_has_ordered(): void
