@@ -15,19 +15,29 @@ use App\Notifications\AnnouncementNotification;
  */
 class AnnouncementService
 {
-    public function send(string $title, string $body, array $imagePaths, ?User $sentBy): Announcement
-    {
+    public function send(
+        string $title,
+        string $body,
+        array $imagePaths,
+        ?User $sentBy,
+        ?string $audioPath = null,
+        ?string $audioOriginalFilename = null,
+        ?int $audioFileSize = null,
+    ): Announcement {
         $announcement = Announcement::create([
-            'title'           => $title,
-            'body'            => $body,
-            'image_paths'     => $imagePaths,
-            'sent_by'         => $sentBy?->id,
-            'sent_at'         => now(),
-            'recipient_count' => Customer::count(),
+            'title'                    => $title,
+            'body'                     => $body,
+            'image_paths'              => $imagePaths,
+            'audio_path'               => $audioPath,
+            'audio_original_filename'  => $audioOriginalFilename,
+            'audio_file_size'          => $audioFileSize,
+            'sent_by'                  => $sentBy?->id,
+            'sent_at'                  => now(),
+            'recipient_count'          => Customer::count(),
         ]);
 
         foreach (Customer::all() as $customer) {
-            $customer->notify(new AnnouncementNotification($title, $body, $imagePaths));
+            $customer->notify(new AnnouncementNotification($title, $body, $imagePaths, $audioPath));
         }
 
         return $announcement;

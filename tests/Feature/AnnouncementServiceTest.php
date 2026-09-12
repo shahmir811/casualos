@@ -62,6 +62,9 @@ class AnnouncementServiceTest extends TestCase
             $table->string('title');
             $table->text('body');
             $table->text('image_paths')->nullable();
+            $table->string('audio_path')->nullable();
+            $table->string('audio_original_filename')->nullable();
+            $table->unsignedBigInteger('audio_file_size')->nullable();
             $table->foreignId('sent_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('sent_at');
             $table->unsignedInteger('recipient_count')->default(0);
@@ -129,5 +132,31 @@ class AnnouncementServiceTest extends TestCase
 
         $this->assertSame(0, $announcement->recipient_count);
         $this->assertDatabaseCount('notifications', 0);
+    }
+
+    public function test_send_with_a_voice_note_stores_its_metadata_and_passes_it_into_the_notification(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $announcement = app(AnnouncementService::class)->send(
+            'New Drop', 'Listen to this.', [], null,
+            'announcements/voice.m4a', 'voice.m4a', 204800,
+        );
+
+        $this->assertSame('announcements/voice.m4a', $announcement->audio_path);
+        $this->assertSame('voice.m4a', $announcement->audio_original_filename);
+        $this->assertSame(204800, $announcement->audio_file_size);
+
+        $notification = $customer->notifications()->first();
+        $this->assertSame('announcements/voice.m4a', $notification->data['audio_path']);
+    }
+
+    public function test_send_without_a_voice_note_stores_null_audio_fields(): void
+    {
+        $announcement = app(AnnouncementService::class)->send('No Audio', 'Body', [], null);
+
+        $this->assertNull($announcement->audio_path);
+        $this->assertNull($announcement->audio_original_filename);
+        $this->assertNull($announcement->audio_file_size);
     }
 }

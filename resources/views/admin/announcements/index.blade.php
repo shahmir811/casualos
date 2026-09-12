@@ -27,11 +27,10 @@
 <div class="card p-4 mb-5">
     <form id="announcement-form" method="POST" action="{{ route('announcements.store') }}"
           enctype="multipart/form-data"
-          x-data="{
-              previews: [],
-              onFiles(e) { this.previews = Array.from(e.target.files).map(f => URL.createObjectURL(f)); },
-              clearAll() { this.previews = []; $refs.imageInput.value = ''; }
-          }"
+          x-data="announcementComposer({
+              presignUrl: '{{ route('announcements.audio.presign') }}',
+              csrfToken: '{{ csrf_token() }}',
+          })"
           class="flex gap-3">
         @csrf
 
@@ -82,15 +81,70 @@
                 <p class="mt-1 text-[#FF3B30] text-xs">{{ $message }}</p>
             @enderror
 
-            <div class="flex items-center justify-between mt-3 pt-3 border-t border-[#F2F2F7]">
-                <label class="w-9 h-9 rounded-full flex items-center justify-center text-[#0071E3] hover:bg-[#0071E3]/10 cursor-pointer transition-colors" title="Add images (optional, max 10MB each)">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
+            {{-- Voice note --}}
+            <input type="hidden" name="audio_key" :value="audioKey">
+            <input type="hidden" name="audio_original_filename" :value="audioOriginalFilename">
+
+            <div x-show="audioStatus === 'uploading'" x-cloak class="mt-3 bg-[#F5F5F7] rounded-full px-4 py-2.5 flex items-center gap-3">
+                <div class="flex-1 h-1.5 bg-[#E8E8ED] rounded-full overflow-hidden">
+                    <div class="h-full bg-[#0071E3] rounded-full transition-all" :style="'width:' + audioProgress + '%'"></div>
+                </div>
+                <span class="text-[#6E6E73] text-xs flex-shrink-0" x-text="audioProgress + '%'"></span>
+            </div>
+
+            <p x-show="audioStatus === 'error'" x-cloak class="mt-2 text-[#FF3B30] text-xs" x-text="audioError"></p>
+            @error('audio')
+                <p class="mt-2 text-[#FF3B30] text-xs">{{ $message }}</p>
+            @enderror
+
+            <div x-show="audioStatus === 'ready'" x-cloak class="relative mt-3">
+                <div class="flex items-center gap-3 bg-[#F5F5F7] rounded-full px-3 py-2 pr-9">
+                    <button type="button" @click="toggleAudioPreview()"
+                            class="w-8 h-8 rounded-full bg-[#0071E3] text-white flex items-center justify-center flex-shrink-0">
+                        <svg x-show="!audioPlaying" class="w-3.5 h-3.5 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6 4l12 6-12 6V4z"/></svg>
+                        <svg x-show="audioPlaying" x-cloak class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6 4h3v12H6zM11 4h3v12h-3z"/></svg>
+                    </button>
+
+                    <div class="flex-1 min-w-0 h-7 flex items-center gap-[2px] cursor-pointer" @click="seekAudioPreview($event)">
+                        <template x-for="(peak, i) in audioPeaks" :key="i">
+                            <div class="w-[3px] rounded-full flex-shrink-0"
+                                 :style="'height:' + Math.max(4, peak * 28) + 'px'"
+                                 :class="(i / audioPeaks.length) * 100 <= audioProgressPct ? 'bg-[#0071E3]' : 'bg-[#D2D2D7]'">
+                            </div>
+                        </template>
+                    </div>
+
+                    <span class="text-[#86868B] text-xs tabular-nums flex-shrink-0" x-text="formatAudioTime(audioPlaying ? audioCurrentTime : audioDuration)"></span>
+                </div>
+                <button type="button" @click="removeAudio()"
+                    class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#1D1D1F]/70 text-white flex items-center justify-center hover:bg-[#1D1D1F]">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
-                    <input type="file" name="images[]" accept="image/*" multiple x-ref="imageInput" class="hidden"
-                        @change="onFiles($event)">
-                </label>
+                </button>
+            </div>
+
+            <div class="flex items-center justify-between mt-3 pt-3 border-t border-[#F2F2F7]">
+                <div class="flex items-center gap-1">
+                    <label class="w-9 h-9 rounded-full flex items-center justify-center text-[#0071E3] hover:bg-[#0071E3]/10 cursor-pointer transition-colors" title="Add images (optional, max 10MB each)">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                        </svg>
+                        <input type="file" name="images[]" accept="image/*" multiple x-ref="imageInput" class="hidden"
+                            @change="onFiles($event)">
+                    </label>
+
+                    <label class="w-9 h-9 rounded-full flex items-center justify-center text-[#0071E3] hover:bg-[#0071E3]/10 cursor-pointer transition-colors"
+                           :class="audioStatus === 'uploading' ? 'opacity-40 pointer-events-none' : ''"
+                           title="Add a voice note (optional)">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                        </svg>
+                        <input type="file" name="audio_file" accept="audio/*" x-ref="audioInput" class="hidden"
+                            @change="onAudioFile($event)">
+                    </label>
+                </div>
 
                 {{--
                     The Send button is type="button" and submits through the global
@@ -100,9 +154,12 @@
                     this codebase submits a separate hidden no-field form instead,
                     since proceed() just calls formId.submit() with no knowledge of
                     field contents — but this send genuinely needs the real form's
-                    data, so pointing at it directly is correct here.
+                    data, so pointing at it directly is correct here. Disabled while a
+                    voice note is still uploading, since audio_key wouldn't be set yet.
                 --}}
                 <button type="button" class="btn-primary rounded-full px-5 py-2 text-sm"
+                        :disabled="audioStatus === 'uploading'"
+                        :class="audioStatus === 'uploading' ? 'opacity-50 cursor-not-allowed' : ''"
                         @click="$store.confirm.show({
                             title: 'Send Announcement',
                             message: 'Send this to every customer? This cannot be undone.',
@@ -149,6 +206,10 @@
             </div>
             @endif
 
+            @if($announcement->audio_path)
+            @include('admin.announcements._waveform-player', ['url' => Storage::url($announcement->audio_path)])
+            @endif
+
             <div class="flex items-center gap-1.5 mt-3 text-[#86868B] text-xs">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1a4 4 0 100-8 4 4 0 000 8zm6 3.13a4 4 0 010 7.75M6 20.13a4 4 0 010-7.75" />
@@ -167,3 +228,243 @@
 </div>
 
 @endsection
+
+@push('scripts')
+<script>
+/**
+ * Downsamples a decoded AudioBuffer's first channel into `barCount` average-
+ * amplitude peaks, normalized 0.12–1 (floor keeps silent bars visible as a
+ * thin line rather than disappearing). Shared by the compose-form preview
+ * (announcementComposer) and the sent-history player (waveformPlayer) so a
+ * WhatsApp-style waveform never needs a server-side audio pipeline.
+ */
+function computeWaveformPeaks(audioBuffer, barCount) {
+    const data = audioBuffer.getChannelData(0);
+    const blockSize = Math.max(1, Math.floor(data.length / barCount));
+    const peaks = [];
+    for (let i = 0; i < barCount; i++) {
+        let sum = 0;
+        const start = i * blockSize;
+        for (let j = 0; j < blockSize; j++) sum += Math.abs(data[start + j] || 0);
+        peaks.push(sum / blockSize);
+    }
+    const max = Math.max(...peaks, 0.0001);
+    return peaks.map(p => Math.max(0.12, p / max));
+}
+
+function formatAudioTime(sec) {
+    if (!isFinite(sec) || sec < 0) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return m + ':' + String(s).padStart(2, '0');
+}
+
+function announcementComposer({ presignUrl, csrfToken }) {
+    return {
+        previews: [],
+
+        // idle | uploading | ready | error
+        audioStatus: 'idle',
+        audioProgress: 0,
+        audioError: '',
+        audioKey: null,
+        audioOriginalFilename: null,
+        audioObjectUrl: null,
+        audioEl: null,
+        audioPlaying: false,
+        audioCurrentTime: 0,
+        audioDuration: 0,
+        audioPeaks: [],
+
+        formatAudioTime,
+
+        onFiles(e) {
+            this.previews = Array.from(e.target.files).map(f => URL.createObjectURL(f));
+        },
+        clearAll() {
+            this.previews = [];
+            this.$refs.imageInput.value = '';
+        },
+
+        onAudioFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('audio/')) {
+                this.audioStatus = 'error';
+                this.audioError = 'Please choose an audio file.';
+                return;
+            }
+
+            this.uploadAudio(file);
+        },
+
+        removeAudio() {
+            if (this.audioEl) {
+                this.audioEl.pause();
+                this.audioEl = null;
+            }
+            if (this.audioObjectUrl) URL.revokeObjectURL(this.audioObjectUrl);
+
+            this.audioStatus = 'idle';
+            this.audioProgress = 0;
+            this.audioError = '';
+            this.audioKey = null;
+            this.audioOriginalFilename = null;
+            this.audioObjectUrl = null;
+            this.audioPlaying = false;
+            this.audioCurrentTime = 0;
+            this.audioDuration = 0;
+            this.audioPeaks = [];
+            this.$refs.audioInput.value = '';
+        },
+
+        async uploadAudio(file) {
+            this.audioStatus = 'uploading';
+            this.audioProgress = 0;
+            this.audioError = '';
+
+            try {
+                const uuid = crypto.randomUUID();
+                const extension = (file.name.split('.').pop() || 'm4a').toLowerCase();
+                const contentType = file.type || 'audio/mpeg';
+
+                const presignRes = await fetch(presignUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ uuid, extension, content_type: contentType }),
+                });
+                if (!presignRes.ok) throw new Error('Could not get an upload URL.');
+                const { url, headers, key } = await presignRes.json();
+
+                await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('PUT', url);
+                    Object.entries(headers || {}).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+                    xhr.upload.onprogress = ev => {
+                        if (ev.lengthComputable) this.audioProgress = Math.round((ev.loaded / ev.total) * 100);
+                    };
+                    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error('Upload to storage failed.'));
+                    xhr.onerror = () => reject(new Error('Upload to storage failed.'));
+                    xhr.send(file);
+                });
+
+                this.audioKey = key;
+                this.audioOriginalFilename = file.name;
+                this.audioObjectUrl = URL.createObjectURL(file);
+
+                this.audioEl = new Audio(this.audioObjectUrl);
+                this.audioEl.addEventListener('loadedmetadata', () => { this.audioDuration = this.audioEl.duration; });
+                this.audioEl.addEventListener('timeupdate', () => { this.audioCurrentTime = this.audioEl.currentTime; });
+                this.audioEl.addEventListener('ended', () => { this.audioPlaying = false; this.audioCurrentTime = 0; });
+
+                const buf = await file.arrayBuffer();
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const decoded = await ctx.decodeAudioData(buf);
+                this.audioPeaks = computeWaveformPeaks(decoded, 40);
+                if (!this.audioDuration) this.audioDuration = decoded.duration;
+                ctx.close();
+
+                this.audioStatus = 'ready';
+            } catch (e) {
+                this.audioStatus = 'error';
+                this.audioError = e.message || 'Voice note upload failed.';
+            }
+        },
+
+        toggleAudioPreview() {
+            if (!this.audioEl) return;
+            if (this.audioPlaying) {
+                this.audioEl.pause();
+                this.audioPlaying = false;
+            } else {
+                this.audioEl.play();
+                this.audioPlaying = true;
+            }
+        },
+
+        seekAudioPreview(e) {
+            if (!this.audioEl || !this.audioDuration) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const pct = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+            this.audioEl.currentTime = pct * this.audioDuration;
+        },
+
+        get audioProgressPct() {
+            return this.audioDuration ? (this.audioCurrentTime / this.audioDuration) * 100 : 0;
+        },
+    };
+}
+
+/**
+ * Playback for an already-sent voice note (Storage::url(), fetched fresh —
+ * no presigning needed since announcement media is public, same as images).
+ * Decodes the whole file client-side to render WhatsApp-style waveform bars;
+ * fine for voice-note-length clips, which is the only use case here.
+ */
+function waveformPlayer(url) {
+    return {
+        url,
+        peaks: [],
+        duration: 0,
+        currentTime: 0,
+        playing: false,
+        loading: true,
+        error: false,
+        audio: null,
+
+        formatAudioTime,
+
+        init() {
+            this.audio = new Audio(this.url);
+            this.audio.preload = 'metadata';
+            this.audio.addEventListener('loadedmetadata', () => { this.duration = this.audio.duration; });
+            this.audio.addEventListener('timeupdate', () => { this.currentTime = this.audio.currentTime; });
+            this.audio.addEventListener('ended', () => { this.playing = false; this.currentTime = 0; });
+            this.load();
+        },
+
+        async load() {
+            try {
+                const res = await fetch(this.url);
+                const buf = await res.arrayBuffer();
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const decoded = await ctx.decodeAudioData(buf);
+                this.peaks = computeWaveformPeaks(decoded, 48);
+                if (!this.duration) this.duration = decoded.duration;
+                ctx.close();
+            } catch (e) {
+                this.error = true;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        toggle() {
+            if (this.playing) {
+                this.audio.pause();
+                this.playing = false;
+            } else {
+                this.audio.play();
+                this.playing = true;
+            }
+        },
+
+        seekFromClick(e) {
+            if (!this.duration || this.loading || this.error) return;
+            const rect = this.$refs.bars.getBoundingClientRect();
+            const pct = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+            this.audio.currentTime = pct * this.duration;
+        },
+
+        get progressPct() {
+            return this.duration ? (this.currentTime / this.duration) * 100 : 0;
+        },
+    };
+}
+</script>
+@endpush

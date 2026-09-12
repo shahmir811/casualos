@@ -12,7 +12,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Announcement extends Model
 {
-    protected $fillable = ['title', 'body', 'image_paths', 'sent_by', 'sent_at', 'recipient_count'];
+    protected $fillable = [
+        'title', 'body', 'image_paths',
+        'audio_path', 'audio_original_filename', 'audio_file_size',
+        'sent_by', 'sent_at', 'recipient_count',
+    ];
 
     protected $casts = [
         'sent_at'      => 'datetime',
