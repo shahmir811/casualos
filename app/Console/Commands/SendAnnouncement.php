@@ -17,7 +17,8 @@ class SendAnnouncement extends Command
     protected $signature = 'announcements:send
                             {title : Announcement title}
                             {body : Announcement body text}
-                            {--image=* : Local file path to an image to attach; repeat --image for multiple; each is uploaded to S3 under announcements/}';
+                            {--image=* : Local file path to an image to attach; repeat --image for multiple; each is uploaded to S3 under announcements/}
+                            {--audio= : Local file path to a voice note to attach; uploaded to S3 under announcements/}';
 
     protected $description = 'Send an announcement to every customer (in-app history + Expo push) from the command line.';
 
@@ -40,7 +41,28 @@ class SendAnnouncement extends Command
             $imagePaths[] = $path;
         }
 
-        $announcement = $announcements->send($title, $body, $imagePaths, null);
+        $audioPath = null;
+        $audioOriginalFilename = null;
+        $audioFileSize = null;
+
+        if ($localAudioPath = $this->option('audio')) {
+            if (! file_exists($localAudioPath)) {
+                $this->error("Audio file not found: {$localAudioPath}");
+
+                return self::FAILURE;
+            }
+
+            $extension = pathinfo($localAudioPath, PATHINFO_EXTENSION) ?: 'm4a';
+            $audioPath = 'announcements/' . Str::uuid() . '.' . $extension;
+            Storage::disk('s3')->put($audioPath, file_get_contents($localAudioPath));
+            $audioOriginalFilename = basename($localAudioPath);
+            $audioFileSize = filesize($localAudioPath);
+        }
+
+        $announcement = $announcements->send(
+            $title, $body, $imagePaths, null,
+            $audioPath, $audioOriginalFilename, $audioFileSize,
+        );
 
         if ($announcement->recipient_count === 0) {
             $this->warn('No customers found — announcement recorded, but nothing was sent.');

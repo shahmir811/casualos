@@ -147,6 +147,36 @@ class AnnouncementTest extends TestCase
         $this->assertStringContainsString('announcements/def.jpg', $imageUrls[1]);
     }
 
+    public function test_index_includes_audio_url_and_has_audio_flag_when_a_voice_note_was_attached(): void
+    {
+        Storage::fake('s3');
+
+        $customer = $this->makeCustomer();
+        $customer->notify(new AnnouncementNotification('With Audio', 'Listen up', [], 'announcements/voice.m4a'));
+
+        $token = $this->bearerToken($customer);
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/announcements');
+
+        $this->assertTrue($response->json('announcements.0.has_audio'));
+        $this->assertStringContainsString('announcements/voice.m4a', $response->json('announcements.0.audio_url'));
+    }
+
+    public function test_index_reports_has_audio_false_when_no_voice_note_was_attached(): void
+    {
+        $customer = $this->makeCustomer();
+        $customer->notify(new AnnouncementNotification('No Audio', 'Just text'));
+
+        $token = $this->bearerToken($customer);
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/announcements');
+
+        $this->assertFalse($response->json('announcements.0.has_audio'));
+        $this->assertNull($response->json('announcements.0.audio_url'));
+    }
+
     public function test_mark_read_sets_read_at_and_is_scoped_to_the_authenticated_customer(): void
     {
         $customer = $this->makeCustomer();
@@ -202,7 +232,27 @@ class AnnouncementTest extends TestCase
             return $request->url() === 'https://exp.host/--/api/v2/push/send'
                 && $body[0]['to'] === 'tokenA'
                 && $body[0]['title'] === 'Sale'
-                && $body[0]['data']['announcement_id'] === $notificationId;
+                && $body[0]['data']['announcement_id'] === $notificationId
+                && $body[0]['data']['has_audio'] === false;
+        });
+    }
+
+    public function test_expo_push_body_is_prefixed_and_flagged_when_a_voice_note_is_attached(): void
+    {
+        Http::fake([
+            'exp.host/*' => Http::response(['data' => [['status' => 'ok']]], 200),
+        ]);
+
+        $customer = $this->makeCustomer();
+        \App\Models\ExpoPushToken::create(['customer_id' => $customer->id, 'token' => 'tokenA']);
+
+        $customer->notify(new AnnouncementNotification('Sale', 'Everything 20% off.', [], 'announcements/voice.m4a'));
+
+        Http::assertSent(function ($request) {
+            $body = $request->data();
+
+            return $body[0]['body'] === '🎤 Voice message · Everything 20% off.'
+                && $body[0]['data']['has_audio'] === true;
         });
     }
 }

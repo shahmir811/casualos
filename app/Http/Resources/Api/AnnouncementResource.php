@@ -22,6 +22,8 @@ class AnnouncementResource extends JsonResource
         $imagePaths = $this->data['image_paths']
             ?? (isset($this->data['image_path']) ? [$this->data['image_path']] : []);
 
+        $audioPath = $this->data['audio_path'] ?? null;
+
         return [
             'id'         => $this->id,
             'title'      => $this->data['title'] ?? null,
@@ -30,6 +32,8 @@ class AnnouncementResource extends JsonResource
             // a single image; always the first of `image_urls`.
             'image_url'  => isset($imagePaths[0]) ? Storage::url($imagePaths[0]) : null,
             'image_urls' => array_map(fn ($path) => Storage::url($path), $imagePaths),
+            'has_audio'  => $audioPath !== null,
+            'audio_url'  => $audioPath ? Storage::url($audioPath) : null,
             'sent_at'    => $this->created_at,
             'read_at'    => $this->read_at,
         ];

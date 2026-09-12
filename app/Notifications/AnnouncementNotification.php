@@ -29,6 +29,7 @@ class AnnouncementNotification extends Notification implements ShouldQueue
         private readonly string $title,
         private readonly string $body,
         private readonly array $imagePaths = [],
+        private readonly ?string $audioPath = null,
     ) {}
 
     public function via(mixed $notifiable): array
@@ -37,7 +38,7 @@ class AnnouncementNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * @return array{title: string, body: string, image_paths: array<int, string>}
+     * @return array{title: string, body: string, image_paths: array<int, string>, audio_path: ?string}
      */
     public function toDatabase(mixed $notifiable): array
     {
@@ -45,17 +46,23 @@ class AnnouncementNotification extends Notification implements ShouldQueue
             'title'       => $this->title,
             'body'        => $this->body,
             'image_paths' => $this->imagePaths,
+            'audio_path'  => $this->audioPath,
         ];
     }
 
     /**
-     * @return array{title: string, body: string, sound: string, data: array{type: string, announcement_id: ?string}}
+     * @return array{title: string, body: string, sound: string, data: array{type: string, announcement_id: ?string, has_audio: bool}}
      */
     public function toExpoPush(mixed $notifiable): array
     {
         return [
             'title' => $this->title,
-            'body'  => $this->body,
+            // A push notification is text-only — there's nothing to play from
+            // the OS notification itself, so a fixed indicator is prefixed
+            // onto the body whenever a voice note is attached, and the
+            // structured `has_audio` flag below lets the app render its own
+            // mic icon without parsing this string.
+            'body'  => $this->audioPath ? "🎤 Voice message · {$this->body}" : $this->body,
             'sound' => 'default',
             'data'  => [
                 'type'            => 'announcement',
@@ -64,6 +71,7 @@ class AnnouncementNotification extends Notification implements ShouldQueue
                 // row id, so the app can deep-link straight to this
                 // announcement instead of just opening the list.
                 'announcement_id' => $this->id,
+                'has_audio'       => $this->audioPath !== null,
             ],
         ];
     }
