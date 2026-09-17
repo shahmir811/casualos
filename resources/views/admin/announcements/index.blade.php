@@ -98,16 +98,18 @@
             @enderror
 
             <div x-show="audioStatus === 'ready'" x-cloak class="relative mt-3">
-                <div class="flex items-center gap-3 bg-[#F5F5F7] rounded-full px-3 py-2 pr-9">
+                <div class="flex items-center bg-[#F5F5F7] rounded-full px-3 py-2 pr-9">
                     <button type="button" @click="toggleAudioPreview()"
-                            class="w-8 h-8 rounded-full bg-[#0071E3] text-white flex items-center justify-center flex-shrink-0">
+                            class="w-8 h-8 rounded-full bg-[#0071E3] text-white flex items-center justify-center flex-shrink-0 mr-3">
                         <svg x-show="!audioPlaying" class="w-3.5 h-3.5 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6 4l12 6-12 6V4z"/></svg>
                         <svg x-show="audioPlaying" x-cloak class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6 4h3v12H6zM11 4h3v12h-3z"/></svg>
                     </button>
 
-                    <div class="flex-1 min-w-0 h-7 flex items-center gap-[2px] cursor-pointer" @click="seekAudioPreview($event)">
+                    <div class="flex-1 min-w-0 h-7 flex items-center gap-x-px overflow-hidden cursor-pointer mr-3" @click="seekAudioPreview($event)">
                         <template x-for="(peak, i) in audioPeaks" :key="i">
-                            <div class="w-[3px] rounded-full flex-shrink-0"
+                            {{-- flex-1 (not a fixed px width) so the bar row always exactly
+                                 fills the available space instead of overflowing on narrow screens --}}
+                            <div class="flex-1 min-w-0 max-w-[4px] rounded-full"
                                  :style="'height:' + Math.max(4, peak * 28) + 'px'"
                                  :class="(i / audioPeaks.length) * 100 <= audioProgressPct ? 'bg-[#0071E3]' : 'bg-[#D2D2D7]'">
                             </div>
@@ -124,8 +126,8 @@
                 </button>
             </div>
 
-            <div class="flex items-center justify-between mt-3 pt-3 border-t border-[#F2F2F7]">
-                <div class="flex items-center gap-1">
+            <div class="flex items-center justify-between flex-wrap gap-3 mt-3 pt-3 border-t border-[#F2F2F7]">
+                <div class="flex items-center gap-1 flex-shrink-0">
                     <label class="w-9 h-9 rounded-full flex items-center justify-center text-[#0071E3] hover:bg-[#0071E3]/10 cursor-pointer transition-colors" title="Add images (optional, max 10MB each)">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" />
@@ -141,7 +143,18 @@
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
                         </svg>
-                        <input type="file" name="audio_file" accept="audio/*" x-ref="audioInput" class="hidden"
+                        {{--
+                            No `accept` restriction on purpose. iOS's file picker turns
+                            `accept="audio/*"` into a strict UTI filter applied before the
+                            user ever taps a file — for some real-world audio exports
+                            (confirmed with a WhatsApp-saved voice note) that filter silently
+                            blocks selection even though the file is shown, not grayed out.
+                            onAudioFile() below already validates the picked file is really
+                            audio and rejects it with a clear message otherwise, and the
+                            presign endpoint re-validates content_type server-side — so
+                            dropping the native filter costs nothing and fixes the picker.
+                        --}}
+                        <input type="file" name="audio_file" x-ref="audioInput" class="hidden"
                             @change="onAudioFile($event)">
                     </label>
                 </div>
@@ -157,7 +170,7 @@
                     data, so pointing at it directly is correct here. Disabled while a
                     voice note is still uploading, since audio_key wouldn't be set yet.
                 --}}
-                <button type="button" class="btn-primary rounded-full px-5 py-2 text-sm"
+                <button type="button" class="btn-primary rounded-full px-5 py-2 text-sm w-full sm:w-auto text-center"
                         :disabled="audioStatus === 'uploading'"
                         :class="audioStatus === 'uploading' ? 'opacity-50 cursor-not-allowed' : ''"
                         @click="$store.confirm.show({

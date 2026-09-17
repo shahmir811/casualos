@@ -194,12 +194,15 @@ The `production_manager` role can view and edit customer records (`customers.ind
 
 ### Route middleware groups currently in `routes/web.php`
 
-- `role:admin` — user management, order reductions, bank accounts, stitching units, piece reassignment, cron logs
-- `role:admin|accountant` — customer create/store, customer ledger, advance payments, payments, reports
+**Corrected 2026-09-15 — this list previously put Order Reductions/Adjust/Delete/Free Pieces under the `role:admin` bullet; they are actually `role:admin|accountant`, and several `role:admin`-only feature groups (announcements, pending signups, backups) were missing entirely. Verified directly against `routes/web.php`.**
+
+- `role:admin` — user management, bank accounts, stitching units, country pricing, piece reassignment, order price recalculation, cron logs, announcements (Timeline), pending signups, database backups
+- `role:admin|accountant` — customer create/store, customer ledger, advance payments, payments, reports, order reductions (Log Reduction / Adjust Order / Delete Order / Free Pieces)
 - `role:admin|accountant|production_manager` — customers index/show/edit/update (financials hidden for production_manager — see above)
 - `role:admin|accountant|production_manager|creative_head` — orders index + exports
 - `role:admin|production_manager|creative_head` — all production routes, dispatch
 - `role:admin|production_manager|accountant|creative_head` — wages, Tarpai charges
+- `role:admin|creative_head` — HD Gallery management (`hd-gallery.index`, `catalogues.hd-images.*`) — narrower than the rest of Production; `production_manager` does not get this one (see rule 5.27)
 - No role restriction (auth only) — dashboard, catalogues (accessible to all including creative_head)
 
 ---
@@ -218,7 +221,7 @@ received | confirmed | stitching | partially_dispatched | dispatched | cancelled
 advance_received | order_charged | payment_received | credit_applied | order_reduced | refund_issued
 ```
 
-`surplus_to_advance` has been **removed** — it double-counted `order_reduced`. Surplus credit is reflected via `order_reduced` alone; the advance_credit_balance column tracks the actual balance. Do not add `surplus_to_advance` back.
+`surplus_to_advance` is **dead — no application code reads or writes it** — it double-counted `order_reduced`. Surplus credit is reflected via `order_reduced` alone; the advance_credit_balance column tracks the actual balance. **Correction (2026-09-15):** this value was never actually dropped from the MySQL `ENUM` definition — no migration ever ran a `DROP`/`MODIFY COLUMN` removing it, so it technically remains a valid value at the schema level (confirmed by reading every migration that touches this column). The list above (six values) is what the DB enum literally allows today: `surplus_to_advance` is still present as a 7th schema-level value even though nothing in the codebase ever writes or expects it. Do not write `surplus_to_advance` from new code, and don't assume a migration exists that removed it from the column definition.
 
 ### `payments.payment_type`
 
@@ -226,7 +229,7 @@ advance_received | order_charged | payment_received | credit_applied | order_red
 cash | bank_transfer | advance
 ```
 
-`easypaisa` and `jazzcash` have been removed from the system. Do not add them back.
+`easypaisa` and `jazzcash` are **dead — no application code reads, writes, or validates them** (no form option, no `in:` rule references them). **Correction (2026-09-15):** same caveat as `surplus_to_advance` above — no migration ever removed them from the MySQL `ENUM` definition, so they technically remain valid schema-level values even though the app never uses them. Do not wire them back into any validation rule, form, or controller.
 
 ### `designs.manufacturing_type`
 
@@ -1083,6 +1086,21 @@ returns that cause discrepancies — it flags them for review.
 | `api.catalogues.book`            | `GET /api/catalogues/{catalogue}/book`      | Fresh presigned URL for the catalogue's book PDF, returned as JSON (`auth:sanctum`, see rule 5.35) |
 | `api.countries.index`            | `GET /api/countries`                        | Returns `Customer::COUNTRIES` as JSON, public, no auth (see rule 5.36) |
 
+**Below added 2026-09-15 — these routes existed in `routes/web.php` but were missing from this table (found during a documentation-accuracy audit against the codebase).**
+
+| `catalogues.close`               | `POST /catalogues/{catalogue}/close`        | Close a catalogue to new orders — no route-level role middleware, guarded inline by `CatalogueController::adminOrProductionManager()` (admin/production_manager/creative_head) |
+| `catalogues.reopen`              | `POST /catalogues/{catalogue}/reopen`       | Reopen a closed catalogue — same inline guard as `catalogues.close` |
+| `customers.ledger`               | `GET /customers/{customer}/ledger`          | Customer ledger view (admin + accountant only) |
+| `customers.ledger.pdf`           | `GET /customers/{customer}/ledger/pdf`      | Customer ledger PDF export (admin + accountant only) |
+| `orders.invoice`                 | `GET /orders/{order}/invoice`               | Order invoice view (admin + accountant only) |
+| `orders.confirm`                 | `POST /orders/{order}/confirm`              | Manually confirm an order (zero-payment confirmations — admin + accountant, see Section 2) |
+| `orders.stitch`                  | `POST /orders/{order}/stitch`               | Manual admin override for the `stitching` transition (admin + accountant — the transition is normally automatic, see rule 5.8) |
+| `orders.apply-credit`            | `POST /orders/{order}/apply-credit`         | Apply a customer's advance credit to an order (admin + accountant) |
+| `orders.assign-bank`             | `PATCH /orders/{order}/assign-bank`         | Assign the "Title Given" collection bank to one order (admin + accountant) |
+| `orders.bulk-assign-bank`        | `POST /orders/bulk-assign-bank`             | Bulk-assign a bank to multiple selected orders (admin + accountant) |
+| `dispatch-batches.cargo-document`| `POST /dispatch-batches/{dispatchBatch}/cargo-document` | Update/replace a dispatch batch's cargo document (admin + production_manager + creative_head, same group as the rest of Dispatch) |
+| `announcements.audio.presign`    | `POST /announcements/audio/presign`         | Presigned S3 PUT URL for a voice note attached to an announcement (admin only, see the "Voice notes on announcements" entry under Section 9) |
+
 **Never use `order.show` — it does not exist. The correct route name is `order.public`.**
 
 ---
@@ -1243,17 +1261,27 @@ returns that cause discrepancies — it flags them for review.
 All migrations have been run (including the two HD Gallery migrations added 2026-07-16, listed below) against the local dev database. Run `php artisan migrate` in any other environment (staging/production) that hasn't picked them up yet. For reference, the full set introduced across branches:
 
 - `2026_05_02_000001` — adds `'np'` to `production_assignment_items.size` enum
+- `2026_05_02_000002_create_production_assignment_np_designs_table` — creates `production_assignment_np_designs` (per-design quantity + per-piece rate for one Naeem Pakki batch assignment; a single `ProductionAssignment` with `destination='naeem_pakki'` can hold many designs here)
+- `2026_05_02_000003_make_design_id_nullable_on_production_assignments` — makes `production_assignments.design_id` nullable, since NP batch assignments no longer store a single design on the parent row (stitching assignments still populate it)
+- `2026_05_03_000001_add_return_fields_to_production_assignment_np_designs` — adds `returned_quantity`/`return_date` to `production_assignment_np_designs` (superseded two days later — see `2026_05_05_000001_restructure_naeem_pakki_returns_for_assignments` below, which drops these same two columns once returns became `naeem_pakki_return_items`-based instead)
+- `2026_05_05_000001_add_order_number_to_orders_table` — adds `orders.order_number` (nullable unique string), backfills existing rows with random 6-digit numbers; this predates the sequential-numbering rework (`2026_06_10_000001` below) — see "How Orders Work" in Section 2 for why pre-existing random numbers were left alone rather than renumbered
+- `2026_05_05_000001_restructure_naeem_pakki_returns_for_assignments` — reworks `naeem_pakki_returns` to link by `production_assignment_id` (one header per batch return) instead of `naeem_pakki_send_id`, and `naeem_pakki_return_items` to link by `np_design_id` (per-design per batch) instead of `size`; drops the now-redundant `returned_quantity`/`return_date` columns added by `2026_05_03_000001` above
+- `2026_05_05_000002_fix_naeem_pakki_return_items_unique_index` — corrects the unique index left over from the restructure above (`(naeem_pakki_return_id)` alone, which blocked multi-design return batches) to `(naeem_pakki_return_id, np_design_id)`
 - `2026_05_06_000001` — adds `discount_price` to `designs` and `quantity_benchmark` to `catalogues`
 - `2026_05_06_000002` — creates `stitching_units` table and seeds Units 1–4
 - `2026_05_06_000003` — migrates `stitching_unit` integer columns to FK on `production_assignments` and `stitching_returns`
 - `2026_05_06_000004` — adds `per_piece_rate` to `stitching_units`
 - `2026_05_06_000005` — adds `stitching_unit_id` FK to `wages`; drops `wage_rate` from `catalogues`
+- `2026_05_07_000001_drop_unique_on_production_assignments_catalogue_design` — drops the `(catalogue_id, design_id)` unique constraint on `production_assignments`, since a design can legitimately have multiple assignments (e.g. NP then stitching, or split batches) — the controller's own availability check already prevents over-assignment, making the DB-level constraint too strict
+- `2026_05_07_000002_add_component_to_stitching_return_items` — adds a `component` enum (`kameez`/`shalwar`/`dupatta`, default `kameez`) to `stitching_return_items`, the column referenced throughout Section 2's wages calculation (wages are summed on `component = 'kameez'` only)
+- `2026_05_09_000001_fix_stitching_return_items_unique_constraint` — widens the unique constraint from `(stitching_return_id, size)` to `(stitching_return_id, size, component)` to accommodate the column added above
 - `2026_05_11_000001` — creates `bank_accounts` table
 - `2026_05_11_000002` — adds `bank_account_id` nullable FK to `payments`
 - `2026_05_11_112300` — drops orphaned `quantity` column from `naeem_pakki_returns` (totals now computed from `naeem_pakki_return_items`)
 - `2026_05_11_113000` — adds `tarpai_house` enum and drops `design_id` from `tarpai_sends` (finishing the partial refactor that `2026_05_09_000002` assumed had already run)
 - `2026_05_11_120000` — drops `press_pack_records` + `press_pack_record_items`; creates `press_sends`, `press_send_items`, `press_returns`, `press_return_items`
 - `2026_05_11_200000` — adds `in_house` to `tarpai_sends.tarpai_house` enum (valid values: `rashid_bhai`, `yousaf_bhai`, `in_house`)
+- `2026_05_14_000001_add_production_assignment_id_to_stitching_returns` — adds a nullable `production_assignment_id` FK (`nullOnDelete`) to `stitching_returns`, letting a return be traced back to the specific assignment it fulfilled
 - `2026_05_18_110503` — renames `users.role` enum values: `manager` → `production_manager`, `designer` → `creative_head`; updates Spatie `roles` table records accordingly
 - `2026_05_19_000001` — adds `partially_dispatched` to `orders.status` enum (value sits between `stitching` and `dispatched`); applied to production via raw SQL on 2026-05-19
 - `2026_05_19_100000` — fixes `wages` unique constraint from `(catalogue_id, week_start)` to `(catalogue_id, stitching_unit_id, week_start)`
@@ -1271,6 +1299,8 @@ All migrations have been run (including the two HD Gallery migrations added 2026
 - `2026_06_05_210000` — creates `cron_logs` table (`job_name`, `job_label`, `triggered_by`, `week_start` nullable, `week_end` nullable, `records_created`, `records_updated`, `records_skipped`, `status` enum(`success`,`failed`), `output` text nullable, `ran_at` timestamp)
 - `2026_06_06_000001` — adds `assigned_bank_account_id` nullable FK to `orders` (references `bank_accounts`, nullOnDelete)
 - `2026_06_10_000001` — creates `order_number_sequence` table (single row, `last_number` seeded at 1005334); new orders increment this counter atomically instead of using `random_int`
+- `2026_06_16_123225_fix_press_return_items_original_quantity_and_remove_duplicates` — data fix: backfills `press_return_items.original_quantity = quantity` for rows where it was silently left at 0 (a `PressReturnItem` `$fillable` gap swallowed the value on create between `2026_06_01_000002` adding the column and this fix), then deletes two duplicate press returns (IDs 59/60) that a production manager had logged believing earlier returns had gone missing — they hadn't; the blank quantities were the same `$fillable` bug
+- `2026_06_17_000001_add_cover_photo_og_to_catalogues` — adds `cover_photo_og` (nullable string) to `catalogues`, a WhatsApp/social-preview-sized copy of the cover photo alongside the original
 - `2026_07_13_170212_create_design_country_prices_table` — creates `design_country_prices` table (`design_id` FK cascade delete, `country`, `price` decimal 10,2); unique constraint `(design_id, country)`
 - `2026_07_13_170212_create_piece_tags_table` — creates `piece_tags` table (`order_id` FK cascade delete, `design_id` FK cascade delete, `size` enum(xs,s,m,l,xl), `barcode` nullable unique string, `country`, `price` decimal 10,2); unique constraint `(order_id, design_id, size)`
 - `2026_07_14_000001_add_sequence_number_to_payments_table` — adds nullable `sequence_number` unsigned integer to `payments`; backfills per-order sequential numbers ordered by `payment_date` then `id`; adds unique constraint `(order_id, sequence_number)`
@@ -1289,11 +1319,15 @@ All migrations have been run (including the two HD Gallery migrations added 2026
 - `2026_07_22_000001_make_refund_order_fields_nullable` — makes `refunds.order_id` and `refunds.order_reduction_id` nullable (`order_id` re-added with `nullOnDelete()`) so a refund created by Delete Order's full flow (rule 5.28, no `OrderReduction` involved) can be stored and survives as a standalone audit record once its order is later deleted
 - `2026_07_23_000001_create_free_pieces_table` — creates `free_pieces` table (`catalogue_id` FK cascade delete, `design_id` FK cascade delete, `size` enum(xs,s,m,l,xl), `quantity` unsigned int default 0); unique constraint `(catalogue_id, design_id, size)`
 - `2026_07_23_000002_add_order_snapshot_to_refunds_table` — adds nullable `order_number` and `catalogue_name` string columns to `refunds`; backfills existing rows whose `order_id` still resolves from a live `orders`/`catalogues` join, plus a second backfill statement that recovers `order_number` (via `SUBSTRING_INDEX`) for the one pre-existing Delete Order refund whose `order_id` was already null, by parsing the `"Refund from deleted Order #{number}"` pattern out of its `notes` column
+- `2026_08_10_185348_create_personal_access_tokens_table` — creates Sanctum's standard `personal_access_tokens` table (morphs `tokenable`, unique `token`, `abilities`, `last_used_at`, `expires_at`), scaffolded by `php artisan install:api` ahead of Mobile API Slice 1 (Section 9's "Mobile API — Authentication")
+- `2026_08_11_200843_create_expo_push_tokens_table` — creates `expo_push_tokens` table (`customer_id` FK cascade delete, unique `token`, nullable `platform`) — the mobile app's push-token store, separate from the webpush `push_subscriptions` table added by `2026_07_15_000003`; see "Mobile API — Push Notifications (Slice 4)" under Section 9
 - `2026_08_18_153405_create_announcements_table` — creates `announcements` table (`title`, `body`, `image_path` nullable, `sent_by` nullable FK to `users` null-on-delete, `sent_at`, `recipient_count` unsigned int default 0) — one row per broadcast, distinct from the framework `notifications` table's one-row-per-customer-per-send; see "Timeline / Announcements" under Section 9
+- `2026_08_19_000001_convert_image_path_to_json_in_announcements_table` — converts `announcements.image_path` (singular string) to `announcements.image_paths` (JSON array) so one announcement can carry multiple images, same wrap-then-widen pattern as `2026_06_04_000002`'s payments receipt migration; unlike that one, this migration also renames the column since `announcements` had only a handful of historical rows at the time
 - `2026_09_09_000001_add_mobile_login_token_to_users_table` — adds nullable unique `mobile_login_token` (string 64) to `users`; backfills existing staff with `Str::uuid()`, same shape as `2026_07_16_000001_add_hd_gallery_token_to_catalogues_table`; see rule 5.33
 - `2026_09_09_000002_create_staff_mobile_login_tokens_table` — creates `staff_mobile_login_tokens` table (`user_id` FK, unique `token_hash`, `expires_at`, nullable `used_at`, `ip_address`, `user_agent`) — the single-use handoff credential for staff mobile login; see rule 5.33
 - `2026_09_09_000003_create_customer_signup_requests_table` — creates `customer_signup_requests` table (`name`, `contact_number`, `city`, `country`, `address` nullable, unique `email`, `status` default `pending`, nullable `customer_id` FK null-on-delete, nullable `reviewed_by` FK to `users` null-on-delete, `reviewed_at`) — the mobile app's self-signup review queue; see rule 5.34
 - `2026_09_09_000004_add_catalogue_book_to_catalogues_table` — adds `catalogue_book_path`, `catalogue_book_original_filename`, `catalogue_book_file_size` (`unsignedBigInteger`), `catalogue_book_uploaded_by` (nullable FK to `users`, null-on-delete), `catalogue_book_uploaded_at` to `catalogues` — the per-catalogue lookbook PDF; see rule 5.35
+- `2026_09_12_193232_add_audio_to_announcements_table` — adds `audio_path`, `audio_original_filename`, `audio_file_size` (nullable) to `announcements` — the voice-note feature, mirrors the existing `image_paths` handling; see "Voice notes on announcements" under Section 9
 
 ---
 
