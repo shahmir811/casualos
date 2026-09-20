@@ -67,7 +67,7 @@ class OrderStatusChanged extends Notification implements ShouldQueue
     }
 
     /**
-     * @return array{title: string, body: string, sound: string, data: array}
+     * @return array{title: string, body: string, data: array}
      */
     public function toExpoPush(mixed $notifiable): array
     {
@@ -76,7 +76,9 @@ class OrderStatusChanged extends Notification implements ShouldQueue
         return [
             'title' => $content['title'],
             'body'  => sprintf($content['body'], $this->order->order_number),
-            'sound' => 'default',
+            // No 'sound' here — ExpoPushChannel::send() sets it per-token
+            // based on platform, since iOS and Android need different
+            // bundled sound filenames (see that class's docblock).
             'data'  => [
                 'order_id'     => $this->order->id,
                 'order_number' => $this->order->order_number,

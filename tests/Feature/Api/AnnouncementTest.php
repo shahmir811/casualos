@@ -232,6 +232,8 @@ class AnnouncementTest extends TestCase
             return $request->url() === 'https://exp.host/--/api/v2/push/send'
                 && $body[0]['to'] === 'tokenA'
                 && $body[0]['title'] === 'Sale'
+                && $body[0]['sound'] === 'casualite_notification_01.wav'
+                && $body[0]['badge'] === 1
                 && $body[0]['data']['announcement_id'] === $notificationId
                 && $body[0]['data']['has_audio'] === false;
         });
@@ -255,4 +257,33 @@ class AnnouncementTest extends TestCase
                 && $body[0]['data']['has_audio'] === true;
         });
     }
+
+    public function test_badge_counts_current_announcement_once_in_either_channel_order(): void
+    {
+        $customer = $this->makeCustomer();
+        for ($i = 0; $i < 5; $i++) {
+            $customer->notify(new AnnouncementNotification('Earlier', 'Body'));
+        }
+        $other = $this->makeCustomer();
+        $other->notify(new AnnouncementNotification('Other customer', 'Body'));
+
+        $notification = new AnnouncementNotification('New', 'Body');
+        $notification->id = (string) \Illuminate\Support\Str::uuid();
+        $this->assertSame(6, $notification->toExpoPush($customer)['badge']);
+
+        $customer->notifications()->create([
+            'id' => $notification->id,
+            'type' => AnnouncementNotification::class,
+            'data' => $notification->toDatabase($customer),
+            'read_at' => null,
+        ]);
+        $this->assertSame(6, $notification->toExpoPush($customer)['badge']);
+
+        $customer->notifications()->findOrFail($notification->id)->markAsRead();
+        $this->assertSame(5, $notification->toExpoPush($customer)['badge']);
+
+        $customer->notifications()->whereNull('read_at')->update(['read_at' => now()]);
+        $this->assertSame(0, $notification->toExpoPush($customer)['badge']);
+    }
+
 }

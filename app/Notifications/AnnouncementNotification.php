@@ -51,7 +51,7 @@ class AnnouncementNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * @return array{title: string, body: string, sound: string, data: array{type: string, announcement_id: ?string, has_audio: bool}}
+     * @return array{title: string, body: string, badge: int, data: array{type: string, announcement_id: ?string, has_audio: bool}}
      */
     public function toExpoPush(mixed $notifiable): array
     {
@@ -63,7 +63,12 @@ class AnnouncementNotification extends Notification implements ShouldQueue
             // structured `has_audio` flag below lets the app render its own
             // mic icon without parsing this string.
             'body'  => $this->audioPath ? "🎤 Voice message · {$this->body}" : $this->body,
-            'sound' => 'default',
+            // No 'sound' here — ExpoPushChannel::send() sets it per-token
+            // based on platform, since iOS and Android need different
+            // bundled sound filenames (see that class's docblock).
+            // APNs needs an absolute count to update the icon while the app
+            // is closed. Database and push channels run as separate jobs.
+            'badge' => $this->unreadBadgeCount($notifiable),
             'data'  => [
                 'type'            => 'announcement',
                 // Set by ChannelManager before any channel runs — the same
@@ -75,4 +80,19 @@ class AnnouncementNotification extends Notification implements ShouldQueue
             ],
         ];
     }
+
+    private function unreadBadgeCount(mixed $notifiable): int
+    {
+        // Read one snapshot, including read rows so a delayed push for an
+        // already-read announcement does not add it back to the badge.
+        $announcements = $notifiable->notifications()
+            ->where('type', self::class)
+            ->get(['id', 'read_at']);
+
+        $unread = $announcements->whereNull('read_at')->count();
+        $pending = $this->id === null || ! $announcements->contains('id', $this->id);
+
+        return $unread + ($pending ? 1 : 0);
+    }
+
 }

@@ -3,6 +3,7 @@
 namespace App\Notifications\Channels;
 
 use App\Models\ExpoPushToken;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Client\Response;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Http;
@@ -20,24 +21,40 @@ class ExpoPushChannel
 {
     private const ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 
+    /**
+     * iOS's locked-screen/background notification sound player is far
+     * stricter than the in-app decoder and silently drops a plain .wav —
+     * Apple's own guidance is a .caf built with afconvert. Android has no
+     * such issue with .wav and, unlike iOS, can't be given the same
+     * basename as the .caf (the expo-notifications config plugin would
+     * collide on the same Android raw-resource name), so the two platforms
+     * carry genuinely different bundled filenames — see casualite-app's
+     * app.json expo-notifications "sounds" list, which bundles both.
+     */
+    private const SOUND_IOS     = 'casualite_notification_ios.caf';
+    private const SOUND_ANDROID = 'casualite_notification_01.wav';
+
     public function send(mixed $notifiable, Notification $notification): void
     {
         if (! method_exists($notification, 'toExpoPush')) {
             return;
         }
 
-        $tokens = $notifiable->expoPushTokens()->pluck('token')->values()->all();
+        $tokens = $notifiable->expoPushTokens()->get(['id', 'token', 'platform']);
 
-        if (empty($tokens)) {
+        if ($tokens->isEmpty()) {
             return;
         }
 
         $message = $notification->toExpoPush($notifiable);
 
-        $messages = array_map(
-            fn (string $token) => array_merge($message, ['to' => $token]),
-            $tokens
-        );
+        $messages = $tokens
+            ->map(fn (ExpoPushToken $expoPushToken) => array_merge($message, [
+                'to'    => $expoPushToken->token,
+                'sound' => $expoPushToken->platform === 'ios' ? self::SOUND_IOS : self::SOUND_ANDROID,
+            ]))
+            ->values()
+            ->all();
 
         $headers = [
             'Accept'          => 'application/json',
@@ -60,7 +77,7 @@ class ExpoPushChannel
      * A DeviceNotRegistered error means the app was uninstalled (or similar)
      * and Expo will never deliver to this token again — safe to delete.
      */
-    protected function pruneInvalidTokens(array $tokens, Response $response): void
+    protected function pruneInvalidTokens(Collection $tokens, Response $response): void
     {
         if (! $response->successful()) {
             return;
@@ -68,7 +85,7 @@ class ExpoPushChannel
 
         foreach ($response->json('data', []) as $index => $ticket) {
             if (($ticket['details']['error'] ?? null) === 'DeviceNotRegistered') {
-                ExpoPushToken::where('token', $tokens[$index] ?? null)->delete();
+                $tokens->get($index)?->delete();
             }
         }
     }

@@ -92,6 +92,44 @@
                 <span class="text-[#6E6E73] text-xs flex-shrink-0" x-text="audioProgress + '%'"></span>
             </div>
 
+            <div x-show="audioStatus === 'recording'" x-cloak class="mt-3 bg-[#FFF0EF] rounded-full pl-4 pr-2 py-2 flex items-center gap-3">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      :class="recordingPaused ? 'bg-[#AEAEB2]' : 'bg-[#FF3B30] animate-pulse'"></span>
+
+                {{-- Live waveform — bar heights track mic input volume in real time
+                     (recordingLevels, sampled off an AnalyserNode), scrolling left as
+                     new samples arrive on the right. Distinct from audioPeaks below,
+                     which is decoded once from the finished file after upload. Sampling
+                     freezes while paused, so the bars hold still rather than reacting
+                     to ambient sound the recorder isn't actually capturing. --}}
+                <div class="flex-1 min-w-0 h-7 flex items-center gap-x-px overflow-hidden">
+                    <template x-for="(level, i) in recordingLevels" :key="i">
+                        <div class="flex-1 min-w-0 max-w-[4px] rounded-full"
+                             :class="recordingPaused ? 'bg-[#D2D2D7]' : 'bg-[#FF3B30]'"
+                             :style="'height:' + Math.max(4, level * 28) + 'px'">
+                        </div>
+                    </template>
+                </div>
+
+                <span class="text-[#FF3B30] text-xs font-medium tabular-nums flex-shrink-0" x-text="formatAudioTime(recordingSeconds)"></span>
+                <button type="button" @click="cancelRecording()" class="text-[#86868B] text-xs font-medium hover:text-[#1D1D1F] flex-shrink-0">Cancel</button>
+
+                {{-- Pause/Resume — MediaRecorder.pause()/resume() append onto the
+                     same chunk list, so stopping afterward produces one continuous
+                     file with the paused gap simply skipped, not silence. --}}
+                <button type="button" @click="togglePauseRecording()"
+                        class="w-8 h-8 rounded-full border flex items-center justify-center flex-shrink-0 text-[#FF3B30] border-[#FF3B30]"
+                        :title="recordingPaused ? 'Resume recording' : 'Pause recording'">
+                    <svg x-show="!recordingPaused" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><rect x="5" y="4" width="3" height="12"/><rect x="12" y="4" width="3" height="12"/></svg>
+                    <svg x-show="recordingPaused" x-cloak class="w-3.5 h-3.5 ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6 4l12 6-12 6V4z"/></svg>
+                </button>
+
+                <button type="button" @click="stopRecording()" title="Stop recording"
+                        class="w-8 h-8 rounded-full bg-[#FF3B30] text-white flex items-center justify-center flex-shrink-0">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="2"/></svg>
+                </button>
+            </div>
+
             <p x-show="audioStatus === 'error'" x-cloak class="mt-2 text-[#FF3B30] text-xs" x-text="audioError"></p>
             @error('audio')
                 <p class="mt-2 text-[#FF3B30] text-xs">{{ $message }}</p>
@@ -138,8 +176,8 @@
                     </label>
 
                     <label class="w-9 h-9 rounded-full flex items-center justify-center text-[#0071E3] hover:bg-[#0071E3]/10 cursor-pointer transition-colors"
-                           :class="audioStatus === 'uploading' ? 'opacity-40 pointer-events-none' : ''"
-                           title="Add a voice note (optional)">
+                           :class="(audioStatus === 'uploading' || audioStatus === 'recording') ? 'opacity-40 pointer-events-none' : ''"
+                           title="Upload a voice note (optional)">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
                         </svg>
@@ -157,6 +195,23 @@
                         <input type="file" name="audio_file" x-ref="audioInput" class="hidden"
                             @change="onAudioFile($event)">
                     </label>
+
+                    {{--
+                        Records in-browser via MediaRecorder instead of requiring the
+                        owner to save a WhatsApp voice note and pick it from Downloads.
+                        On stop, the recorded Blob is wrapped in a File and handed to
+                        the exact same uploadAudio() the file-picker above uses — same
+                        presign, same S3 PUT, same waveform preview, same audio_key
+                        field — so nothing downstream needs to know how the clip was
+                        produced.
+                    --}}
+                    <button type="button" @click="startRecording()"
+                            :disabled="audioStatus === 'uploading' || audioStatus === 'recording'"
+                            class="w-9 h-9 rounded-full flex items-center justify-center text-[#0071E3] hover:bg-[#0071E3]/10 transition-colors"
+                            :class="(audioStatus === 'uploading' || audioStatus === 'recording') ? 'opacity-40 pointer-events-none' : ''"
+                            title="Record a voice note (optional)">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>
+                    </button>
                 </div>
 
                 {{--
@@ -171,8 +226,8 @@
                     voice note is still uploading, since audio_key wouldn't be set yet.
                 --}}
                 <button type="button" class="btn-primary rounded-full px-5 py-2 text-sm w-full sm:w-auto text-center"
-                        :disabled="audioStatus === 'uploading'"
-                        :class="audioStatus === 'uploading' ? 'opacity-50 cursor-not-allowed' : ''"
+                        :disabled="audioStatus === 'uploading' || audioStatus === 'recording'"
+                        :class="(audioStatus === 'uploading' || audioStatus === 'recording') ? 'opacity-50 cursor-not-allowed' : ''"
                         @click="$store.confirm.show({
                             title: 'Send Announcement',
                             message: 'Send this to every customer? This cannot be undone.',
@@ -276,7 +331,7 @@ function announcementComposer({ presignUrl, csrfToken }) {
     return {
         previews: [],
 
-        // idle | uploading | ready | error
+        // idle | uploading | ready | error | recording
         audioStatus: 'idle',
         audioProgress: 0,
         audioError: '',
@@ -288,6 +343,18 @@ function announcementComposer({ presignUrl, csrfToken }) {
         audioCurrentTime: 0,
         audioDuration: 0,
         audioPeaks: [],
+
+        recordingSeconds: 0,
+        recordingPaused: false,
+        mediaRecorder: null,
+        mediaStream: null,
+        recordedChunks: [],
+        recordingCancelled: false,
+        recordingTimerId: null,
+        recordingLevels: [],
+        recordingAudioCtx: null,
+        recordingAnalyser: null,
+        recordingLevelIntervalId: null,
 
         formatAudioTime,
 
@@ -310,6 +377,128 @@ function announcementComposer({ presignUrl, csrfToken }) {
             }
 
             this.uploadAudio(file);
+        },
+
+        async startRecording() {
+            if (this.audioStatus === 'uploading' || this.audioStatus === 'recording') return;
+            this.audioError = '';
+
+            if (!navigator.mediaDevices || !window.MediaRecorder) {
+                this.audioStatus = 'error';
+                this.audioError = 'Voice recording is not supported in this browser.';
+                return;
+            }
+
+            try {
+                this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (e) {
+                this.audioStatus = 'error';
+                this.audioError = 'Microphone access was denied.';
+                return;
+            }
+
+            // audio/mp4 (AAC/M4A) is preferred over webm/ogg — iOS's AVFoundation
+            // playback stack (used by the mobile app's voice-note player) can't
+            // decode webm/Opus or ogg at all, so a voice note recorded in a
+            // browser that supports mp4 recording (Chrome/Edge/Safari) needs to
+            // stay in that format to play back on an iPhone. Only browsers with
+            // no mp4 recording support (e.g. older Firefox) fall through to webm.
+            const mimeType = ['audio/mp4', 'audio/webm', 'audio/ogg']
+                .find(t => window.MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+
+            this.recordedChunks = [];
+            this.recordingCancelled = false;
+            this.mediaRecorder = mimeType ? new MediaRecorder(this.mediaStream, { mimeType }) : new MediaRecorder(this.mediaStream);
+            this.mediaRecorder.addEventListener('dataavailable', e => {
+                if (e.data && e.data.size > 0) this.recordedChunks.push(e.data);
+            });
+            this.mediaRecorder.addEventListener('stop', () => {
+                this.mediaStream.getTracks().forEach(t => t.stop());
+                this.mediaStream = null;
+                clearInterval(this.recordingTimerId);
+                this.recordingTimerId = null;
+                this.recordingSeconds = 0;
+                this.recordingPaused = false;
+                this.stopRecordingLevelMeter();
+
+                if (this.recordingCancelled || !this.recordedChunks.length) {
+                    this.audioStatus = 'idle';
+                    return;
+                }
+
+                const blobType = this.mediaRecorder.mimeType || 'audio/webm';
+                const extension = blobType.includes('mp4') ? 'm4a' : (blobType.includes('ogg') ? 'ogg' : 'webm');
+                const blob = new Blob(this.recordedChunks, { type: blobType });
+                const file = new File([blob], `voice-note-${Date.now()}.${extension}`, { type: blobType });
+                this.uploadAudio(file);
+            });
+
+            this.mediaRecorder.start();
+            this.audioStatus = 'recording';
+            this.recordingSeconds = 0;
+            this.recordingPaused = false;
+            this.recordingTimerId = setInterval(() => {
+                if (!this.recordingPaused) this.recordingSeconds++;
+            }, 1000);
+            this.startRecordingLevelMeter();
+        },
+
+        togglePauseRecording() {
+            if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') return;
+            if (this.recordingPaused) {
+                this.mediaRecorder.resume();
+                this.recordingPaused = false;
+            } else {
+                this.mediaRecorder.pause();
+                this.recordingPaused = true;
+            }
+        },
+
+        // Live waveform — taps the mic stream via an AnalyserNode (never
+        // connected to the speakers, so there's no feedback loop) and
+        // samples volume ~12x/sec into a scrolling bar row. Purely visual:
+        // if AudioContext isn't available for any reason, recording still
+        // works, it just shows flat bars.
+        startRecordingLevelMeter() {
+            this.recordingLevels = Array(40).fill(0.08);
+            try {
+                this.recordingAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const source = this.recordingAudioCtx.createMediaStreamSource(this.mediaStream);
+                this.recordingAnalyser = this.recordingAudioCtx.createAnalyser();
+                this.recordingAnalyser.fftSize = 256;
+                this.recordingAnalyser.smoothingTimeConstant = 0.6;
+                source.connect(this.recordingAnalyser);
+            } catch (e) {
+                this.recordingAnalyser = null;
+                return;
+            }
+
+            const data = new Uint8Array(this.recordingAnalyser.frequencyBinCount);
+            this.recordingLevelIntervalId = setInterval(() => {
+                if (this.recordingPaused) return;
+                this.recordingAnalyser.getByteFrequencyData(data);
+                const avg = data.reduce((sum, v) => sum + v, 0) / data.length; // 0-255
+                const level = Math.max(0.08, Math.min(1, avg / 90));
+                this.recordingLevels = [...this.recordingLevels.slice(1), level];
+            }, 80);
+        },
+
+        stopRecordingLevelMeter() {
+            clearInterval(this.recordingLevelIntervalId);
+            this.recordingLevelIntervalId = null;
+            if (this.recordingAudioCtx) this.recordingAudioCtx.close();
+            this.recordingAudioCtx = null;
+            this.recordingAnalyser = null;
+            this.recordingLevels = [];
+        },
+
+        stopRecording() {
+            if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop();
+        },
+
+        cancelRecording() {
+            this.recordingCancelled = true;
+            this.stopRecording();
         },
 
         removeAudio() {

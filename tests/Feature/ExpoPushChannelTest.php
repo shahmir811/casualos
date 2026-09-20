@@ -117,6 +117,28 @@ class ExpoPushChannelTest extends TestCase
         });
     }
 
+    public function test_sends_the_ios_caf_sound_to_ios_tokens_and_the_android_wav_to_everything_else(): void
+    {
+        Http::fake([
+            'exp.host/*' => Http::response(['data' => [['status' => 'ok'], ['status' => 'ok'], ['status' => 'ok']]], 200),
+        ]);
+
+        $customer = $this->makeCustomer();
+        ExpoPushToken::create(['customer_id' => $customer->id, 'token' => 'tokenIos', 'platform' => 'ios']);
+        ExpoPushToken::create(['customer_id' => $customer->id, 'token' => 'tokenAndroid', 'platform' => 'android']);
+        ExpoPushToken::create(['customer_id' => $customer->id, 'token' => 'tokenUnknown']);
+
+        $customer->notify($this->stubNotification());
+
+        Http::assertSent(function ($request) {
+            $body = collect($request->data())->keyBy('to');
+
+            return $body['tokenIos']['sound'] === 'casualite_notification_ios.caf'
+                && $body['tokenAndroid']['sound'] === 'casualite_notification_01.wav'
+                && $body['tokenUnknown']['sound'] === 'casualite_notification_01.wav';
+        });
+    }
+
     public function test_includes_the_configured_access_token_when_present(): void
     {
         config(['services.expo.access_token' => 'expo-secret']);
