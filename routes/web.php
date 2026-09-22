@@ -381,6 +381,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
         Route::post('announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
         Route::post('announcements/audio/presign', [AnnouncementController::class, 'presignAudio'])->name('announcements.audio.presign');
+        Route::get('announcements/{announcement}', [AnnouncementController::class, 'show'])->name('announcements.show');
     });
 
     /*

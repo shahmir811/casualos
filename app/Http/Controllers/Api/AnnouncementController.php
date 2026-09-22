@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\AnnouncementResource;
+use App\Models\AnnouncementRead;
 use App\Notifications\AnnouncementNotification;
 use Illuminate\Http\Request;
 
@@ -36,6 +37,22 @@ class AnnouncementController extends Controller
     {
         $notification = $request->user()->notifications()->findOrFail($id);
         $notification->markAsRead();
+
+        // broadcast_id links back to the Announcement row this notification
+        // came from (see AnnouncementNotification::toDatabase()) — absent
+        // for notifications sent before this field existed, in which case
+        // there's no AnnouncementRead row to update either; the read-stats
+        // page shows those broadcasts as "not tracked".
+        $broadcastId = $notification->data['broadcast_id'] ?? null;
+
+        if ($broadcastId !== null) {
+            // whereNull('read_at') keeps the first-read timestamp on repeat
+            // calls rather than pushing it forward every time the app opens.
+            AnnouncementRead::where('announcement_id', $broadcastId)
+                ->where('customer_id', $request->user()->id)
+                ->whereNull('read_at')
+                ->update(['read_at' => now()]);
+        }
 
         return response()->json(['status' => 'read']);
     }

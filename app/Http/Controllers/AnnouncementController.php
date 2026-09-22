@@ -23,6 +23,39 @@ class AnnouncementController extends Controller
         return view('admin.announcements.index', compact('announcements'));
     }
 
+    /**
+     * Read-analytics detail page. $tracked distinguishes "sent after this
+     * feature shipped, zero people have read it yet" (tracked, 0 reads)
+     * from "sent before this feature existed, we have no idea" (not
+     * tracked at all) — see AnnouncementRead's docblock.
+     */
+    public function show(Announcement $announcement)
+    {
+        $tracked = $announcement->reads()->exists();
+
+        $reads = $announcement->reads()
+            ->with('customer')
+            ->orderByRaw('read_at IS NULL')
+            ->orderByDesc('read_at')
+            ->get();
+
+        $readCount = $reads->whereNotNull('read_at')->count();
+        $totalCount = $reads->count();
+
+        // Flattened for the Alpine-driven client-side name/city search filter
+        // on the show view — the stat cards above still use $readCount/
+        // $totalCount computed from the untouched $reads collection, so the
+        // filter never affects them.
+        $readsData = $reads->map(fn ($read) => [
+            'name'    => $read->customer?->name ?? '—',
+            'city'    => $read->customer?->city ?? '—',
+            'read'    => (bool) $read->read_at,
+            'readAt'  => $read->read_at?->format('M j, Y g:i A'),
+        ])->values();
+
+        return view('admin.announcements.show', compact('announcement', 'tracked', 'reads', 'readCount', 'totalCount', 'readsData'));
+    }
+
     public function store(Request $request, AnnouncementService $announcements)
     {
         $validated = $request->validate([

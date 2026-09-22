@@ -30,6 +30,14 @@ class AnnouncementNotification extends Notification implements ShouldQueue
         private readonly string $body,
         private readonly array $imagePaths = [],
         private readonly ?string $audioPath = null,
+        // The `announcements.id` row this send belongs to (see the
+        // Announcement model's own docblock — "one row per broadcast").
+        // Optional and appended last so existing call sites (tests, any
+        // ad-hoc ->notify() call) that don't pass it keep working —
+        // AnnouncementService::send() is the only caller that populates it,
+        // which is also why announcements sent before this field existed
+        // have no way to be retroactively linked to read stats.
+        private readonly ?int $broadcastId = null,
     ) {}
 
     public function via(mixed $notifiable): array
@@ -38,15 +46,16 @@ class AnnouncementNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * @return array{title: string, body: string, image_paths: array<int, string>, audio_path: ?string}
+     * @return array{title: string, body: string, image_paths: array<int, string>, audio_path: ?string, broadcast_id: ?int}
      */
     public function toDatabase(mixed $notifiable): array
     {
         return [
-            'title'       => $this->title,
-            'body'        => $this->body,
-            'image_paths' => $this->imagePaths,
-            'audio_path'  => $this->audioPath,
+            'title'        => $this->title,
+            'body'         => $this->body,
+            'image_paths'  => $this->imagePaths,
+            'audio_path'   => $this->audioPath,
+            'broadcast_id' => $this->broadcastId,
         ];
     }
 

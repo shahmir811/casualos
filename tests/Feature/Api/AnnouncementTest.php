@@ -65,11 +65,34 @@ class AnnouncementTest extends TestCase
             $table->string('platform')->nullable();
             $table->timestamps();
         });
+
+        Schema::create('announcements', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->text('body');
+            $table->text('image_paths')->nullable();
+            $table->string('audio_path')->nullable();
+            $table->string('audio_original_filename')->nullable();
+            $table->unsignedBigInteger('audio_file_size')->nullable();
+            $table->foreignId('sent_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('sent_at');
+            $table->unsignedInteger('recipient_count')->default(0);
+            $table->timestamps();
+        });
+
+        Schema::create('announcement_reads', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('announcement_id')->constrained('announcements')->cascadeOnDelete();
+            $table->foreignId('customer_id')->constrained('customers')->cascadeOnDelete();
+            $table->timestamp('read_at')->nullable();
+            $table->timestamps();
+            $table->unique(['announcement_id', 'customer_id']);
+        });
     }
 
     protected function tearDown(): void
     {
-        foreach (['expo_push_tokens', 'notifications', 'personal_access_tokens', 'customers', 'users'] as $table) {
+        foreach (['announcement_reads', 'announcements', 'expo_push_tokens', 'notifications', 'personal_access_tokens', 'customers', 'users'] as $table) {
             Schema::dropIfExists($table);
         }
 
@@ -205,6 +228,57 @@ class AnnouncementTest extends TestCase
         $this->withHeader('Authorization', "Bearer {$otherToken}")
             ->postJson("/api/announcements/{$notificationId}/read")
             ->assertStatus(404);
+    }
+
+    public function test_mark_read_updates_the_linked_announcement_read_row_via_broadcast_id(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $broadcast = \App\Models\Announcement::create([
+            'title'           => 'Sale',
+            'body'            => 'Everything 20% off.',
+            'sent_at'         => now(),
+            'recipient_count' => 1,
+        ]);
+
+        \App\Models\AnnouncementRead::create([
+            'announcement_id' => $broadcast->id,
+            'customer_id'     => $customer->id,
+            'read_at'         => null,
+        ]);
+
+        $customer->notify(new AnnouncementNotification('Sale', 'Everything 20% off.', [], null, $broadcast->id));
+        $notificationId = $customer->notifications()->first()->id;
+
+        $token = $this->bearerToken($customer);
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/announcements/{$notificationId}/read")
+            ->assertOk();
+
+        $this->assertNotNull(\App\Models\AnnouncementRead::where('announcement_id', $broadcast->id)
+            ->where('customer_id', $customer->id)
+            ->first()
+            ->read_at);
+    }
+
+    public function test_mark_read_is_a_no_op_on_announcement_reads_when_the_notification_has_no_broadcast_id(): void
+    {
+        $customer = $this->makeCustomer();
+
+        // Direct ->notify() call with no broadcast_id, same as any pre-existing
+        // test/ad-hoc notification — should not error even though there's no
+        // AnnouncementRead row (or even an Announcement row) to update.
+        $customer->notify(new AnnouncementNotification('Untracked', 'Body'));
+        $notificationId = $customer->notifications()->first()->id;
+
+        $token = $this->bearerToken($customer);
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/announcements/{$notificationId}/read")
+            ->assertOk();
+
+        $this->assertDatabaseCount('announcement_reads', 0);
     }
 
     public function test_sending_an_announcement_delivers_via_expo_push_and_writes_a_database_row(): void
