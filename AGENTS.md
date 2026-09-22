@@ -9,7 +9,7 @@ Deviating from these rules means deviating from the signed contract.
 
 ## 1. What This Project Is
 
-**CasualiteOS** is the complete business operations system for **Casual Lite**, a fashion
+**CasualiteOS** is the complete business operations system for **Casualite**, a fashion
 brand based in Pakistan. It replaces manual notebooks, WhatsApp tracking, and Google
 Forms with a single web application.
 
@@ -26,7 +26,7 @@ Forms with a single web application.
 
 ### Catalogues
 
-A Casual Lite season is called a **Catalogue**. Each has:
+A Casualite season is called a **Catalogue**. Each has:
 
 - A name (e.g. ISHQIA), cover photo, and a set of designs (each with its own selling price)
 - A **qty_per_design** — pieces manufactured FROM EACH design (NOT total across all designs)
@@ -296,7 +296,7 @@ When a customer submits the order form:
 - System looks up `submitted_email` in the `customers` table
 - **If found:** Order is linked to that customer (`customer_id` set), saved normally
 - **If NOT found:** The order is **rejected** and the customer sees an "Account Not Found"
-  modal telling them to contact the Casual Lite admin. The flagged-orders feature has been
+  modal telling them to contact the Casualite admin. The flagged-orders feature has been
   removed from the system.
 
 ### 5.2 Dispatch Rules
@@ -842,9 +842,9 @@ Both only surfaced when forcing `page-break-after: always` between many small pa
 **Why a separate table, not a status column on `customers`:** `customers.created_by` is a required, non-nullable FK to `users`, and the `Customer` model has no status/approval concept anywhere. Rather than reworking that FK or bolting an approval state onto a table that's meant to represent real, live customers, `customer_signup_requests` (migration `2026_09_09_000003`) is a parallel table — `name`, `contact_number`, `city`, `country`, `address` (nullable), unique `email`, `status` (`pending`|`approved`|`rejected`, default `pending`), nullable `customer_id` FK (null-on-delete, set on approval), nullable `reviewed_by` FK to `users` (null-on-delete) and `reviewed_at`. `email` is unique so there is exactly **one row per email ever** — a rejected request is updated back to `pending` in place on resubmission rather than accumulating duplicate rows.
 
 **`POST /api/auth/signup` (`api.auth.signup`, public, no auth)** — a new method on the existing `Api\AuthController` (kept alongside `verify()` since both are "how does an unauthenticated person get into the system" entry points). Validation is field-for-field identical to `CustomerController::store()` (including `Customer::COUNTRIES` for the `country` check), minus `unique:customers,email` — that case is handled explicitly so the response can distinguish "you're already a customer" from "you already have a pending request" rather than a generic validation error:
-1. If a `Customer` already exists for that email (or a `CustomerSignupRequest` row is already `approved`, a defensive edge case) → `422`, `{"message": "An account already exists for this email. Please contact Casual Lite for your portal link."}`
+1. If a `Customer` already exists for that email (or a `CustomerSignupRequest` row is already `approved`, a defensive edge case) → `422`, `{"message": "An account already exists for this email. Please contact Casualite for your portal link."}`
 2. If a `CustomerSignupRequest` for that email is already `pending` → `200`, `{"status": "pending", "message": "You already have a signup request pending review."}` — idempotent, no duplicate row.
-3. Otherwise (brand new email, or a previously `rejected` row) → `CustomerSignupRequest::firstOrNew(['email' => ...])` is filled with the new data, `status` reset to `pending`, `customer_id`/`reviewed_by`/`reviewed_at` cleared, and saved. `201`, `{"status": "pending", "message": "Your details have been submitted. Casual Lite will review them and send you your portal link once approved."}`
+3. Otherwise (brand new email, or a previously `rejected` row) → `CustomerSignupRequest::firstOrNew(['email' => ...])` is filled with the new data, `status` reset to `pending`, `customer_id`/`reviewed_by`/`reviewed_at` cleared, and saved. `201`, `{"status": "pending", "message": "Your details have been submitted. Casualite will review them and send you your portal link once approved."}`
 
 **No status-polling endpoint was added** (e.g. `GET /api/auth/signup-status`) — deliberately out of scope. The customer is told to wait; admin still shares the portal link manually via WhatsApp once approved, exactly as they already do for admin-created customers. No auto-login and no push notification is tied to approval, since the customer has no account (and therefore no bearer token or push subscription) to notify until admin approves.
 
@@ -896,6 +896,38 @@ Both only surfaced when forcing `page-break-after: always` between many small pa
 **Currently the only consumer is the mobile app's signup screen.** `Customer::CURRENCY_SYMBOLS` (piece-tag currency labels, Section 5.20) is not exposed by this endpoint — nothing outside this repo currently needs it; add it to the JSON response only if a real consumer shows up, rather than pre-emptively.
 
 **Test:** `tests/Feature/Api/CountryTest.php` — no hand-built schema needed (unlike most `Api\*` tests), since the endpoint touches no database table at all.
+
+---
+
+### 5.37 Size Chart — Single Global Reference Image
+
+**Model:** `SizeChart` is a singleton — `SizeChart::current()` (`firstOrCreate([])`) always returns the one row, never `::create()` directly, so a second row never gets introduced by accident. `size_chart` table: `image_path` (nullable, S3 key), `original_filename`, `file_size`, `uploaded_by` (nullable FK to `users`), `uploaded_at`.
+
+**Admin management (pre-existing, undocumented until now):** `App\Http\Controllers\SizeChartController` (`index`/`store`/`destroy`, admin web routes — not yet in the route table above) lets an admin upload/replace/delete the single image, stored on `s3` under `size-charts/`. Uploading replaces the row in place and deletes the previous S3 object; there is no history of past charts.
+
+**Customer-facing API (2026-09-22):** `GET /api/size-chart` (`api.size-chart.show`, `Api\SizeChartController::show()`, `auth:sanctum`) lets `casualite-app` show the same image to customers. Same fresh-presigned-URL-on-demand pattern as the catalogue book (rule 5.35): a 10-minute `Storage::disk('s3')->temporaryUrl()`, generated per request rather than embedded anywhere, so a customer opening the chart minutes after loading a screen doesn't hit an expired link. If no image has ever been uploaded (`image_path` is null), returns `404` with `{"message": ..., "reason": "not_uploaded"}` — a stable reason code, same convention as `OrderPlacementException` — rather than a bare Laravel 404, so the app can render a calm empty state instead of a generic error.
+
+**Deliberately not built:** no `has_size_chart` flag anywhere in `/api/me` or elsewhere — unlike the catalogue book, the size chart's nav entry point in the app is always visible regardless of upload state (owner's call, 2026-09-22); the 404 + reason code is how the app tells "not uploaded yet" apart from a real failure when the customer actually taps in.
+
+---
+
+### 5.38 Announcement Read Stats — Per-Broadcast Read Analytics
+
+**Purpose:** the owner asked for a way to tell whether a given Timeline announcement (rule under Section 9, "Timeline / Announcements") is actually landing with customers — before this, `Announcement` (one row per broadcast) recorded `recipient_count` but nothing about how many of those recipients ever opened it. The framework `notifications` table already tracked `read_at` per customer per send, but had no column linking a given notification row back to which `Announcement` broadcast produced it, so there was no way to compute "how many people read broadcast #12."
+
+**New table `announcement_reads`** (`announcement_id` FK cascade delete, `customer_id` FK cascade delete, `read_at` nullable, unique on `(announcement_id, customer_id)`) — one row per customer, created **unread** for every customer at send time inside `AnnouncementService::send()`, in the same loop that calls `$customer->notify(...)`. This mirrors the "separate table when the shape doesn't fit" precedent already used for `advance_payments`/`expo_push_tokens` in this codebase, rather than trying to compute stats by joining against the polymorphic `notifications` table.
+
+**Linking a notification row back to its broadcast:** `AnnouncementNotification` gained a fifth, optional constructor parameter `?int $broadcastId = null` (appended last, so every existing call site — tests, any ad-hoc `->notify()` call — that doesn't pass it keeps working unchanged). `toDatabase()` stores it as `broadcast_id` in the notification's `data` JSON. **Deliberately a different key name than the existing `announcement_id` already present in `toExpoPush()`'s `data` payload** — that one refers to the notification's own uuid (used by the app to deep-link), a different piece of data entirely; reusing the same key name across the two channels' payloads would have been confusing even though there's no runtime collision. Only `AnnouncementService::send()` populates `broadcastId` — this is also why announcements sent before this feature shipped have no way to be retroactively linked to read stats (see "not tracked" below).
+
+**`Api\AnnouncementController::markRead()`** (unchanged route, `POST /api/announcements/{id}/read`) additionally reads `$notification->data['broadcast_id'] ?? null` after marking the notification itself read, and — only when present — updates the matching `announcement_reads` row via `whereNull('read_at')->update(['read_at' => now()])`. The `whereNull` guard preserves the *first*-read timestamp on repeat calls rather than pushing it forward every time the app reopens the announcement. Absent `broadcast_id` (old notifications, or any notification created without it) is a silent no-op, not an error — there's no `announcement_reads` row to update in that case either.
+
+**Admin UI — `AnnouncementController::show()`** (`GET /announcements/{announcement}`, route `announcements.show`, admin only, same trust-the-middleware precedent as the rest of this controller): shows three stat cards (Sent To / Read / Read Rate, computed server-side from the `Announcement`'s own `reads()` relation) and a full per-customer list with each customer's read timestamp or "Not read yet". `$tracked = $announcement->reads()->exists()` distinguishes "sent after this feature shipped, genuinely zero reads so far" (tracked, shows 0/N) from "sent before `announcement_reads` existed, we have no data at all" (not tracked — the page shows an amber notice instead of a fabricated 0/N). Each row in the main Announcements history list (`admin/announcements/index.blade.php`) links to this page via a "View Read Stats" link next to the existing "N customers notified" text.
+
+**Client-side name/city search, stat cards never affected by it.** The per-customer list can run into 100+ rows, so `AnnouncementController::show()` flattens `$reads` into a plain array (`$readsData`, name/city/read/readAt) passed into the view via `Js::from()` (same pattern already used elsewhere in this codebase, e.g. `customers/ledger.blade.php`), and an Alpine `x-data` component on the customer-list card filters that array client-side against a `search` input matching name **or** city, case-insensitive, live as-you-type. The three stat cards above are rendered from `$readCount`/`$totalCount` computed once server-side before the view renders — the search filter only ever hides/shows rows in the list below, it never recomputes or touches the cards.
+
+**Mobile-responsive table (2026-09-22 follow-up):** the customer list renders twice from the same Alpine `filtered` list — a `hidden md:block` `<table>` for desktop, and a `md:hidden` stacked-card list for narrow screens (same dual-render convention already used by `admin/pending-signups/index.blade.php`, `admin/stitching-units/index.blade.php`, etc.). The original single-table version squeezed the Status column's badge text (e.g. "READ SEP 22, 2026 12:02 PM") into a narrow table cell on phone-width screens, wrapping it across 3-4 lines — the card layout gives each row full card width instead, so the badge renders on one or two lines normally.
+
+**Tests:** `tests/Feature/AnnouncementServiceTest.php` covers `send()` creating one unread `announcement_reads` row per customer linked to the right broadcast id. `tests/Feature/Api/AnnouncementTest.php` covers `markRead()` updating the linked `announcement_reads` row via `broadcast_id`, and confirms it's a safe no-op when a notification has no `broadcast_id` (the pre-existing-announcements case). No web-controller HTTP test was added for `AnnouncementController::show()`, consistent with this project's existing "no Feature-test coverage of the admin announcements route" call (see the "Timeline / Announcements" entry under Section 9).
 
 ---
 
@@ -1059,6 +1091,7 @@ returns that cause discrepancies — it flags them for review.
 | `orders.recalculate-price`       | `POST /orders/{order}/recalculate-price`    | Re-price an order against the catalogue's current benchmark/design prices (admin only, see rule 5.32) |
 | `announcements.index`            | `GET /announcements`                        | Timeline/Announcements admin compose screen + history (admin only, see "Timeline / Announcements" under Section 9) |
 | `announcements.store`            | `POST /announcements`                       | Send an announcement to every customer (admin only) |
+| `announcements.show`             | `GET /announcements/{announcement}`         | Read-analytics detail page for one broadcast — sent/read/read-rate + per-customer list, with client-side name/city search (admin only, see rule 5.38) |
 | `api.auth.verify`                | `POST /api/auth/verify`                     | Mobile app login — portal_token + email, issues a Sanctum bearer token (public, no auth) |
 | `api.auth.logout`                | `POST /api/auth/logout`                     | Revokes only the bearer token used for the request; other devices stay signed in (`auth:sanctum`) |
 | `mobile-login.consume`           | `GET /mobile-login/{token}`                 | Consumes a staff member's single-use handoff token from `Api\AuthController::verify()`'s staff branch, starts a real Laravel web session (public, no auth — see rule 5.33) |
@@ -1085,6 +1118,7 @@ returns that cause discrepancies — it flags them for review.
 | `portal.catalogue-book`          | `GET /portal/{token}/orders/{order}/catalogue-book` | Customer portal view — device-cookie + order-ownership gated, redirects to a presigned S3 URL (see rule 5.35) |
 | `api.catalogues.book`            | `GET /api/catalogues/{catalogue}/book`      | Fresh presigned URL for the catalogue's book PDF, returned as JSON (`auth:sanctum`, see rule 5.35) |
 | `api.countries.index`            | `GET /api/countries`                        | Returns `Customer::COUNTRIES` as JSON, public, no auth (see rule 5.36) |
+| `api.size-chart.show`            | `GET /api/size-chart`                       | Fresh presigned URL for the singleton size-chart image; `404` + `reason: not_uploaded` if none exists (`auth:sanctum`, see rule 5.37) |
 
 **Below added 2026-09-15 — these routes existed in `routes/web.php` but were missing from this table (found during a documentation-accuracy audit against the codebase).**
 
@@ -1242,6 +1276,8 @@ returns that cause discrepancies — it flags them for review.
 - **Catalogue Book — per-catalogue lookbook PDF** (2026-09-09): admin/production_manager/creative_head can now upload a single lookbook PDF (seen up to ~200MB) per catalogue, from a "Catalog Book" card on `catalogues/show.blade.php` — direct-to-S3 presigned PUT (`CatalogueBookController::presign()`/`store()`), same mechanic as the HD Gallery (rule 5.27) and no new one-time CORS step needed since `s3:configure-gallery-cors` already applies bucket-wide. Customers can view (never download-forced — always `inline` disposition via a fresh presigned URL) the book for a catalogue they've ordered from, via a "Catalog Book" link on their portal order card (`portal.catalogue-book`, gated by the same device-cookie check as `pushSubscribe()` plus an order-ownership check) or via the mobile app's catalogue-browsing screens (`has_catalogue_book` on `CatalogueResource`/`CatalogueSummaryResource`, `GET /api/catalogues/{catalogue}/book` for the on-demand presigned URL). Deliberately not a public no-auth link like HD Gallery — the owner confirmed this should stay customer-authenticated only. See rule 5.35 for full detail.
 
 - **Destination Countries — API-driven single source** (2026-09-11): `GET /api/countries` (public, no auth) exposes `Customer::COUNTRIES` as JSON so `casualite-app`'s self-signup screen (rule 5.34) fetches the country list at runtime instead of keeping its own hardcoded copy in sync by hand — the trigger was the client asking to add Malaysia and Norway to the dispatch destinations and wanting future countries to be easier to add. `Customer::COUNTRIES`/`CURRENCY_SYMBOLS` remain the actual source of truth in code (no DB-backed admin-editable list was built — considered and deliberately deferred); adding a country is still a one-line edit + deploy in this repo, but the mobile app now picks it up without its own release. See rule 5.36 for full detail.
+- **Size Chart exposed to the mobile app** (2026-09-22): `GET /api/size-chart` (`auth:sanctum`) added so `casualite-app` can show customers the same singleton size-chart image the admin-only `SizeChartController` already managed (upload existed before this date but was customer-invisible and undocumented). Fresh presigned URL per request, `404` + `reason: not_uploaded` when no image has ever been uploaded. See rule 5.37 for full detail.
+- **Announcement Read Stats** (2026-09-22, mobile-responsive follow-up same day): each Timeline announcement now has a read-analytics detail page (`announcements.show`, admin only) — Sent/Read/Read Rate stat cards plus a per-customer list (name, city, read timestamp or "Not read yet"), with a client-side name/city search that never affects the stat cards. New `announcement_reads` table (one unread row per customer created at send time) is linked to its notification via a new optional `broadcast_id` passed into `AnnouncementNotification` and stored in its `toDatabase()` payload; `Api\AnnouncementController::markRead()` updates the matching row (first-read timestamp preserved on repeat calls). Announcements sent before this shipped have no linkage data and show a "not tracked" notice instead of a fabricated 0/N. The per-customer list renders as a `hidden md:block` table on desktop and a `md:hidden` card list on phone-width screens (same dual-render convention as `admin/pending-signups/index.blade.php`), fixing an initial version where narrow columns wrapped the status badge text across several lines. See rule 5.38 for full detail.
 
 ### Known Bugs / Incomplete Features (must fix)
 
@@ -1328,6 +1364,8 @@ All migrations have been run (including the two HD Gallery migrations added 2026
 - `2026_09_09_000003_create_customer_signup_requests_table` — creates `customer_signup_requests` table (`name`, `contact_number`, `city`, `country`, `address` nullable, unique `email`, `status` default `pending`, nullable `customer_id` FK null-on-delete, nullable `reviewed_by` FK to `users` null-on-delete, `reviewed_at`) — the mobile app's self-signup review queue; see rule 5.34
 - `2026_09_09_000004_add_catalogue_book_to_catalogues_table` — adds `catalogue_book_path`, `catalogue_book_original_filename`, `catalogue_book_file_size` (`unsignedBigInteger`), `catalogue_book_uploaded_by` (nullable FK to `users`, null-on-delete), `catalogue_book_uploaded_at` to `catalogues` — the per-catalogue lookbook PDF; see rule 5.35
 - `2026_09_12_193232_add_audio_to_announcements_table` — adds `audio_path`, `audio_original_filename`, `audio_file_size` (nullable) to `announcements` — the voice-note feature, mirrors the existing `image_paths` handling; see "Voice notes on announcements" under Section 9
+- `2026_09_22_000001_create_size_chart_table` — creates the singleton `size_chart` table (`image_path`, `original_filename`, `file_size`, `uploaded_by` nullable FK to `users`, `uploaded_at`); see rule 5.37
+- `2026_09_22_000002_create_announcement_reads_table` — creates `announcement_reads` table (`announcement_id` FK cascade delete, `customer_id` FK cascade delete, `read_at` nullable, unique on `(announcement_id, customer_id)`) — one row per customer per broadcast, created unread at send time; see rule 5.38
 
 ---
 
