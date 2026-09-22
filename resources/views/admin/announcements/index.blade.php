@@ -52,7 +52,7 @@
 
             <textarea name="body" required rows="2"
                 class="w-full border-0 p-0 mt-1.5 text-[15px] text-[#1D1D1F] placeholder-[#AEAEB2] resize-none focus:ring-0 focus:outline-none"
-                placeholder="What's happening at Casual Lite?"
+                placeholder="What's happening at Casualite?"
                 oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'">{{ old('body') }}</textarea>
             @error('body')
                 <p class="mt-1 text-[#FF3B30] text-xs">{{ $message }}</p>
@@ -255,7 +255,7 @@
 
         <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1.5 text-[15px] flex-wrap">
-                <span class="font-semibold text-[#1D1D1F]">Casual Lite</span>
+                <span class="font-semibold text-[#1D1D1F]">Casualite</span>
                 <span class="text-[#86868B]">·</span>
                 <span class="text-[#86868B]" title="{{ $announcement->sent_at->format('M j, Y g:i A') }}">{{ $announcement->sent_at->diffForHumans() }}</span>
                 <span class="text-[#86868B]">·</span>
@@ -278,11 +278,16 @@
             @include('admin.announcements._waveform-player', ['url' => Storage::url($announcement->audio_path)])
             @endif
 
-            <div class="flex items-center gap-1.5 mt-3 text-[#86868B] text-xs">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1a4 4 0 100-8 4 4 0 000 8zm6 3.13a4 4 0 010 7.75M6 20.13a4 4 0 010-7.75" />
-                </svg>
-                <span>{{ number_format($announcement->recipient_count) }} customers notified</span>
+            <div class="flex items-center gap-x-3 gap-y-1.5 mt-3 text-[#86868B] text-xs flex-wrap">
+                <span class="flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1a4 4 0 100-8 4 4 0 000 8zm6 3.13a4 4 0 010 7.75M6 20.13a4 4 0 010-7.75" />
+                    </svg>
+                    {{ number_format($announcement->recipient_count) }} customers notified
+                </span>
+                <a href="{{ route('announcements.show', $announcement) }}" class="text-[#0066CC] font-medium hover:underline">
+                    View Read Stats
+                </a>
             </div>
         </div>
     </div>

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Announcement;
+use App\Models\AnnouncementRead;
 use App\Models\Customer;
 use App\Models\User;
 use App\Notifications\AnnouncementNotification;
@@ -37,7 +38,13 @@ class AnnouncementService
         ]);
 
         foreach (Customer::all() as $customer) {
-            $customer->notify(new AnnouncementNotification($title, $body, $imagePaths, $audioPath));
+            AnnouncementRead::create([
+                'announcement_id' => $announcement->id,
+                'customer_id'     => $customer->id,
+                'read_at'         => null,
+            ]);
+
+            $customer->notify(new AnnouncementNotification($title, $body, $imagePaths, $audioPath, $announcement->id));
         }
 
         return $announcement;

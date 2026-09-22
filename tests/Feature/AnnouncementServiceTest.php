@@ -70,11 +70,20 @@ class AnnouncementServiceTest extends TestCase
             $table->unsignedInteger('recipient_count')->default(0);
             $table->timestamps();
         });
+
+        Schema::create('announcement_reads', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('announcement_id')->constrained('announcements')->cascadeOnDelete();
+            $table->foreignId('customer_id')->constrained('customers')->cascadeOnDelete();
+            $table->timestamp('read_at')->nullable();
+            $table->timestamps();
+            $table->unique(['announcement_id', 'customer_id']);
+        });
     }
 
     protected function tearDown(): void
     {
-        foreach (['announcements', 'expo_push_tokens', 'notifications', 'customers', 'users'] as $table) {
+        foreach (['announcement_reads', 'announcements', 'expo_push_tokens', 'notifications', 'customers', 'users'] as $table) {
             Schema::dropIfExists($table);
         }
 
@@ -104,6 +113,29 @@ class AnnouncementServiceTest extends TestCase
         $this->assertSame(3, $announcement->recipient_count);
         $this->assertSame($admin->id, $announcement->sent_by);
         $this->assertDatabaseCount('announcements', 1);
+    }
+
+    public function test_send_creates_an_unread_announcement_read_row_per_customer_linked_to_the_broadcast(): void
+    {
+        $customerA = $this->makeCustomer();
+        $customerB = $this->makeCustomer();
+
+        $announcement = app(AnnouncementService::class)->send('Sale', 'Everything 20% off.', [], null);
+
+        $this->assertDatabaseCount('announcement_reads', 2);
+        $this->assertDatabaseHas('announcement_reads', [
+            'announcement_id' => $announcement->id,
+            'customer_id'     => $customerA->id,
+            'read_at'         => null,
+        ]);
+        $this->assertDatabaseHas('announcement_reads', [
+            'announcement_id' => $announcement->id,
+            'customer_id'     => $customerB->id,
+            'read_at'         => null,
+        ]);
+
+        $notification = $customerA->notifications()->first();
+        $this->assertSame($announcement->id, $notification->data['broadcast_id']);
     }
 
     public function test_send_notifies_every_customer(): void

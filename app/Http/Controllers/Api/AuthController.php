@@ -120,7 +120,7 @@ class AuthController extends Controller
 
         if ($alreadyCustomer || ($signup->exists && $signup->status === 'approved')) {
             return response()->json([
-                'message' => 'An account already exists for this email. Please contact Casual Lite for your portal link.',
+                'message' => 'An account already exists for this email. Please contact Casualite for your portal link.',
             ], 422);
         }
 
@@ -143,7 +143,7 @@ class AuthController extends Controller
 
         return response()->json([
             'status'  => 'pending',
-            'message' => 'Your details have been submitted. Casual Lite will review them and send you your portal link once approved.',
+            'message' => 'Your details have been submitted. Casualite will review them and send you your portal link once approved.',
         ], 201);
     }
 

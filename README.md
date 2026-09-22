@@ -1,6 +1,6 @@
 # CasualiteOS — Business Operations System
 
-A full-stack internal business operations system built for **Casual Lite**, a fashion brand. CasualiteOS replaces manual spreadsheets, notebooks, and WhatsApp-based workflows with a centralised, role-based web application.
+A full-stack internal business operations system built for **Casualite**, a fashion brand. CasualiteOS replaces manual spreadsheets, notebooks, and WhatsApp-based workflows with a centralised, role-based web application.
 
 ---
 
@@ -155,4 +155,4 @@ database/
 
 ---
 
-*Built by [The Techmint](mailto:thetechmint2025@gmail.com) for Casual Lite.*
+*Built by [The Techmint](mailto:thetechmint2025@gmail.com) for Casualite.*

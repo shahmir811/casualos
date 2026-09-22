@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\CountryController;
 use App\Http\Controllers\Api\LedgerController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PushTokenController;
+use App\Http\Controllers\Api\SizeChartController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/verify', [AuthController::class, 'verify'])->name('api.auth.verify');
@@ -33,4 +34,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/push-tokens', [PushTokenController::class, 'store'])->name('api.push-tokens.store');
     Route::delete('/push-tokens', [PushTokenController::class, 'destroy'])->name('api.push-tokens.destroy');
+
+    Route::get('/size-chart', [SizeChartController::class, 'show'])->name('api.size-chart.show');
 });
