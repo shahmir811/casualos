@@ -60,6 +60,8 @@ class AuthTest extends TestCase
             $table->string('portal_token', 64)->unique();
             $table->decimal('advance_credit_balance', 12, 2)->default(0.00);
             $table->foreignId('created_by')->nullable()->constrained('users');
+            $table->string('app_platform')->nullable();
+            $table->timestamp('app_last_seen_at')->nullable();
             $table->timestamps();
         });
 
@@ -182,6 +184,78 @@ class AuthTest extends TestCase
         ]);
 
         $response->assertStatus(422);
+    }
+
+    public function test_verify_records_the_app_platform_and_last_seen_when_sent(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $this->postJson('/api/auth/verify', [
+            'portal_token' => $customer->portal_token,
+            'email'        => $customer->email,
+            'platform'     => 'android',
+        ])->assertOk();
+
+        $customer->refresh();
+
+        $this->assertEquals('android', $customer->app_platform);
+        $this->assertNotNull($customer->app_last_seen_at);
+    }
+
+    public function test_verify_without_a_platform_leaves_app_usage_untouched(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $this->postJson('/api/auth/verify', [
+            'portal_token' => $customer->portal_token,
+            'email'        => $customer->email,
+        ])->assertOk();
+
+        $customer->refresh();
+
+        $this->assertNull($customer->app_platform);
+        $this->assertNull($customer->app_last_seen_at);
+    }
+
+    public function test_authenticated_requests_refresh_app_usage_via_the_platform_header(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $token = $this->postJson('/api/auth/verify', [
+            'portal_token' => $customer->portal_token,
+            'email'        => $customer->email,
+            'platform'     => 'android',
+        ])->json('token');
+
+        // A later request from the same install reports iOS (e.g. a shared
+        // test device) — the header on this later request should win, since
+        // tracking reflects the most recent request, not just login.
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->withHeader('X-App-Platform', 'ios')
+            ->getJson('/api/me')
+            ->assertOk();
+
+        $customer->refresh();
+
+        $this->assertEquals('ios', $customer->app_platform);
+        $this->assertNotNull($customer->app_last_seen_at);
+    }
+
+    public function test_authenticated_request_without_the_platform_header_still_refreshes_last_seen(): void
+    {
+        $customer = $this->makeCustomer(['app_platform' => 'android']);
+
+        $token = $customer->createToken('mobile-app')->plainTextToken;
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/me')
+            ->assertOk();
+
+        $customer->refresh();
+
+        // Missing header never clears a previously known platform.
+        $this->assertEquals('android', $customer->app_platform);
+        $this->assertNotNull($customer->app_last_seen_at);
     }
 
     public function test_me_requires_a_bearer_token(): void

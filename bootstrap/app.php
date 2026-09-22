@@ -25,9 +25,10 @@ return Application::configure(basePath: dirname(__DIR__))
             Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO);
 
         $middleware->alias([
-            'active'     => \App\Http\Middleware\EnsureUserIsActive::class,
-            'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'active'           => \App\Http\Middleware\EnsureUserIsActive::class,
+            'role'             => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission'       => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'track-app-usage'  => \App\Http\Middleware\TrackCustomerAppUsage::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

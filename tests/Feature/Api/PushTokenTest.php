@@ -31,6 +31,8 @@ class PushTokenTest extends TestCase
             $table->string('email')->unique();
             $table->string('portal_token', 64)->unique();
             $table->foreignId('created_by')->nullable()->constrained('users');
+            $table->string('app_platform')->nullable();
+            $table->timestamp('app_last_seen_at')->nullable();
             $table->timestamps();
         });
 

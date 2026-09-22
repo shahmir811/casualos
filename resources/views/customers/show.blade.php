@@ -12,6 +12,18 @@
         @if($customer->address)
         <p class="text-[#86868B] text-xs mt-0.5">{{ $customer->address }}</p>
         @endif
+        @if($isAdmin)
+        <p class="text-xs mt-2">
+            @if($customer->app_platform)
+            <span class="badge" style="background:#E8F2FF; color:#0066CC;">
+                Using App · {{ $customer->app_platform === 'ios' ? 'iOS' : 'Android' }}
+            </span>
+            <span class="text-[#86868B] ml-1">Last seen {{ $customer->app_last_seen_at?->diffForHumans() }}</span>
+            @else
+            <span class="text-[#86868B] text-xs font-medium uppercase tracking-widest">Not using the app</span>
+            @endif
+        </p>
+        @endif
     </div>
     @if(in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager']))
     <div class="flex items-center gap-2.5">
