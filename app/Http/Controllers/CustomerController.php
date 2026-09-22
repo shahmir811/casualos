@@ -77,8 +77,9 @@ class CustomerController extends Controller
         ]);
         $bankAccounts = BankAccount::where('is_active', true)->orderBy('title')->get();
         $hideFinancials = Auth::user()->role === 'production_manager';
+        $isAdmin = Auth::user()->role === 'admin';
 
-        return view('customers.show', compact('customer', 'bankAccounts', 'hideFinancials'));
+        return view('customers.show', compact('customer', 'bankAccounts', 'hideFinancials', 'isAdmin'));
     }
 
     public function edit(Customer $customer)

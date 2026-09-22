@@ -41,6 +41,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'portal_token' => 'required|string',
             'email'        => 'required|email',
+            'platform'     => 'nullable|string|in:ios,android',
         ]);
 
         $token = Str::of($validated['portal_token'])->trim()->explode('/')->last();
@@ -49,6 +50,13 @@ class AuthController extends Controller
 
         if ($customer && strtolower($customer->email) === strtolower($validated['email'])) {
             $apiToken = $customer->createToken('mobile-app')->plainTextToken;
+
+            if (! empty($validated['platform'])) {
+                $customer->update([
+                    'app_platform'     => $validated['platform'],
+                    'app_last_seen_at' => now(),
+                ]);
+            }
 
             return response()->json([
                 'account_type' => 'customer',

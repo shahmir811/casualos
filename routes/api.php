@@ -14,7 +14,7 @@ Route::post('/auth/verify', [AuthController::class, 'verify'])->name('api.auth.v
 Route::post('/auth/signup', [AuthController::class, 'signup'])->name('api.auth.signup');
 Route::get('/countries', [CountryController::class, 'index'])->name('api.countries.index');
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'track-app-usage'])->group(function () {
     Route::get('/me', [AuthController::class, 'me'])->name('api.me');
     Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
 

@@ -42,6 +42,8 @@ class OrderPlacementTest extends TestCase
             $table->string('portal_token', 64)->unique();
             $table->decimal('advance_credit_balance', 12, 2)->default(0.00);
             $table->foreignId('created_by')->nullable()->constrained('users');
+            $table->string('app_platform')->nullable();
+            $table->timestamp('app_last_seen_at')->nullable();
             $table->timestamps();
         });
 

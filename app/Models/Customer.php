@@ -46,11 +46,12 @@ class Customer extends Model implements AuthenticatableContract
 
     protected $fillable = [
         'name', 'city', 'country', 'address', 'contact_number', 'email', 'portal_token',
-        'advance_credit_balance', 'created_by',
+        'advance_credit_balance', 'created_by', 'app_platform', 'app_last_seen_at',
     ];
 
     protected $casts = [
         'advance_credit_balance' => 'decimal:2',
+        'app_last_seen_at' => 'datetime',
     ];
 
     // Auto-generate portal_token on creation (UUID, permanent — never changes)

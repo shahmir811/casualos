@@ -65,22 +65,20 @@
     <p class="text-[#86868B] text-sm mb-5">No size chart uploaded yet.</p>
     @endif
 
-    <form method="POST" action="{{ route('size-chart.store') }}" enctype="multipart/form-data" class="flex items-end gap-3 flex-wrap">
+    <form method="POST" action="{{ route('size-chart.store') }}" enctype="multipart/form-data">
         @csrf
-        <div class="flex-1 min-w-[240px]">
-            <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
-                Image
-            </label>
+        <label class="block text-xs font-semibold text-[#6E6E73] uppercase tracking-widest mb-2">
+            Image
+        </label>
+        <div class="flex flex-col lg:flex-row lg:items-center gap-3">
             <input type="file" name="image" accept="image/jpeg,image/jpg,image/png,image/webp" required
                    @change="fileChosen = !!$event.target.files.length"
-                   class="apple-input">
-            <p class="text-[#86868B] text-xs mt-2">JPG, PNG or WebP, up to 10MB.</p>
-        </div>
-        <div class="flex-shrink-0 pb-px">
-            <button type="submit" class="btn-primary" :disabled="!fileChosen" :class="{ 'opacity-50 cursor-not-allowed': !fileChosen }">
+                   class="apple-input flex-1 lg:max-w-md">
+            <button type="submit" class="btn-primary w-full lg:w-auto flex-shrink-0" :disabled="!fileChosen" :class="{ 'opacity-50 cursor-not-allowed': !fileChosen }">
                 {{ $sizeChart->image_path ? 'Replace' : 'Upload' }}
             </button>
         </div>
+        <p class="text-[#86868B] text-xs mt-2">JPG, PNG or WebP, up to 10MB.</p>
     </form>
 
     @if($sizeChart->image_path)
