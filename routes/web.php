@@ -44,6 +44,7 @@ use App\Http\Controllers\OrderPriceRecalculationController;
 use App\Http\Controllers\OrderDeleteController;
 use App\Http\Controllers\FreePieceController;
 use App\Http\Controllers\DesignCountryPriceController;
+use App\Http\Controllers\SizeChartController;
 use App\Http\Controllers\PieceTagController;
 use App\Http\Controllers\DispatchOptimizerController;
 use App\Http\Controllers\CostEstimationController;
@@ -364,6 +365,11 @@ Route::middleware(['auth', 'active'])->group(function () {
         // Country pricing for tags (per design, per destination country)
         Route::get('country-pricing', [DesignCountryPriceController::class, 'index'])->name('country-pricing.index');
         Route::post('country-pricing/{catalogue}', [DesignCountryPriceController::class, 'store'])->name('country-pricing.store');
+
+        // Size chart — single global reference image, admin-only, not customer-facing
+        Route::get('size-chart', [SizeChartController::class, 'index'])->name('size-chart.index');
+        Route::post('size-chart', [SizeChartController::class, 'store'])->name('size-chart.store');
+        Route::delete('size-chart', [SizeChartController::class, 'destroy'])->name('size-chart.destroy');
     });
 
     /*

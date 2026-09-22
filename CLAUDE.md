@@ -899,6 +899,18 @@ Both only surfaced when forcing `page-break-after: always` between many small pa
 
 ---
 
+### 5.37 Size Chart — Single Global Reference Image
+
+**Model:** `SizeChart` is a singleton — `SizeChart::current()` (`firstOrCreate([])`) always returns the one row, never `::create()` directly, so a second row never gets introduced by accident. `size_chart` table: `image_path` (nullable, S3 key), `original_filename`, `file_size`, `uploaded_by` (nullable FK to `users`), `uploaded_at`.
+
+**Admin management (pre-existing, undocumented until now):** `App\Http\Controllers\SizeChartController` (`index`/`store`/`destroy`, admin web routes — not yet in the route table above) lets an admin upload/replace/delete the single image, stored on `s3` under `size-charts/`. Uploading replaces the row in place and deletes the previous S3 object; there is no history of past charts.
+
+**Customer-facing API (2026-09-22):** `GET /api/size-chart` (`api.size-chart.show`, `Api\SizeChartController::show()`, `auth:sanctum`) lets `casualite-app` show the same image to customers. Same fresh-presigned-URL-on-demand pattern as the catalogue book (rule 5.35): a 10-minute `Storage::disk('s3')->temporaryUrl()`, generated per request rather than embedded anywhere, so a customer opening the chart minutes after loading a screen doesn't hit an expired link. If no image has ever been uploaded (`image_path` is null), returns `404` with `{"message": ..., "reason": "not_uploaded"}` — a stable reason code, same convention as `OrderPlacementException` — rather than a bare Laravel 404, so the app can render a calm empty state instead of a generic error.
+
+**Deliberately not built:** no `has_size_chart` flag anywhere in `/api/me` or elsewhere — unlike the catalogue book, the size chart's nav entry point in the app is always visible regardless of upload state (owner's call, 2026-09-22); the 404 + reason code is how the app tells "not uploaded yet" apart from a real failure when the customer actually taps in.
+
+---
+
 ## 6. Production Flow (In-House)
 
 ```
@@ -1085,6 +1097,7 @@ returns that cause discrepancies — it flags them for review.
 | `portal.catalogue-book`          | `GET /portal/{token}/orders/{order}/catalogue-book` | Customer portal view — device-cookie + order-ownership gated, redirects to a presigned S3 URL (see rule 5.35) |
 | `api.catalogues.book`            | `GET /api/catalogues/{catalogue}/book`      | Fresh presigned URL for the catalogue's book PDF, returned as JSON (`auth:sanctum`, see rule 5.35) |
 | `api.countries.index`            | `GET /api/countries`                        | Returns `Customer::COUNTRIES` as JSON, public, no auth (see rule 5.36) |
+| `api.size-chart.show`            | `GET /api/size-chart`                       | Fresh presigned URL for the singleton size-chart image; `404` + `reason: not_uploaded` if none exists (`auth:sanctum`, see rule 5.37) |
 
 **Below added 2026-09-15 — these routes existed in `routes/web.php` but were missing from this table (found during a documentation-accuracy audit against the codebase).**
 
@@ -1242,6 +1255,7 @@ returns that cause discrepancies — it flags them for review.
 - **Catalogue Book — per-catalogue lookbook PDF** (2026-09-09): admin/production_manager/creative_head can now upload a single lookbook PDF (seen up to ~200MB) per catalogue, from a "Catalog Book" card on `catalogues/show.blade.php` — direct-to-S3 presigned PUT (`CatalogueBookController::presign()`/`store()`), same mechanic as the HD Gallery (rule 5.27) and no new one-time CORS step needed since `s3:configure-gallery-cors` already applies bucket-wide. Customers can view (never download-forced — always `inline` disposition via a fresh presigned URL) the book for a catalogue they've ordered from, via a "Catalog Book" link on their portal order card (`portal.catalogue-book`, gated by the same device-cookie check as `pushSubscribe()` plus an order-ownership check) or via the mobile app's catalogue-browsing screens (`has_catalogue_book` on `CatalogueResource`/`CatalogueSummaryResource`, `GET /api/catalogues/{catalogue}/book` for the on-demand presigned URL). Deliberately not a public no-auth link like HD Gallery — the owner confirmed this should stay customer-authenticated only. See rule 5.35 for full detail.
 
 - **Destination Countries — API-driven single source** (2026-09-11): `GET /api/countries` (public, no auth) exposes `Customer::COUNTRIES` as JSON so `casualite-app`'s self-signup screen (rule 5.34) fetches the country list at runtime instead of keeping its own hardcoded copy in sync by hand — the trigger was the client asking to add Malaysia and Norway to the dispatch destinations and wanting future countries to be easier to add. `Customer::COUNTRIES`/`CURRENCY_SYMBOLS` remain the actual source of truth in code (no DB-backed admin-editable list was built — considered and deliberately deferred); adding a country is still a one-line edit + deploy in this repo, but the mobile app now picks it up without its own release. See rule 5.36 for full detail.
+- **Size Chart exposed to the mobile app** (2026-09-22): `GET /api/size-chart` (`auth:sanctum`) added so `casualite-app` can show customers the same singleton size-chart image the admin-only `SizeChartController` already managed (upload existed before this date but was customer-invisible and undocumented). Fresh presigned URL per request, `404` + `reason: not_uploaded` when no image has ever been uploaded. See rule 5.37 for full detail.
 
 ### Known Bugs / Incomplete Features (must fix)
 
