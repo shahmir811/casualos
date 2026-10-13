@@ -26,9 +26,10 @@ class CustomerLedger extends Model
         static::deleting(fn() => false); // prevent deletions
     }
 
+    // withTrashed() — see Order::customer()'s docblock.
     public function customer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(Customer::class)->withTrashed();
     }
 
     public function createdBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo

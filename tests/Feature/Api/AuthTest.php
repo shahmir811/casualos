@@ -63,6 +63,7 @@ class AuthTest extends TestCase
             $table->string('app_platform')->nullable();
             $table->timestamp('app_last_seen_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('personal_access_tokens', function (Blueprint $table) {
@@ -79,9 +80,9 @@ class AuthTest extends TestCase
         Schema::create('customer_signup_requests', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('contact_number', 30);
-            $table->string('city', 100);
-            $table->string('country', 50);
+            $table->string('contact_number', 30)->nullable();
+            $table->string('city', 100)->nullable();
+            $table->string('country', 50)->nullable();
             $table->string('address')->nullable();
             $table->string('email')->unique();
             $table->string('status')->default('pending');
@@ -460,5 +461,77 @@ class AuthTest extends TestCase
         $response = $this->postJson('/api/auth/signup', $this->validSignupPayload(['country' => 'Narnia']));
 
         $response->assertStatus(422)->assertJsonValidationErrors('country');
+    }
+
+    public function test_signup_contact_number_city_and_country_are_optional(): void
+    {
+        $response = $this->postJson('/api/auth/signup', [
+            'name'  => 'Sana Malik',
+            'email' => 'sana@example.com',
+        ]);
+
+        $response->assertCreated()->assertJsonPath('status', 'pending');
+    }
+
+    public function test_delete_account_requires_a_bearer_token(): void
+    {
+        $this->deleteJson('/api/me')->assertStatus(401);
+    }
+
+    public function test_delete_account_revokes_every_token_for_the_customer(): void
+    {
+        $customer = $this->makeCustomer();
+
+        $tokenA = $this->postJson('/api/auth/verify', [
+            'portal_token' => $customer->portal_token,
+            'email'        => $customer->email,
+        ])->json('token');
+
+        $tokenB = $this->postJson('/api/auth/verify', [
+            'portal_token' => $customer->portal_token,
+            'email'        => $customer->email,
+        ])->json('token');
+
+        $this->withHeader('Authorization', "Bearer {$tokenA}")
+            ->deleteJson('/api/me')
+            ->assertOk();
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+
+        $this->app['auth']->forgetGuards();
+
+        $this->withHeader('Authorization', "Bearer {$tokenB}")
+            ->getJson('/api/me')
+            ->assertStatus(401);
+    }
+
+    public function test_delete_account_soft_deletes_and_invalidates_the_portal_token(): void
+    {
+        $customer = $this->makeCustomer();
+        $originalPortalToken = $customer->portal_token;
+
+        $token = $this->postJson('/api/auth/verify', [
+            'portal_token' => $customer->portal_token,
+            'email'        => $customer->email,
+        ])->json('token');
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->deleteJson('/api/me')
+            ->assertOk();
+
+        // Row still exists (never hard-deleted — order/ledger history keeps
+        // its customer_id), just soft-deleted and no longer reachable by
+        // the old portal link.
+        $this->assertDatabaseHas('customers', ['id' => $customer->id]);
+        $customer->refresh();
+        $this->assertNotNull($customer->deleted_at);
+        $this->assertNotEquals($originalPortalToken, $customer->portal_token);
+
+        $this->app['auth']->forgetGuards();
+
+        $this->postJson('/api/auth/verify', [
+            'portal_token' => $originalPortalToken,
+            'email'        => $customer->email,
+        ])->assertStatus(422);
     }
 }

@@ -115,9 +115,9 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name'           => 'required|string|max:255',
-            'contact_number' => 'required|string|max:30',
-            'city'           => 'required|string|max:100',
-            'country'        => 'required|string|in:' . implode(',', Customer::COUNTRIES),
+            'contact_number' => 'nullable|string|max:30',
+            'city'           => 'nullable|string|max:100',
+            'country'        => 'nullable|string|in:' . implode(',', Customer::COUNTRIES),
             'address'        => 'nullable|string|max:255',
             'email'          => 'required|email|max:255',
         ]);
@@ -172,6 +172,27 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Signed out.']);
+    }
+
+    /**
+     * Account deletion (Guideline 5.1.1(v)) — self-serve, no customer
+     * service round trip required. Revokes every token (not just the
+     * current one, unlike logout()), rotates portal_token to a fresh UUID
+     * the customer never received (column is NOT NULL + unique, so it can't
+     * just be cleared) so the old WhatsApp link stops working, then
+     * soft-deletes: the row stays for order/ledger history
+     * (orders.customer_id is never nulled), but disappears from login and
+     * every default query.
+     */
+    public function destroy(Request $request)
+    {
+        $customer = $request->user();
+
+        $customer->tokens()->delete();
+        $customer->update(['portal_token' => Str::uuid()->toString()]);
+        $customer->delete();
+
+        return response()->json(['message' => 'Your account has been deleted.']);
     }
 
     protected function customerPayload(Customer $customer): array

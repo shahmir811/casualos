@@ -6,6 +6,8 @@ use App\Exceptions\OrderPlacementException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\CatalogueResource;
 use App\Http\Resources\Api\CatalogueSummaryResource;
+use App\Http\Resources\Api\PublicCatalogueResource;
+use App\Http\Resources\Api\PublicCatalogueSummaryResource;
 use App\Models\Catalogue;
 use App\Models\Order;
 use App\Services\OrderPlacementService;
@@ -40,6 +42,30 @@ class CatalogueController extends Controller
 
         return response()->json([
             'catalogue' => new CatalogueResource($catalogue),
+        ]);
+    }
+
+    /**
+     * Unauthenticated browsing for the pre-login Wholesale destination (see
+     * Guideline 5.1.1(v) — browsing shouldn't require an account, only
+     * pricing/ordering should). No already_ordered, no pricing: both are
+     * meaningless or sensitive without a known customer.
+     */
+    public function publicIndex()
+    {
+        $catalogues = Catalogue::latest()->get();
+
+        return response()->json([
+            'catalogues' => PublicCatalogueSummaryResource::collection($catalogues),
+        ]);
+    }
+
+    public function publicShow(Catalogue $catalogue)
+    {
+        $catalogue->load(['designs' => fn ($q) => $q->orderBy('sort_order')]);
+
+        return response()->json([
+            'catalogue' => new PublicCatalogueResource($catalogue),
         ]);
     }
 

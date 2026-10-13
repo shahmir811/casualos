@@ -59,9 +59,10 @@ class Payment extends Model
         return $description . ' has been deleted';
     }
 
+    // withTrashed() — see Order::customer()'s docblock.
     public function customer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(Customer::class)->withTrashed();
     }
 
     public function order(): \Illuminate\Database\Eloquent\Relations\BelongsTo

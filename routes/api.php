@@ -14,8 +14,14 @@ Route::post('/auth/verify', [AuthController::class, 'verify'])->name('api.auth.v
 Route::post('/auth/signup', [AuthController::class, 'signup'])->name('api.auth.signup');
 Route::get('/countries', [CountryController::class, 'index'])->name('api.countries.index');
 
+// Guest browsing — no auth required. See Guideline 5.1.1(v): catalogue
+// browsing isn't account-based, only pricing/ordering is.
+Route::get('/public/catalogues', [CatalogueController::class, 'publicIndex'])->name('api.public.catalogues.index');
+Route::get('/public/catalogues/{catalogue}', [CatalogueController::class, 'publicShow'])->name('api.public.catalogues.show');
+
 Route::middleware(['auth:sanctum', 'track-app-usage'])->group(function () {
     Route::get('/me', [AuthController::class, 'me'])->name('api.me');
+    Route::delete('/me', [AuthController::class, 'destroy'])->name('api.me.destroy');
     Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
 
     Route::get('/orders', [OrderController::class, 'index'])->name('api.orders.index');
