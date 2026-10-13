@@ -145,6 +145,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('customers', [CustomerController::class, 'store'])->name('customers.store');
     });
 
+    // Restoring a deleted account is admin-only, matching the button's
+    // $isAdmin gate in customers/show.blade.php.
+    Route::middleware('role:admin')->group(function () {
+        Route::post('customers/{customer}/restore', [CustomerController::class, 'restore'])->name('customers.restore');
+    });
+
     Route::middleware('role:admin|accountant|production_manager')->group(function () {
         Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
         Route::get('customers/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');

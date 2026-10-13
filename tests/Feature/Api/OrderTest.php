@@ -56,6 +56,7 @@ class OrderTest extends TestCase
             $table->string('app_platform')->nullable();
             $table->timestamp('app_last_seen_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('personal_access_tokens', function (Blueprint $table) {
@@ -387,5 +388,27 @@ class OrderTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('order.dispatch_batches.0.total_pieces', 2)
             ->assertJsonPath('order.dispatch_batches.0.items.0.design', 'ISHQIA-1');
+    }
+
+    /**
+     * Guards the fix for Order::customer() — admin views (order show/pdf,
+     * dispatch, reports) all read $order->customer->name directly, mostly
+     * without a null-safe operator. Soft-deleting Customer without
+     * withTrashed() on this relation would make every one of those render
+     * blank/broken for a deleted customer's past orders, defeating the
+     * entire reason soft-delete was chosen over a hard delete.
+     */
+    public function test_order_customer_relation_survives_the_customer_deleting_their_account(): void
+    {
+        $customer = $this->makeCustomer();
+        $order    = $this->makeOrder($customer);
+
+        $customer->delete();
+
+        $order->refresh();
+
+        $this->assertNotNull($order->customer);
+        $this->assertEquals($customer->id, $order->customer->id);
+        $this->assertEquals('Ayesha Khan', $order->customer->name);
     }
 }

@@ -38,6 +38,7 @@ class ExpoPushChannelTest extends TestCase
             $table->string('portal_token', 64)->unique();
             $table->foreignId('created_by')->nullable()->constrained('users');
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('expo_push_tokens', function (Blueprint $table) {

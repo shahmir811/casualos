@@ -45,6 +45,7 @@ class OrderPlacementTest extends TestCase
             $table->string('app_platform')->nullable();
             $table->timestamp('app_last_seen_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('personal_access_tokens', function (Blueprint $table) {

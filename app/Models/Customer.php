@@ -6,6 +6,7 @@ use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
@@ -17,10 +18,15 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
  * issued after proving ownership of the permanent portal_token link *and*
  * confirming the email on file, mirroring CustomerPortalController::verify()
  * for the web PWA. See Api\AuthController.
+ *
+ * SoftDeletes backs the app's account-deletion flow (Guideline 5.1.1(v)) —
+ * deleted_at makes the row invisible to login and every default query, but
+ * the row itself is never removed, so orders/ledger entries never lose
+ * their customer_id. See Api\AuthController::destroy().
  */
 class Customer extends Model implements AuthenticatableContract
 {
-    use Authenticatable, HasApiTokens, HasFactory, Notifiable, HasPushSubscriptions;
+    use Authenticatable, HasApiTokens, HasFactory, Notifiable, HasPushSubscriptions, SoftDeletes;
 
     public const COUNTRIES = [
         'Australia', 'Bangladesh', 'Canada', 'Kuwait', 'Malaysia', 'Norway',
@@ -65,6 +71,20 @@ class Customer extends Model implements AuthenticatableContract
     public function hasAdvanceCredit(): bool
     {
         return $this->advance_credit_balance > 0;
+    }
+
+    /**
+     * Route-model binding (customers.show/edit/ledger/advance-payments)
+     * includes soft-deleted customers — staff following a "View Customer"
+     * link from an order/ledger/report row must still reach the page
+     * instead of a 404, or the whole point of soft-deleting (keeping
+     * history visible) is defeated. Never affects AuthController::verify(),
+     * which queries directly rather than through route binding, so a
+     * deleted customer still can't log back in.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return $this->withTrashed()->where($field ?? $this->getRouteKeyName(), $value)->first();
     }
 
     // Relationships

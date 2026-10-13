@@ -7,7 +7,7 @@
 <div class="flex items-start justify-between gap-3 mb-7">
     <div>
         <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F]">Customers</h1>
-        <p class="text-[#6E6E73] text-sm mt-1">{{ $customers->total() }} total accounts</p>
+        <p class="text-[#6E6E73] text-sm mt-1">{{ $customers->total() }} {{ $status === 'deleted' ? 'deleted' : 'total' }} accounts</p>
     </div>
     @if(Auth::user()->role === 'admin')
     <a href="{{ route('customers.create') }}" class="btn-primary">
@@ -17,6 +17,20 @@
         New Customer
     </a>
     @endif
+</div>
+
+{{-- Status tabs --}}
+<div class="flex items-center gap-1 mb-5 border-b border-[#E8E8ED]">
+    <a href="{{ route('customers.index', array_filter(['search' => request('search')])) }}"
+       class="px-3.5 py-2 text-sm font-medium border-b-2 -mb-px transition-colors
+              {{ $status === 'active' ? 'border-[#0071E3] text-[#0071E3]' : 'border-transparent text-[#6E6E73] hover:text-[#1D1D1F]' }}">
+        Active
+    </a>
+    <a href="{{ route('customers.index', array_filter(['status' => 'deleted', 'search' => request('search')])) }}"
+       class="px-3.5 py-2 text-sm font-medium border-b-2 -mb-px transition-colors
+              {{ $status === 'deleted' ? 'border-[#0071E3] text-[#0071E3]' : 'border-transparent text-[#6E6E73] hover:text-[#1D1D1F]' }}">
+        Deleted
+    </a>
 </div>
 
 {{-- Search --}}
@@ -35,7 +49,7 @@
 
         {{-- clear link (only visible when there's a search term) --}}
         @if(request('search'))
-        <a href="{{ route('customers.index') }}"
+        <a href="{{ route('customers.index', array_filter(['status' => $status === 'deleted' ? 'deleted' : null])) }}"
            class="absolute right-20 text-xs text-[#86868B] hover:text-[#1D1D1F] transition-colors">
             Clear
         </a>
@@ -55,10 +69,18 @@
     <div class="card p-4">
         <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-                <div class="font-semibold text-[#1D1D1F] truncate">{{ $customer->name }}</div>
+                <div class="font-semibold text-[#1D1D1F] truncate flex items-center gap-2">
+                    {{ $customer->name }}
+                    @if($customer->trashed())
+                    <span class="badge" style="background:#FFEBE9; color:#D1242F;">Deleted</span>
+                    @else
+                    <span class="badge" style="background:#E6F9ED; color:#1A8A3C;">Active</span>
+                    @endif
+                </div>
                 <div class="text-sm text-[#6E6E73] mt-0.5">{{ $customer->city }}</div>
             </div>
             <div class="flex items-center gap-3 shrink-0">
+                @unless($customer->trashed())
                 <button type="button"
                     onclick="copyPortalLink('{{ route('portal.show', $customer->portal_token) }}', '{{ $customer->email }}', this)"
                     title="Copy portal link + email"
@@ -68,6 +90,7 @@
                     </svg>
                     Portal Link
                 </button>
+                @endunless
                 <a href="{{ route('customers.show', $customer) }}"
                    class="text-[#0066CC] text-sm font-medium hover:underline">View →</a>
             </div>
@@ -91,7 +114,7 @@
         </div>
     </div>
     @empty
-    <div class="card p-8 text-center text-[#86868B]">No customers found.</div>
+    <div class="card p-8 text-center text-[#86868B]">{{ $status === 'deleted' ? 'No deleted accounts.' : 'No customers found.' }}</div>
     @endforelse
 </div>
 
@@ -101,6 +124,7 @@
         <thead>
             <tr>
                 <th class="text-left">Name</th>
+                <th class="text-left">Status</th>
                 <th class="text-left">Contact</th>
                 <th class="text-left">City</th>
                 <th class="text-left">Orders</th>
@@ -114,6 +138,13 @@
             @forelse($customers as $customer)
             <tr>
                 <td class="font-medium text-[#1D1D1F]">{{ $customer->name }}</td>
+                <td>
+                    @if($customer->trashed())
+                    <span class="badge" style="background:#FFEBE9; color:#D1242F;">Deleted</span>
+                    @else
+                    <span class="badge" style="background:#E6F9ED; color:#1A8A3C;">Active</span>
+                    @endif
+                </td>
                 <td>
                     <div class="text-sm">{{ $customer->contact_number }}</div>
                     <div class="text-[#86868B] text-xs">{{ $customer->email }}</div>
@@ -131,6 +162,7 @@
                 @endif
                 <td>
                     <div class="flex items-center gap-3">
+                        @unless($customer->trashed())
                         <button type="button"
                             onclick="copyPortalLink('{{ route('portal.show', $customer->portal_token) }}', '{{ $customer->email }}', this)"
                             title="Copy customer portal link + email"
@@ -140,6 +172,7 @@
                             </svg>
                             Portal Link
                         </button>
+                        @endunless
                         <a href="{{ route('customers.show', $customer) }}"
                            class="text-[#0066CC] text-sm hover:underline font-medium">
                             View →
@@ -149,7 +182,9 @@
             </tr>
             @empty
             <tr>
-                <td colspan="{{ $hideFinancials ? 5 : 6 }}" class="text-center text-[#86868B] py-12">No customers found.</td>
+                <td colspan="{{ $hideFinancials ? 6 : 7 }}" class="text-center text-[#86868B] py-12">
+                    {{ $status === 'deleted' ? 'No deleted accounts.' : 'No customers found.' }}
+                </td>
             </tr>
             @endforelse
         </tbody>

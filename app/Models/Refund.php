@@ -27,9 +27,10 @@ class Refund extends Model
         return $this->belongsTo(OrderReduction::class, 'order_reduction_id');
     }
 
+    // withTrashed() — see Order::customer()'s docblock.
     public function customer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(Customer::class)->withTrashed();
     }
 
     public function refundedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo

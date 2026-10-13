@@ -12,8 +12,14 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         $search = $request->query('search');
+        // 'active' (default) uses Customer's normal query — soft-deleted
+        // rows are already excluded by the model's global scope. 'deleted'
+        // flips to onlyTrashed() so admin has somewhere to actually find
+        // and restore an account a customer deleted by accident.
+        $status = $request->query('status', 'active') === 'deleted' ? 'deleted' : 'active';
 
         $customers = Customer::withCount('orders')
+            ->when($status === 'deleted', fn($q) => $q->onlyTrashed())
             ->when($search, fn($q) => $q->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%")
@@ -25,7 +31,7 @@ class CustomerController extends Controller
 
         $hideFinancials = Auth::user()->role === 'production_manager';
 
-        return view('customers.index', compact('customers', 'hideFinancials'));
+        return view('customers.index', compact('customers', 'hideFinancials', 'status'));
     }
 
     public function create()
@@ -118,5 +124,26 @@ class CustomerController extends Controller
 
         return redirect()->route('customers.show', $customer)
             ->with('success', 'Customer updated.');
+    }
+
+    /**
+     * Undoes the app's self-serve account deletion (DELETE /api/me) —
+     * admin-only. Clears deleted_at; portal_token stays rotated (set on
+     * delete, see Api\AuthController::destroy()) since the old WhatsApp
+     * link is gone for good, so the admin must send the customer a fresh
+     * one after restoring.
+     */
+    public function restore(Customer $customer)
+    {
+        $customer->restore();
+
+        activity()
+            ->performedOn($customer)
+            ->causedBy(Auth::user())
+            ->event('detail')
+            ->log('Customer "' . $customer->name . '" account restored');
+
+        return redirect()->route('customers.show', $customer)
+            ->with('success', 'Customer restored. Send them a fresh portal link — their old one no longer works.');
     }
 }

@@ -102,9 +102,13 @@ class Order extends Model
     }
 
     // Relationships
+    // withTrashed() — a soft-deleted customer's past orders must still show
+    // their name/address everywhere (order list/show/PDF, dispatch, reports).
+    // That's the entire point of soft- over hard-delete; without this every
+    // one of those views silently loses the customer's details.
     public function customer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(Customer::class)->withTrashed();
     }
 
     public function catalogue(): \Illuminate\Database\Eloquent\Relations\BelongsTo

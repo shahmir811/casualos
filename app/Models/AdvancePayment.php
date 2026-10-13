@@ -25,9 +25,10 @@ class AdvancePayment extends Model
         return LogOptions::defaults()->logAll();
     }
 
+    // withTrashed() — see Order::customer()'s docblock.
     public function customer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(Customer::class)->withTrashed();
     }
 
     public function bankAccount(): \Illuminate\Database\Eloquent\Relations\BelongsTo

@@ -4,10 +4,15 @@
 
 @section('content')
 
-<div class="flex items-start justify-between mb-7">
+<div class="mb-7">
     <div>
         <a href="{{ route('customers.index') }}" class="text-[#0066CC] text-sm hover:underline">← Customers</a>
-        <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F] mt-3">{{ $customer->name }}</h1>
+        <h1 class="text-2xl font-semibold tracking-tight text-[#1D1D1F] mt-3">
+            {{ $customer->name }}
+            @if($customer->trashed())
+            <span class="badge" style="background:#FFEBE9; color:#D1242F;">Account Deleted</span>
+            @endif
+        </h1>
         <p class="text-[#6E6E73] text-sm mt-1">{{ $customer->city }}{{ $customer->country ? ', ' . $customer->country : '' }} · {{ $customer->contact_number }} · {{ $customer->email }}</p>
         @if($customer->address)
         <p class="text-[#86868B] text-xs mt-0.5">{{ $customer->address }}</p>
@@ -26,7 +31,20 @@
         @endif
     </div>
     @if(in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager']))
-    <div class="flex items-center gap-2.5">
+    <div class="flex flex-wrap items-center gap-2.5 mt-4">
+        @if($isAdmin && $customer->trashed())
+        <form id="form-restore-customer-{{ $customer->id }}" method="POST"
+              action="{{ route('customers.restore', $customer) }}" class="hidden">@csrf</form>
+        <button type="button" class="btn-primary"
+                @click="$store.confirm.show({
+                    title: 'Restore Account',
+                    message: 'Restore this account? The customer will need a fresh portal link — their old one no longer works.',
+                    formId: 'form-restore-customer-{{ $customer->id }}',
+                    confirmText: 'Restore Account'
+                })">
+            Restore Account
+        </button>
+        @endif
         @if(in_array(Auth::user()->role, ['admin', 'production_manager']))
         <a href="{{ route('customers.edit', $customer) }}" class="btn-secondary">Edit</a>
         @endif

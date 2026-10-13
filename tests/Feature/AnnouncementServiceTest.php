@@ -38,6 +38,7 @@ class AnnouncementServiceTest extends TestCase
             $table->string('portal_token', 64)->unique();
             $table->foreignId('created_by')->nullable()->constrained('users');
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('notifications', function (Blueprint $table) {
