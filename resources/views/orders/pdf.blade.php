@@ -95,7 +95,8 @@
     <thead>
         <tr>
             <th style="width:2%">#</th>
-            <th style="width:8%">Customer</th>
+            <th style="width:4.5%">Order #</th>
+            <th style="width:6%">Customer</th>
             <th style="width:5%">City</th>
             <th style="width:3%">XS</th>
             <th style="width:3%">S</th>
@@ -186,6 +187,7 @@
     @endphp
     <tr class="{{ $i % 2 === 1 ? 'even' : '' }}">
         <td>{{ $i + 1 }}</td>
+        <td>{{ $order->order_number }}</td>
         <td class="td-left">{{ $order->customer?->name ?? $order->submitted_name }}</td>
         <td>{{ $order->submitted_city }}</td>
         <td>{{ $xs ?: '' }}</td>
@@ -228,7 +230,7 @@
 
     {{-- Totals row --}}
     <tr class="totals">
-        <td colspan="3" class="td-left">TOTAL ({{ $orders->count() }} orders)</td>
+        <td colspan="4" class="td-left">TOTAL ({{ $orders->count() }} orders)</td>
         <td>{{ $totals['xs'] > 0 ? number_format($totals['xs']) : '' }}</td>
         <td>{{ $totals['s'] > 0 ? number_format($totals['s']) : '' }}</td>
         <td>{{ $totals['m'] > 0 ? number_format($totals['m']) : '' }}</td>

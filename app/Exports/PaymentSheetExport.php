@@ -40,10 +40,10 @@ class PaymentSheetExport
         $bankHeaders = $this->bankAccounts->pluck('title')->toArray();
 
         if ($this->hideFinancials) {
-            $headers = ['#', 'Customer', 'City', 'XS', 'S', 'M', 'L', 'XL', 'Qty/Dsn', 'Total Qty', 'Status', 'Payment'];
+            $headers = ['#', 'Order #', 'Customer', 'City', 'XS', 'S', 'M', 'L', 'XL', 'Qty/Dsn', 'Total Qty', 'Status', 'Payment'];
         } else {
             $headers = array_merge(
-                ['#', 'Customer', 'City', 'XS', 'S', 'M', 'L', 'XL', 'Qty/Dsn', 'Total Qty', 'Rate', 'Total Bill', 'Received', 'Receivable', 'Title Given'],
+                ['#', 'Order #', 'Customer', 'City', 'XS', 'S', 'M', 'L', 'XL', 'Qty/Dsn', 'Total Qty', 'Rate', 'Total Bill', 'Received', 'Receivable', 'Title Given'],
                 $bankHeaders,
                 ['Misc']
             );
@@ -96,6 +96,7 @@ class PaymentSheetExport
 
                 $rowData = [
                     $i + 1,
+                    $order->order_number,
                     $order->customer?->name ?? $order->submitted_name,
                     $order->submitted_city,
                     $xs ?: '',
@@ -151,6 +152,7 @@ class PaymentSheetExport
                 $rowData = array_merge(
                     [
                         $i + 1,
+                        $order->order_number,
                         $order->customer?->name ?? $order->submitted_name,
                         $order->submitted_city,
                         $xs ?: '',
@@ -187,7 +189,7 @@ class PaymentSheetExport
 
         if ($this->hideFinancials) {
             $totalsRow = [
-                '', '',
+                '', '', '',
                 $label,
                 $totals['xs'] > 0 ? $totals['xs'] : '',
                 $totals['s']  > 0 ? $totals['s']  : '',
@@ -206,7 +208,7 @@ class PaymentSheetExport
 
             $totalsRow = array_merge(
                 [
-                    '', '',
+                    '', '', '',
                     $label,
                     $totals['xs'] > 0 ? $totals['xs'] : '',
                     $totals['s']  > 0 ? $totals['s']  : '',
