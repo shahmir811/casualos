@@ -38,7 +38,12 @@
             @endif
         </div>
         <p class="text-[#6E6E73] text-sm mt-1">
-            {{ $order->customer->name ?? '—' }} · {{ $order->catalogue->name ?? '—' }} · {{ $order->created_at->format('d M Y') }}
+            @if($order->customer && in_array(Auth::user()->role, ['admin', 'accountant', 'production_manager']))
+                <a href="{{ route('customers.show', $order->customer) }}" class="text-[#0066CC] hover:underline">{{ $order->customer->name }}</a>
+            @else
+                {{ $order->customer->name ?? '—' }}
+            @endif
+            · {{ $order->catalogue->name ?? '—' }} · {{ $order->created_at->format('d M Y') }}
         </p>
     </div>
 
@@ -77,6 +82,12 @@
         @if(Auth::user()->role === 'admin' && $order->reductions->count() > 0)
         <a href="{{ route('orders.reassign.create', $order) }}" class="btn-secondary">
             Reassign Pieces
+        </a>
+        @endif
+
+        @if(Auth::user()->role === 'admin' && !in_array($order->status, ['dispatched', 'cancelled']))
+        <a href="{{ route('orders.move-pieces.create', $order) }}" class="btn-secondary">
+            Move Pieces
         </a>
         @endif
 

@@ -78,9 +78,24 @@
                 </td>
                 <td class="text-[#6E6E73] text-sm max-w-xs">
                     @if($entry->notes)
-                        @foreach(explode("\n", $entry->notes) as $line)
-                            <p class="{{ $loop->first ? 'text-[#1D1D1F] font-medium' : 'text-[#6E6E73]' }} text-xs leading-relaxed">{{ $line }}</p>
-                        @endforeach
+                        @php
+                            $noteLines   = explode("\n", $entry->notes);
+                            $headerLine  = $noteLines[0];
+                            $restLines   = collect($noteLines)->skip(1);
+                            $bulletLines = $restLines->reject(fn($l) => str_starts_with($l, 'Note:'));
+                            $freeNote    = $restLines->first(fn($l) => str_starts_with($l, 'Note:'));
+                        @endphp
+                        <p class="text-[#1D1D1F] font-medium text-xs leading-relaxed">{{ $headerLine }}</p>
+                        @if($bulletLines->isNotEmpty())
+                            <ul class="list-disc list-inside mt-0.5 space-y-0.5">
+                                @foreach($bulletLines as $line)
+                                    <li class="text-[#6E6E73] text-xs leading-relaxed">{{ $line }}</li>
+                                @endforeach
+                            </ul>
+                        @endif
+                        @if($freeNote)
+                            <p class="text-[#6E6E73] text-xs leading-relaxed italic mt-0.5">{{ $freeNote }}</p>
+                        @endif
                     @else
                         <span class="text-[#C7C7CC]">—</span>
                     @endif

@@ -168,6 +168,19 @@ class FreePieceController extends Controller
 
                 $designIds = $byDesign->keys()->all();
 
+                // Size breakdown shared by both branches' ledger notes — the
+                // catalogue/order number are already shown by the row's own
+                // Catalogue/Order columns, so the notes only need to say what was
+                // actually assigned.
+                $sizeLabels = ['xs' => 'XS', 's' => 'S', 'm' => 'M', 'l' => 'L', 'xl' => 'XL'];
+                $sizeParts  = [];
+                foreach ($sizeLabels as $key => $label) {
+                    if ($requestedQty[$key] > 0) {
+                        $sizeParts[] = "{$label}×{$requestedQty[$key]}";
+                    }
+                }
+                $freePiecesDesc = implode(', ', $sizeParts) . ' per design · ' . count($designIds) . ' designs';
+
                 if ($targetType === 'existing_order') {
                     $targetOrder = Order::where('id', $targetId)->lockForUpdate()->first();
                     $targetOrder->load(['items', 'customer']);
@@ -203,7 +216,7 @@ class FreePieceController extends Controller
                             'running_advance_balance' => (float) $targetOrder->customer->advance_credit_balance,
                             'reference_type'          => Order::class,
                             'reference_id'            => $targetOrder->id,
-                            'notes'                   => "Free pieces assigned from catalogue {$catalogue->name}",
+                            'notes'                   => "Free pieces assigned · {$freePiecesDesc}",
                             'created_by'              => Auth::id(),
                         ]);
                     }
@@ -275,7 +288,7 @@ class FreePieceController extends Controller
                         'running_advance_balance' => (float) ($customer->advance_credit_balance ?? 0),
                         'reference_type'          => Order::class,
                         'reference_id'            => $order->id,
-                        'notes'                   => "Order #{$order->order_number} — created from free pieces ({$catalogue->name})",
+                        'notes'                   => "New order from free pieces · {$freePiecesDesc}",
                         'created_by'              => Auth::id(),
                     ]);
 

@@ -201,6 +201,21 @@ class OrderPlacementService
 
             // Debit the customer ledger. 'order_charged' is the correct ENUM
             // value for a new order — NOT 'order_placed', which does not exist.
+            // The notes line shows the size breakdown (identical across every
+            // design, per the order form's uniform-sizing rule) rather than the
+            // order number/catalogue name, which the row's own Order/Catalogue
+            // columns already show.
+            $sizeLabels = ['xs' => 'XS', 's' => 'S', 'm' => 'M', 'l' => 'L', 'xl' => 'XL'];
+            $sizeParts  = [];
+            foreach ($sizeLabels as $key => $label) {
+                if (($quote['sizes'][$key] ?? 0) > 0) {
+                    $sizeParts[] = "{$label}×{$quote['sizes'][$key]}";
+                }
+            }
+            $orderNotes = $sizeParts
+                ? implode(', ', $sizeParts) . ' per design · ' . $quote['design_count'] . ' designs'
+                : 'New order placed';
+
             CustomerLedger::create([
                 'customer_id'             => $customer->id,
                 'transaction_type'        => 'order_charged',
@@ -208,7 +223,7 @@ class OrderPlacementService
                 'running_advance_balance' => $customer->advance_credit_balance ?? 0,
                 'reference_type'          => Order::class,
                 'reference_id'            => $order->id,
-                'notes'                   => "Order #{$order->order_number} — {$catalogue->name}",
+                'notes'                   => $orderNotes,
                 'created_by'              => null, // nullable — see migration
             ]);
 
