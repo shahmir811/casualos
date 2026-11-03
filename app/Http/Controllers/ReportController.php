@@ -293,8 +293,12 @@ class ReportController extends Controller
         $selectedCatalogue = $this->activeCatalogue();
         $catalogueId       = $selectedCatalogue->id;
 
+        // Excludes 'transfer' rows (OrderPieceMoveController) — this report tracks
+        // damage/short-supply/price-correction losses, not inter-customer moves,
+        // which already have their own visibility on the order and ledger pages.
         $reductions = OrderReduction::with(['order.customer', 'items.design', 'reducedBy'])
             ->whereHas('order', fn($q) => $q->where('catalogue_id', $catalogueId))
+            ->where('adjustment_type', '!=', 'transfer')
             ->latest()
             ->get();
 

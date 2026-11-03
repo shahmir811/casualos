@@ -13,6 +13,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\OrderReductionController;
 use App\Http\Controllers\OrderPieceReassignmentController;
+use App\Http\Controllers\OrderPieceMoveController;
 use App\Http\Controllers\OgImageController;
 use App\Http\Controllers\PublicOrderController;
 use App\Http\Controllers\CustomerPortalController;
@@ -226,6 +227,13 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('orders/{order}/reassign-pieces',  [OrderPieceReassignmentController::class, 'create'])->name('orders.reassign.create');
         Route::post('orders/{order}/reassign-pieces', [OrderPieceReassignmentController::class, 'store'])->name('orders.reassign.store');
+
+        // Move Pieces — moves a specific design+size quantity from this order
+        // to another order (existing, or a brand-new one for a customer with
+        // none yet), auto-decrementing the source using the same reduce/
+        // surplus/auto-cancel logic Log Reduction has (admin only)
+        Route::get('orders/{order}/move-pieces',  [OrderPieceMoveController::class, 'create'])->name('orders.move-pieces.create');
+        Route::post('orders/{order}/move-pieces', [OrderPieceMoveController::class, 'store'])->name('orders.move-pieces.store');
 
         // Recalculate Order Amount — re-prices the order against the catalogue's
         // current benchmark and design prices (admin only)

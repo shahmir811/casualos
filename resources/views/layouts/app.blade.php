@@ -257,17 +257,77 @@
             </a>
 
             {{-- Global Active Catalogue Picker --}}
-            <div class="px-2 pt-2 pb-1">
-                <form method="POST" action="{{ route('active-catalogue.store') }}">
+            <div class="px-2 pt-2 pb-1 relative"
+                 x-data="{
+                    open: false,
+                    query: '',
+                    activeId: {{ $activeCatalogueId ?? 'null' }},
+                    catalogues: {{ Js::from($sidebarCatalogues->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values()) }},
+                    get activeName() {
+                        const match = this.catalogues.find(c => c.id === this.activeId);
+                        return match ? match.name : 'Select Catalogue';
+                    },
+                    get filtered() {
+                        const q = this.query.trim().toLowerCase();
+                        if (!q) return this.catalogues;
+                        return this.catalogues.filter(c => c.name.toLowerCase().includes(q));
+                    },
+                    toggle() {
+                        this.open = !this.open;
+                        if (this.open) {
+                            this.query = '';
+                            this.$nextTick(() => this.$refs.search.focus());
+                        }
+                    },
+                    select(id) {
+                        this.activeId = id;
+                        this.open = false;
+                        this.$refs.catalogueInput.value = id;
+                        this.$refs.catalogueForm.submit();
+                    }
+                 }"
+                 @keydown.escape.window="open = false">
+                <form method="POST" action="{{ route('active-catalogue.store') }}" x-ref="catalogueForm" class="hidden">
                     @csrf
-                    <select name="catalogue_id"
-                            onchange="this.form.submit()"
-                            class="w-full text-xs rounded-lg border border-[#D2D2D7] bg-[#F5F5F7] px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#0071E3] text-[#1D1D1F] font-medium cursor-pointer">
-                        @foreach($sidebarCatalogues as $cat)
-                            <option value="{{ $cat->id }}" @selected($cat->id == $activeCatalogueId)>{{ $cat->name }}</option>
-                        @endforeach
-                    </select>
+                    <input type="hidden" name="catalogue_id" x-ref="catalogueInput">
                 </form>
+
+                <button type="button"
+                        @click="toggle()"
+                        class="w-full flex items-center justify-between gap-2 text-xs rounded-lg border border-[#D2D2D7] bg-[#F5F5F7] px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#0071E3] text-[#1D1D1F] font-medium cursor-pointer">
+                    <span class="truncate" x-text="activeName"></span>
+                    <svg class="w-3.5 h-3.5 flex-shrink-0 text-[#86868B] transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+
+                <div x-show="open"
+                     x-cloak
+                     x-transition
+                     @click.outside="open = false"
+                     class="absolute left-2 right-2 mt-1 z-50 bg-white border border-[#D2D2D7] rounded-lg shadow-lg overflow-hidden">
+                    {{-- Search box sits above the list so both are visible at once --}}
+                    <div class="p-1.5 border-b border-[#D2D2D7]">
+                        <input type="text"
+                               x-ref="search"
+                               x-model="query"
+                               placeholder="Search catalogues…"
+                               class="w-full text-xs rounded-md border border-[#D2D2D7] bg-[#F5F5F7] px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#0071E3] text-[#1D1D1F]">
+                    </div>
+                    <ul class="max-h-56 overflow-y-auto py-1">
+                        <template x-for="cat in filtered" :key="cat.id">
+                            <li @click="select(cat.id)"
+                                class="flex items-center gap-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-[#F5F5F7]"
+                                :class="cat.id === activeId ? 'font-semibold text-[#0071E3]' : 'text-[#1D1D1F]'">
+                                <svg class="w-3 h-3 flex-shrink-0" :class="cat.id === activeId ? 'opacity-100' : 'opacity-0'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span class="truncate" x-text="cat.name"></span>
+                            </li>
+                        </template>
+                        <li x-show="filtered.length === 0" class="px-2.5 py-2 text-xs text-[#86868B]">No catalogues found</li>
+                    </ul>
+                </div>
             </div>
 
             {{-- Catalogue --}}

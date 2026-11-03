@@ -50,7 +50,7 @@ class OrderReductionController extends Controller
             $orderItemsByDesign = $order->items->keyBy('design_id');
             $totalReduced       = 0;
             $itemData           = [];
-            $itemLines          = [];
+            $itemsByDesign      = []; // design_id => ['name' => ..., 'parts' => ["S×1", "M×3", ...]]
 
             foreach ($nonZeroItems as $item) {
                 $orderItem = $orderItemsByDesign->get($item['design_id']);
@@ -59,7 +59,8 @@ class OrderReductionController extends Controller
                 $totalReduced += $amount;
 
                 $designName = $orderItem?->design?->name ?? "Design #{$item['design_id']}";
-                $itemLines[] = "{$designName} " . strtoupper($item['size']) . "×{$item['qty']}";
+                $itemsByDesign[$item['design_id']]['name'] = $designName;
+                $itemsByDesign[$item['design_id']]['parts'][] = strtoupper($item['size']) . "×{$item['qty']}";
 
                 $itemData[] = [
                     'design_id'      => $item['design_id'],
@@ -75,12 +76,21 @@ class OrderReductionController extends Controller
             $totalPaid      = (float) $order->total_paid;
             $customer       = $order->customer;
             $adjustmentLabel = ucwords(str_replace('_', ' ', $request->adjustment_type));
-            $byName          = Auth::user()->name;
-            $dateLabel       = today()->format('d M Y');
 
-            // Rich description for order_reduced ledger entry
-            $reductionDesc  = "Order #{$order->order_number} · {$adjustmentLabel} · {$dateLabel} · By: {$byName}";
-            $reductionDesc .= "\nItems: " . implode(', ', $itemLines);
+            // Ledger description — the header line is the only thing not already
+            // shown by the row's own Date/Order/By columns; items are grouped one
+            // bullet line per design (the view renders lines after the first as a
+            // bulleted list), so a multi-size reduction on one design doesn't repeat
+            // the design name on every line.
+            $itemLines = collect($itemsByDesign)
+                ->map(fn($d) => $d['name'] . ': ' . implode(', ', $d['parts']))
+                ->values()
+                ->all();
+
+            $reductionDesc = $adjustmentLabel;
+            foreach ($itemLines as $line) {
+                $reductionDesc .= "\n" . $line;
+            }
             if ($request->notes) $reductionDesc .= "\nNote: {$request->notes}";
 
             // Determine surplus_action — only meaningful if customer has overpaid
@@ -153,7 +163,7 @@ class OrderReductionController extends Controller
                     ]);
 
                     $this->ledgerEntry($order, 'refund_issued', $surplus, $refund, $customer,
-                        "Order #{$order->order_number} · Refund PKR " . number_format($surplus, 0) . " via {$refundMethodLabel} · {$dateLabel} · By: {$byName}");
+                        "Refund PKR " . number_format($surplus, 0) . " via {$refundMethodLabel} (reduction surplus)");
                 }
             }
 

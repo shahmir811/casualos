@@ -41,10 +41,11 @@ class OrderPieceReassignmentController extends Controller
             return back()->withErrors(['target_order_id' => 'Target order must be from the same catalogue.']);
         }
 
-        $logItems   = [];
-        $totalAdded = 0;
+        $logItems      = [];
+        $itemsByDesign = []; // design_id => ['name' => ..., 'parts' => ["S×1", "M×3", ...]]
+        $totalAdded    = 0;
 
-        DB::transaction(function () use ($request, $order, $targetOrder, &$logItems, &$totalAdded) {
+        DB::transaction(function () use ($request, $order, $targetOrder, &$logItems, &$itemsByDesign, &$totalAdded) {
             $targetItemsByDesign = $targetOrder->items->keyBy('design_id');
 
             foreach ($request->items as $item) {
@@ -62,13 +63,16 @@ class OrderPieceReassignmentController extends Controller
                     $targetItem->save();
                     $lineAmount  = $targetItem->unit_price * $qty;
                     $totalAdded += $lineAmount;
+                    $designName  = $targetItem->design?->name ?? "Design #{$designId}";
                     $logItems[] = [
-                        'design'     => $targetItem->design?->name ?? "Design #{$designId}",
+                        'design'     => $designName,
                         'size'       => strtoupper($size),
                         'qty_moved'  => $qty,
                         'unit_price' => 'PKR ' . number_format((float) $targetItem->unit_price, 0),
                         'amount'     => 'PKR ' . number_format($lineAmount, 0),
                     ];
+                    $itemsByDesign[$designId]['name'] = $designName;
+                    $itemsByDesign[$designId]['parts'][] = strtoupper($size) . "×{$qty}";
                 }
             }
 
@@ -78,6 +82,19 @@ class OrderPieceReassignmentController extends Controller
 
                 $customer = $targetOrder->customer;
 
+                // Header line is the only thing not already shown by the row's own
+                // Order/Catalogue columns; items are grouped one bullet per design.
+                $itemLines = collect($itemsByDesign)
+                    ->map(fn($d) => $d['name'] . ': ' . implode(', ', $d['parts']))
+                    ->values()
+                    ->all();
+
+                $reassignDesc = "Pieces added from Order #{$order->order_number}";
+                foreach ($itemLines as $line) {
+                    $reassignDesc .= "\n" . $line;
+                }
+                if ($request->notes) $reassignDesc .= "\nNote: {$request->notes}";
+
                 CustomerLedger::create([
                     'customer_id'             => $targetOrder->customer_id,
                     'transaction_type'        => 'order_charged',
@@ -85,7 +102,7 @@ class OrderPieceReassignmentController extends Controller
                     'running_advance_balance' => (float) $customer->advance_credit_balance,
                     'reference_type'          => Order::class,
                     'reference_id'            => $targetOrder->id,
-                    'notes'                   => "Pieces added from Order #{$order->order_number}" . ($request->notes ? ": {$request->notes}" : ''),
+                    'notes'                   => $reassignDesc,
                     'created_by'              => Auth::id(),
                 ]);
             }

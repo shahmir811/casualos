@@ -27,6 +27,8 @@ class ProductionAssignmentAlertService
         'order_cancelled'      => 'reduced to zero and cancelled',
         'order_deleted'        => 'permanently deleted',
         'free_pieces_assigned' => 'given newly assigned free pieces',
+        'pieces_moved_out'     => 'had pieces moved out to another order',
+        'pieces_moved_in'      => 'given newly moved-in pieces',
     ];
 
     public function checkOrder(Order $order, array $designIds, string $trigger): void
