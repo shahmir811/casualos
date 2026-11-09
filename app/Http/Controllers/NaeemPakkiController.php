@@ -17,6 +17,7 @@ class NaeemPakkiController extends Controller
     {
         $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: '';
         $selectedDesignId    = $request->get('design_id', '');
+        $activeCatalogue     = $selectedCatalogueId ? Catalogue::find($selectedCatalogueId) : null;
 
         $catalogueDesigns = $selectedCatalogueId
             ? Design::where('catalogue_id', $selectedCatalogueId)
@@ -41,7 +42,7 @@ class NaeemPakkiController extends Controller
         $assignments = $query->paginate(20)->withQueryString();
 
         return view('production.naeem-pakki.index', compact(
-            'assignments', 'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId'
+            'assignments', 'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId', 'activeCatalogue'
         ));
     }
 

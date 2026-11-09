@@ -20,6 +20,7 @@ class ProductionAssignmentController extends Controller
         $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: '';
         $selectedDestination = $request->get('destination', '');
         $selectedUnit        = $request->get('stitching_unit_id', '');
+        $activeCatalogue     = $selectedCatalogueId ? Catalogue::find($selectedCatalogueId) : null;
 
         $query = ProductionAssignment::with(['catalogue', 'design', 'items', 'npDesigns.design', 'stitchingUnit'])->latest();
 
@@ -33,7 +34,7 @@ class ProductionAssignmentController extends Controller
 
         return view('production.assignments.index', compact(
             'assignments', 'stitchingUnits',
-            'selectedCatalogueId', 'selectedDestination', 'selectedUnit'
+            'selectedCatalogueId', 'selectedDestination', 'selectedUnit', 'activeCatalogue'
         ));
     }
 
@@ -45,6 +46,10 @@ class ProductionAssignmentController extends Controller
         if (!$catalogueId) {
             return redirect()->route('production-assignments.index')
                 ->with('error', 'Please select a catalogue from the sidebar before creating an assignment.');
+        }
+
+        if ($redirect = $this->rejectIfVendorCatalogue($catalogueId, 'production-assignments.index')) {
+            return $redirect;
         }
 
         $catalogue = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')])
@@ -170,6 +175,10 @@ class ProductionAssignmentController extends Controller
             'destination'     => 'required|in:naeem_pakki,stitching_unit',
             'assignment_date' => 'required|date',
         ]);
+
+        if ($redirect = $this->rejectIfVendorCatalogue((int) $request->catalogue_id, 'production-assignments.index')) {
+            return $redirect;
+        }
 
         return $request->destination === 'naeem_pakki'
             ? $this->storeNaeemPakki($request)

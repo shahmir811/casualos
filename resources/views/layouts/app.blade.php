@@ -396,6 +396,7 @@
             </a>
             @endif
 
+            @unless($activeCatalogue && $activeCatalogue->isVendorProduced())
             <a href="{{ route('fabric-batches.index') }}"
                class="nav-item {{ request()->routeIs('fabric-batches.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -443,6 +444,7 @@
                 </svg>
                 Press
             </a>
+            @endunless
 
             <a href="{{ route('packed-inventory.index') }}"
                class="nav-item {{ request()->routeIs('packed-inventory.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
@@ -476,6 +478,7 @@
                 Dispatch Optimizer
             </a>
 
+            @unless($activeCatalogue && $activeCatalogue->isVendorProduced())
             <a href="{{ route('wages.index') }}"
                class="nav-item {{ request()->routeIs('wages.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -499,6 +502,7 @@
                 </svg>
                 Production Tracker
             </a>
+            @endunless
             @endif
 
             {{-- Reports --}}

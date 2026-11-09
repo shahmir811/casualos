@@ -36,7 +36,8 @@ class CatalogueController extends Controller
      */
     public function index()
     {
-        $catalogues = Catalogue::withCount('designs')
+        $catalogues = Catalogue::with('vendor')
+            ->withCount('designs')
             ->withCount(['orders as orders_count'])
             ->latest()
             ->paginate(15);

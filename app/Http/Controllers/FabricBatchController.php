@@ -19,6 +19,7 @@ class FabricBatchController extends Controller
     {
         $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: null;
         $selectedDesignId    = $request->filled('design_id') ? (int) $request->input('design_id') : null;
+        $activeCatalogue     = $selectedCatalogueId ? Catalogue::find($selectedCatalogueId) : null;
 
         $catalogueDesigns = $selectedCatalogueId
             ? Design::where('catalogue_id', $selectedCatalogueId)
@@ -65,7 +66,7 @@ class FabricBatchController extends Controller
 
         return view('production.fabric-batches.index', compact(
             'batches', 'receivedPerCatalogue', 'receivedPerDesignByCatalogue',
-            'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId'
+            'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId', 'activeCatalogue'
         ));
     }
 
@@ -77,6 +78,10 @@ class FabricBatchController extends Controller
         if (!$catalogueId) {
             return redirect()->route('fabric-batches.index')
                 ->with('error', 'Please select a catalogue from the sidebar before logging a fabric batch.');
+        }
+
+        if ($redirect = $this->rejectIfVendorCatalogue($catalogueId, 'fabric-batches.index')) {
+            return $redirect;
         }
 
         $catalogue = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')])
@@ -96,6 +101,10 @@ class FabricBatchController extends Controller
             'items.*.design_id' => ['required', Rule::exists('designs', 'id')->where('manufacturing_type', 'in_house')],
             'items.*.quantity'  => 'nullable|integer|min:0',
         ]);
+
+        if ($redirect = $this->rejectIfVendorCatalogue($validated['catalogue_id'], 'fabric-batches.index')) {
+            return $redirect;
+        }
 
         // Only keep designs where fabric was actually received (qty > 0)
         $itemsToSave = array_filter($validated['items'], fn($i) => (int)$i['quantity'] > 0);
