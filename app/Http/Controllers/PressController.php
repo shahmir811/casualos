@@ -21,6 +21,7 @@ class PressController extends Controller
     {
         $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: null;
         $selectedDesignId    = $request->filled('design_id') ? (int) $request->input('design_id') : null;
+        $activeCatalogue     = $selectedCatalogueId ? Catalogue::find($selectedCatalogueId) : null;
 
         $catalogueDesigns = $selectedCatalogueId
             ? Design::where('catalogue_id', $selectedCatalogueId)
@@ -37,7 +38,7 @@ class PressController extends Controller
             ->withQueryString();
 
         return view('production.press.index', compact(
-            'sends', 'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId'
+            'sends', 'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId', 'activeCatalogue'
         ));
     }
 
@@ -49,6 +50,10 @@ class PressController extends Controller
         if (!$catalogueId) {
             return redirect()->route('press-sends.index')
                 ->with('error', 'Please select a catalogue from the sidebar before logging a press send.');
+        }
+
+        if ($redirect = $this->rejectIfVendorCatalogue($catalogueId, 'press-sends.index')) {
+            return $redirect;
         }
 
         $catalogue = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')->orderBy('name')])
@@ -82,6 +87,10 @@ class PressController extends Controller
             'designs.*.items.*.size' => 'required|in:xs,s,m,l,xl',
             'designs.*.items.*.qty'  => 'nullable|integer|min:0',
         ]);
+
+        if ($redirect = $this->rejectIfVendorCatalogue($validated['catalogue_id'], 'press-sends.index')) {
+            return $redirect;
+        }
 
         $totalPieces = 0;
         foreach ($validated['designs'] as $d) {

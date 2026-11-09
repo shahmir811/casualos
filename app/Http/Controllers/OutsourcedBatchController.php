@@ -13,7 +13,7 @@ class OutsourcedBatchController extends Controller
     {
         $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: null;
 
-        $query = OutsourcedBatch::with(['catalogue', 'items.design'])->latest();
+        $query = OutsourcedBatch::with(['catalogue.vendor', 'items.design'])->latest();
 
         if ($selectedCatalogueId) {
             $query->where('catalogue_id', $selectedCatalogueId);
@@ -33,7 +33,10 @@ class OutsourcedBatchController extends Controller
                 ->with('error', 'Please select a catalogue from the sidebar before logging an outsourced batch.');
         }
 
-        $catalogue = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'outsourced')->orderBy('name')])
+        $catalogue = Catalogue::with([
+                'designs' => fn($q) => $q->where('manufacturing_type', 'outsourced')->orderBy('name'),
+                'vendor',
+            ])
             ->findOrFail($catalogueId);
 
         return view('production.outsourced-batches.create', compact('catalogue'));

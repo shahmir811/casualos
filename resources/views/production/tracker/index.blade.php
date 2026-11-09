@@ -25,6 +25,13 @@
         $gb = 'border-left: 2px solid #E8E8ED;'; // group separator
     @endphp
 
+    @if($catalogue->isVendorProduced())
+    <div class="flex items-center gap-2">
+        <span class="text-sm font-semibold text-[#1D1D1F]">{{ $catalogue->name }}</span>
+        <span class="badge bg-amber-50 text-amber-700">Vendor: {{ $catalogue->vendor->name }}</span>
+    </div>
+    @endif
+
     {{-- ── STALE ASSIGNMENT ALERTS ───────────────────────────────── --}}
     @if($alerts->isNotEmpty())
     <div class="card p-5" style="background:#FFF0EF;border:1px solid #FFD0CC;">

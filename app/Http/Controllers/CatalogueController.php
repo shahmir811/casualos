@@ -36,7 +36,8 @@ class CatalogueController extends Controller
      */
     public function index()
     {
-        $catalogues = Catalogue::withCount('designs')
+        $catalogues = Catalogue::with('vendor')
+            ->withCount('designs')
             ->withCount(['orders as orders_count'])
             ->latest()
             ->paginate(15);
@@ -50,7 +51,8 @@ class CatalogueController extends Controller
     public function create()
     {
         $this->adminOrProductionManager();
-        return view('catalogues.create');
+        $vendors = \App\Models\Vendor::where('is_active', true)->orderBy('name')->get();
+        return view('catalogues.create', compact('vendors'));
     }
 
     /**
@@ -67,7 +69,16 @@ class CatalogueController extends Controller
             'number_of_designs'  => 'required|integer|min:1',
             'quantity_benchmark' => 'nullable|integer|min:1',
             'notes'              => 'nullable|string',
+            'production_mode'    => 'required|in:in_house,vendor',
+            'vendor_id'          => 'required_if:production_mode,vendor|nullable|exists:vendors,id',
+        ], [
+            'vendor_id.required_if' => 'Please select a vendor for this catalogue.',
         ]);
+
+        // production_mode is a form-only field, not a DB column — vendor_id is
+        // the only thing persisted, and is only ever set once, here at creation.
+        $validated['vendor_id'] = $validated['production_mode'] === 'vendor' ? $validated['vendor_id'] : null;
+        unset($validated['production_mode']);
 
         $validated['created_by'] = Auth::id();
         $validated['status']     = 'open';
@@ -95,6 +106,7 @@ class CatalogueController extends Controller
             'designs.costEstimation',
             'createdBy',
             'catalogueBookUploadedBy',
+            'vendor',
         ]);
 
         $ordersCount  = $catalogue->orders()->count();

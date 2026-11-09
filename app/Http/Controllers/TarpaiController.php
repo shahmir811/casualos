@@ -20,6 +20,7 @@ class TarpaiController extends Controller
         $house               = $request->input('house', '');
         $selectedCatalogueId = (int) session('active_catalogue_id', 0) ?: '';
         $selectedDesignId    = $request->get('design_id', '');
+        $activeCatalogue     = $selectedCatalogueId ? Catalogue::find($selectedCatalogueId) : null;
         $catalogueDesigns = $selectedCatalogueId
             ? Design::where('catalogue_id', $selectedCatalogueId)
                 ->where('manufacturing_type', 'in_house')
@@ -78,7 +79,7 @@ class TarpaiController extends Controller
 
         return view('production.tarpai.index', compact(
             'sends', 'house', 'designSummary', 'sizes',
-            'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId'
+            'catalogueDesigns', 'selectedCatalogueId', 'selectedDesignId', 'activeCatalogue'
         ));
     }
 
@@ -90,6 +91,10 @@ class TarpaiController extends Controller
         if (!$catalogueId) {
             return redirect()->route('tarpai-sends.index')
                 ->with('error', 'Please select a catalogue from the sidebar before logging a Tarpai send.');
+        }
+
+        if ($redirect = $this->rejectIfVendorCatalogue($catalogueId, 'tarpai-sends.index')) {
+            return $redirect;
         }
 
         $catalogue = Catalogue::with(['designs' => fn($q) => $q->where('manufacturing_type', 'in_house')->orderBy('name')])
@@ -126,6 +131,10 @@ class TarpaiController extends Controller
             'designs.*.items.*.size' => 'required|in:xs,s,m,l,xl',
             'designs.*.items.*.qty'  => 'nullable|integer|min:0',
         ]);
+
+        if ($redirect = $this->rejectIfVendorCatalogue($validated['catalogue_id'], 'tarpai-sends.index')) {
+            return $redirect;
+        }
 
         // At least one piece across all designs
         $totalPieces = 0;

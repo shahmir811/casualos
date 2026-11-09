@@ -37,7 +37,12 @@ $badgeColors = [
             <span class="font-semibold text-[#0066CC] text-sm">OB-{{ str_pad($batch->id, 4, '0', STR_PAD_LEFT) }}</span>
             <span class="text-xs font-semibold text-[#1D1D1F]">{{ number_format($batch->items->sum('original_quantity')) }} pcs</span>
         </div>
-        <p class="text-xs text-[#6E6E73] mb-2">{{ $batch->catalogue->name ?? '—' }} · {{ $batch->received_date->format('d M Y') }}</p>
+        <p class="text-xs text-[#6E6E73] mb-2">
+            {{ $batch->catalogue->name ?? '—' }} · {{ $batch->received_date->format('d M Y') }}
+            @if($batch->catalogue?->isVendorProduced())
+                <span class="badge bg-amber-50 text-amber-700 ml-1">{{ $batch->catalogue->vendor->name }}</span>
+            @endif
+        </p>
         <div class="flex flex-wrap gap-1">
             @foreach($batch->items->groupBy('design_id') as $designId => $designItems)
             @php $color = $badgeColors[$designId % count($badgeColors)]; @endphp
@@ -75,7 +80,12 @@ $badgeColors = [
             @forelse($batches as $batch)
             <tr>
                 <td class="font-medium text-[#0066CC]">OB-{{ str_pad($batch->id, 4, '0', STR_PAD_LEFT) }}</td>
-                <td>{{ $batch->catalogue->name ?? '—' }}</td>
+                <td>
+                    {{ $batch->catalogue->name ?? '—' }}
+                    @if($batch->catalogue?->isVendorProduced())
+                        <span class="badge bg-amber-50 text-amber-700 ml-1">{{ $batch->catalogue->vendor->name }}</span>
+                    @endif
+                </td>
                 <td>{{ $batch->received_date->format('d M Y') }}</td>
                 <td>
                     <div class="flex flex-col gap-1">

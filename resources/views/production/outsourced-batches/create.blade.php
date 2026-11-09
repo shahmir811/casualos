@@ -47,6 +47,9 @@
                 <div class="flex items-center gap-2.5 px-4 py-3 bg-[#F5F5F7] border border-[#E8E8ED] rounded-xl">
                     <span class="font-semibold text-[#1D1D1F]">{{ $catalogue->name }}</span>
                     <span class="text-xs text-[#86868B]">· selected from sidebar</span>
+                    @if($catalogue->isVendorProduced())
+                        <span class="badge bg-amber-50 text-amber-700 ml-1">{{ $catalogue->vendor->name }}</span>
+                    @endif
                 </div>
             </div>
 

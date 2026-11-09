@@ -39,11 +39,14 @@
             </div>
 
             <div class="min-w-0">
-                <div class="flex items-center gap-2.5 mb-1">
+                <div class="flex items-center flex-wrap gap-y-1 gap-x-2.5 mb-1">
                     <h2 class="text-[#1D1D1F] text-sm font-semibold group-hover:text-[#0066CC] transition-colors">{{ $catalogue->name }}</h2>
-                    <span class="badge {{ $catalogue->status === 'open' ? 'bg-green-100 text-green-700' : 'bg-[#F5F5F7] text-[#6E6E73]' }}">
+                    <span class="badge whitespace-nowrap {{ $catalogue->status === 'open' ? 'bg-green-100 text-green-700' : 'bg-[#F5F5F7] text-[#6E6E73]' }}">
                         {{ strtoupper($catalogue->status) }}
                     </span>
+                    @if($catalogue->isVendorProduced())
+                        <span class="badge whitespace-nowrap bg-amber-50 text-amber-700">{{ $catalogue->vendor->name }}</span>
+                    @endif
                 </div>
                 <p class="text-[#6E6E73] text-xs">
                     {{ $catalogue->designs_count }} designs ·
