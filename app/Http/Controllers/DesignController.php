@@ -65,6 +65,13 @@ class DesignController extends Controller
         $validated['needs_naeem_pakki'] = ($validated['manufacturing_type'] === 'in_house')
             && !empty($validated['needs_naeem_pakki']);
 
+        // Every design under a vendor-assigned catalogue is produced by that
+        // vendor, regardless of what was posted — never trust the client here.
+        if ($catalogue->isVendorProduced()) {
+            $validated['manufacturing_type'] = 'outsourced';
+            $validated['needs_naeem_pakki']  = false;
+        }
+
         if ($request->hasFile('photo')) {
             $validated['photo'] = $request->file('photo')->store('designs');
         }
@@ -129,6 +136,13 @@ class DesignController extends Controller
         // Only in-house designs can need Naeem Pakki work
         $validated['needs_naeem_pakki'] = ($validated['manufacturing_type'] === 'in_house')
             && !empty($validated['needs_naeem_pakki']);
+
+        // Every design under a vendor-assigned catalogue is produced by that
+        // vendor, regardless of what was posted — never trust the client here.
+        if ($design->catalogue->isVendorProduced()) {
+            $validated['manufacturing_type'] = 'outsourced';
+            $validated['needs_naeem_pakki']  = false;
+        }
 
         if ($request->hasFile('photo')) {
             if ($design->photo) {

@@ -34,6 +34,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductionAlertController;
 use App\Http\Controllers\ProductionTrackerController;
 use App\Http\Controllers\BankAccountController;
+use App\Http\Controllers\VendorController;
 use App\Http\Controllers\ActiveCatalogueController;
 use App\Http\Controllers\AdvancePaymentController;
 use App\Http\Controllers\TarpaiPaymentController;
@@ -375,6 +376,11 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('bank-accounts', [BankAccountController::class, 'index'])->name('bank-accounts.index');
         Route::post('bank-accounts', [BankAccountController::class, 'store'])->name('bank-accounts.store');
         Route::post('bank-accounts/{bankAccount}/toggle', [BankAccountController::class, 'toggle'])->name('bank-accounts.toggle');
+
+        // Vendor management (catalogues produced entirely by an outside vendor)
+        Route::get('vendors', [VendorController::class, 'index'])->name('vendors.index');
+        Route::post('vendors', [VendorController::class, 'store'])->name('vendors.store');
+        Route::post('vendors/{vendor}/toggle', [VendorController::class, 'toggle'])->name('vendors.toggle');
 
         // Country pricing for tags (per design, per destination country)
         Route::get('country-pricing', [DesignCountryPriceController::class, 'index'])->name('country-pricing.index');

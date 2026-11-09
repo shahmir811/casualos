@@ -13,6 +13,11 @@
             <span class="badge {{ $catalogue->status === 'open' ? 'bg-green-100 text-green-700' : 'bg-[#F5F5F7] text-[#6E6E73]' }}">
                 {{ $catalogue->status }}
             </span>
+            @if($catalogue->isVendorProduced())
+                <span class="badge bg-amber-50 text-amber-700">Vendor: {{ $catalogue->vendor->name }}</span>
+            @else
+                <span class="badge bg-[#F5F5F7] text-[#6E6E73]">In-House</span>
+            @endif
         </div>
         <p class="text-[#6E6E73] text-xs mt-1">
             Created by {{ $catalogue->createdBy->name ?? 'System' }} · {{ $catalogue->created_at->format('d M Y') }}

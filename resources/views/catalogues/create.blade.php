@@ -70,6 +70,35 @@
             </div>
         </div>
 
+        {{-- Production --}}
+        <div x-data="{ mode: '{{ old('production_mode', 'in_house') }}' }">
+            <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Production <span class="text-[#FF3B30]">*</span></label>
+            <select name="production_mode" required class="apple-input" x-model="mode">
+                <option value="in_house" {{ old('production_mode', 'in_house') === 'in_house' ? 'selected' : '' }}>Produced In-House</option>
+                <option value="vendor" {{ old('production_mode') === 'vendor' ? 'selected' : '' }}>Outsourced to a Vendor</option>
+            </select>
+            <p class="mt-1 text-[#86868B] text-xs">This cannot be changed once the catalogue is created.</p>
+            @error('production_mode')
+                <p class="mt-1.5 text-[#FF3B30] text-xs">{{ $message }}</p>
+            @enderror
+
+            <div class="mt-3" x-show="mode === 'vendor'" x-cloak>
+                <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Vendor <span class="text-[#FF3B30]">*</span></label>
+                <select name="vendor_id" class="apple-input">
+                    <option value="">Select vendor</option>
+                    @foreach($vendors as $vendor)
+                        <option value="{{ $vendor->id }}" {{ (string) old('vendor_id') === (string) $vendor->id ? 'selected' : '' }}>{{ $vendor->name }}</option>
+                    @endforeach
+                </select>
+                <p class="mt-1 text-[#86868B] text-xs">
+                    <a href="{{ route('vendors.index') }}" class="text-[#0066CC] hover:underline">Manage vendors</a>
+                </p>
+                @error('vendor_id')
+                    <p class="mt-1.5 text-[#FF3B30] text-xs">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
+
         {{-- Discount Benchmark --}}
         <div>
             <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Discount Benchmark (Qty)</label>

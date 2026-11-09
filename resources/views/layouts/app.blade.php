@@ -570,6 +570,14 @@
                 Stitching Units
             </a>
 
+            <a href="{{ route('vendors.index') }}"
+               class="nav-item {{ request()->routeIs('vendors.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5V7.5a1.5 1.5 0 011.5-1.5h9a1.5 1.5 0 011.5 1.5v1.5h2.382a1.5 1.5 0 011.342.83l1.618 3.236a1.5 1.5 0 01.158.67V16.5a1 1 0 01-1 1h-1m-12 0H4a1 1 0 01-1-1zm0 0a2 2 0 104 0m8 0a2 2 0 104 0m-8 0h8"/>
+                </svg>
+                Vendors
+            </a>
+
             <a href="{{ route('bank-accounts.index') }}"
                class="nav-item {{ request()->routeIs('bank-accounts.*') ? 'active' : '' }} flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium text-[#1D1D1F]">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">

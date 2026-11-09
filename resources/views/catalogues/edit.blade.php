@@ -76,6 +76,19 @@
             </div>
         </div>
 
+        {{-- Production (locked at creation) --}}
+        <div>
+            <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Production</label>
+            <div class="px-4 py-2.5 bg-[#F5F5F7] border border-[#E8E8ED] rounded-xl text-sm text-[#1D1D1F]">
+                @if($catalogue->isVendorProduced())
+                    Outsourced to <span class="font-medium">{{ $catalogue->vendor->name }}</span>
+                @else
+                    Produced In-House
+                @endif
+            </div>
+            <p class="mt-1 text-[#86868B] text-xs">Locked at creation — cannot be changed.</p>
+        </div>
+
         {{-- Discount Benchmark --}}
         <div>
             <label class="block text-[#1D1D1F] text-sm font-medium mb-1.5">Discount Benchmark (Qty)</label>
