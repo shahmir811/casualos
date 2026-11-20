@@ -209,54 +209,19 @@
 
 {{-- Order Summary --}}
 @php
-    $firstItem  = $order->items->first();
-    $rawXs      = $firstItem?->qty_xs ?? 0;
-    $rawS       = $firstItem?->qty_s  ?? 0;
-    $rawM       = $firstItem?->qty_m  ?? 0;
-    $rawL       = $firstItem?->qty_l  ?? 0;
-    $rawXl      = $firstItem?->qty_xl ?? 0;
-    $numDesigns = $order->catalogue?->number_of_designs ?? $order->items->count();
-
-    // Sum reduction qty per size, total, and per-design
-    $reducedBySize    = ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0];
-    $perDesignReduced = [];
-    $totalReduced     = 0;
-    foreach ($order->reductions as $red) {
-        foreach ($red->items as $ri) {
-            $did = $ri->design_id;
-            if (!isset($perDesignReduced[$did])) {
-                $perDesignReduced[$did] = ['xs' => 0, 's' => 0, 'm' => 0, 'l' => 0, 'xl' => 0];
-            }
-            if (isset($reducedBySize[$ri->size])) {
-                $reducedBySize[$ri->size]          += $ri->qty_reduced;
-                $perDesignReduced[$did][$ri->size] += $ri->qty_reduced;
-            }
-            $totalReduced += $ri->qty_reduced;
-        }
-    }
-
-    // A size column updates only when the reduction is uniform across ALL designs.
-    // If only some designs were reduced for a size, the column stays at the original
-    // value (total pieces still reflects the actual deduction via flat math below).
-    $uniformForSize = function(string $sz) use ($numDesigns, $perDesignReduced): int {
-        if ($numDesigns === 0 || empty($perDesignReduced)) return 0;
-        $amounts = array_column($perDesignReduced, $sz);
-        if (count($perDesignReduced) < $numDesigns) {
-            $amounts[] = 0; // designs with no reduction entry contributed 0
-        }
-        $unique = array_unique($amounts);
-        return count($unique) === 1 ? (int) $unique[0] : 0;
-    };
-
-    $qxs = max(0, $rawXs - $uniformForSize('xs'));
-    $qs  = max(0, $rawS  - $uniformForSize('s'));
-    $qm  = max(0, $rawM  - $uniformForSize('m'));
-    $ql  = max(0, $rawL  - $uniformForSize('l'));
-    $qxl = max(0, $rawXl - $uniformForSize('xl'));
-
-    $qtyPerDesign  = $qxs + $qs + $qm + $ql + $qxl;
-    $originalTotal = ($rawXs + $rawS + $rawM + $rawL + $rawXl) * $numDesigns;
-    $totalPieces   = max(0, $originalTotal - $totalReduced);
+    // Built from the order's current order_items, which are the source of truth:
+    // Log Reduction and Move Pieces decrement them, Piece Reassignment / Free
+    // Pieces / Move Pieces increment them. Reductions must NOT be subtracted
+    // again here. Designs can legitimately differ (e.g. Move Pieces moves only
+    // some designs), so one row per design is shown whenever they aren't uniform.
+    $summarySizes = ['xs', 's', 'm', 'l', 'xl'];
+    $summaryItems = $order->items->sortBy('design_id')->values();
+    $sizeKey      = fn($i) => implode('-', array_map(fn($sz) => (int) $i->{'qty_' . $sz}, $summarySizes));
+    $isUniform    = $summaryItems->map($sizeKey)->unique()->count() <= 1;
+    $numDesigns   = $summaryItems->count();
+    $totalPieces  = (int) $summaryItems->sum(fn($i) => array_sum(array_map(fn($sz) => (int) $i->{'qty_' . $sz}, $summarySizes)));
+    $firstItem    = $summaryItems->first();
+    $sizeCell     = fn($q) => '<td class="text-center tabular-nums px-3 ' . ($q ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]') . '">' . ($q ?: '—') . '</td>';
 @endphp
 <div class="card mb-5">
     <div class="px-6 py-4 border-b border-[#F2F2F7] flex items-center justify-between">
@@ -267,34 +232,55 @@
         <table class="w-full apple-table whitespace-nowrap">
             <thead>
                 <tr>
-                    <th class="text-left">Catalogue</th>
+                    <th class="text-left">{{ $isUniform ? 'Catalogue' : 'Design' }}</th>
                     <th class="text-left">Order #</th>
                     <th class="text-center px-3">XS</th>
                     <th class="text-center px-3">S</th>
                     <th class="text-center px-3">M</th>
                     <th class="text-center px-3">L</th>
                     <th class="text-center px-3">XL</th>
-                    <th class="text-center">Qty / Design</th>
+                    <th class="text-center">{{ $isUniform ? 'Qty / Design' : 'Qty' }}</th>
                     <th class="text-center">Total Pieces</th>
                     <th class="text-right">Amount</th>
                 </tr>
             </thead>
             <tbody>
+                @if($isUniform)
+                @php $qtyPerDesign = $firstItem ? array_sum(array_map(fn($sz) => (int) $firstItem->{'qty_' . $sz}, $summarySizes)) : 0; @endphp
                 <tr>
                     <td>
                         <p class="font-medium text-[#1D1D1F] text-sm">{{ $order->catalogue->name ?? '—' }}</p>
                         <p class="text-xs text-[#86868B] mt-0.5">{{ $numDesigns }} designs</p>
                     </td>
                     <td class="text-[#6E6E73] text-xs tabular-nums font-mono">{{ $order->order_number }}</td>
-                    <td class="text-center tabular-nums px-3 {{ $qxs ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $qxs ?: '—' }}</td>
-                    <td class="text-center tabular-nums px-3 {{ $qs  ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $qs  ?: '—' }}</td>
-                    <td class="text-center tabular-nums px-3 {{ $qm  ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $qm  ?: '—' }}</td>
-                    <td class="text-center tabular-nums px-3 {{ $ql  ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $ql  ?: '—' }}</td>
-                    <td class="text-center tabular-nums px-3 {{ $qxl ? 'font-medium text-[#1D1D1F]' : 'text-[#D1D1D6]' }}">{{ $qxl ?: '—' }}</td>
+                    @foreach($summarySizes as $sz){!! $sizeCell((int) ($firstItem?->{'qty_' . $sz} ?? 0)) !!}@endforeach
                     <td class="text-center font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($qtyPerDesign) }}</td>
                     <td class="text-center font-semibold text-[#0071E3] tabular-nums">{{ number_format($totalPieces) }}</td>
                     <td class="text-right font-semibold text-[#1D1D1F] tabular-nums">PKR {{ number_format($order->total_amount, 0) }}</td>
                 </tr>
+                @else
+                @foreach($summaryItems as $item)
+                @php $itemQty = array_sum(array_map(fn($sz) => (int) $item->{'qty_' . $sz}, $summarySizes)); @endphp
+                <tr>
+                    <td>
+                        <p class="font-medium text-[#1D1D1F] text-sm">{{ $item->design->name ?? "Design #{$item->design_id}" }}</p>
+                        <p class="text-xs text-[#86868B] mt-0.5">PKR {{ number_format($item->unit_price, 0) }} / piece</p>
+                    </td>
+                    <td class="text-[#6E6E73] text-xs tabular-nums font-mono">{{ $order->order_number }}</td>
+                    @foreach($summarySizes as $sz){!! $sizeCell((int) $item->{'qty_' . $sz}) !!}@endforeach
+                    <td class="text-center font-semibold text-[#1D1D1F] tabular-nums">{{ number_format($itemQty) }}</td>
+                    <td class="text-center tabular-nums text-[#6E6E73]">—</td>
+                    <td class="text-right tabular-nums text-[#1D1D1F]">PKR {{ number_format($item->total_amount, 0) }}</td>
+                </tr>
+                @endforeach
+                <tr>
+                    <td colspan="2"><p class="font-semibold text-[#1D1D1F] text-sm">{{ $order->catalogue->name ?? '—' }} · Total</p></td>
+                    @foreach($summarySizes as $sz){!! $sizeCell((int) $summaryItems->sum('qty_' . $sz)) !!}@endforeach
+                    <td class="text-center text-[#D1D1D6]">—</td>
+                    <td class="text-center font-semibold text-[#0071E3] tabular-nums">{{ number_format($totalPieces) }}</td>
+                    <td class="text-right font-semibold text-[#1D1D1F] tabular-nums">PKR {{ number_format($order->total_amount, 0) }}</td>
+                </tr>
+                @endif
             </tbody>
         </table>
     </div>

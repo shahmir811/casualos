@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Customer;
 use App\Models\CustomerLedger;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderReduction;
 use App\Models\Refund;
-use App\Services\AdvanceCreditAutoApplyService;
 use App\Services\OrderStatusNotificationService;
 use App\Services\ProductionAssignmentAlertService;
 use Illuminate\Http\Request;
@@ -17,12 +15,14 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Moves a specific design+size quantity out of one existing order (the
- * "source") and into another — an existing order on the same catalogue, or a
- * brand-new order for a customer who has none yet (the "target") — in one
+ * "source") and into another existing, non-cancelled order on the same
+ * catalogue (the "target") — including an already-dispatched one — in one
  * transaction. Unlike Piece Reassignment (which only ever touches the
  * target), this also shrinks the source order using the same reduce/surplus/
- * auto-cancel logic Log Reduction already has. No OrderReduction row is
- * created — see the "Move Pieces" rule in CLAUDE.md for why.
+ * auto-cancel logic Log Reduction already has, recorded as an OrderReduction
+ * with adjustment_type 'transfer'. Moved pieces are charged at the price the
+ * target customer is already paying for that design (their existing tier) —
+ * never re-priced against the benchmark. See rule 5.43 in CLAUDE.md.
  */
 class OrderPieceMoveController extends Controller
 {
@@ -36,16 +36,15 @@ class OrderPieceMoveController extends Controller
 
         $order->load(['items.design', 'catalogue', 'customer']);
 
+        // Dispatched targets are deliberately allowed (owner's call, 2026-11-20):
+        // pieces are typically moved to a customer whose order already shipped.
         $existingTargets = Order::where('catalogue_id', $order->catalogue_id)
             ->where('id', '!=', $order->id)
-            ->whereNotIn('status', ['dispatched', 'cancelled'])
+            ->where('status', '!=', 'cancelled')
             ->with('customer')
             ->get();
 
-        $orderedCustomerIds = Order::where('catalogue_id', $order->catalogue_id)->pluck('customer_id');
-        $newCustomerTargets = Customer::whereNotIn('id', $orderedCustomerIds)->orderBy('name')->get();
-
-        return view('orders.move-pieces', compact('order', 'existingTargets', 'newCustomerTargets'));
+        return view('orders.move-pieces', compact('order', 'existingTargets'));
     }
 
     public function store(Request $request, Order $order)
@@ -61,7 +60,7 @@ class OrderPieceMoveController extends Controller
             'items.*.design_id'  => 'required|exists:designs,id',
             'items.*.size'       => 'required|in:xs,s,m,l,xl',
             'items.*.qty'        => 'required|integer|min:0',
-            'target_type'        => 'required|in:existing_order,new_customer',
+            'target_type'        => 'required|in:existing_order',
             'target_id'          => 'required|integer',
             'surplus_action'     => 'required|in:none,credit_to_advance,refund',
             'refund_method'      => 'required_if:surplus_action,refund|nullable|in:cash,bank_transfer',
@@ -75,7 +74,6 @@ class OrderPieceMoveController extends Controller
             return back()->withErrors(['items' => 'Please enter at least one quantity to move.'])->withInput();
         }
 
-        $targetType = $request->input('target_type');
         $targetId   = (int) $request->input('target_id');
 
         $statusBeforeMove = $order->status;
@@ -83,7 +81,7 @@ class OrderPieceMoveController extends Controller
 
         try {
             DB::transaction(function () use (
-                $request, $order, $nonZeroItems, $targetType, $targetId, $byName
+                $request, $order, $nonZeroItems, $targetId, $byName
             ) {
                 $order = Order::where('id', $order->id)->lockForUpdate()->first();
                 $order->load(['items.design', 'customer', 'catalogue']);
@@ -126,49 +124,20 @@ class OrderPieceMoveController extends Controller
                     ];
                 }
 
-                // Resolve the target inside the lock, closing the same race
-                // Free Pieces already guards against for new-customer targets.
-                if ($targetType === 'existing_order') {
-                    $targetOrder = Order::where('id', $targetId)->lockForUpdate()->first();
+                // Resolve the target inside the lock. Only existing, non-cancelled
+                // orders on the same catalogue qualify — dispatched ones included.
+                $targetOrder = Order::where('id', $targetId)->lockForUpdate()->first();
 
-                    if (! $targetOrder
-                        || $targetOrder->id === $order->id
-                        || $targetOrder->catalogue_id !== $order->catalogue_id
-                        || in_array($targetOrder->status, ['dispatched', 'cancelled'])
-                    ) {
-                        throw new \RuntimeException('Invalid target order for this move.');
-                    }
-
-                    $targetOrder->load(['items', 'customer']);
-                    $targetCustomer = $targetOrder->customer;
-                } else {
-                    $targetCustomer = Customer::where('id', $targetId)->lockForUpdate()->first();
-                    if (! $targetCustomer) {
-                        throw new \RuntimeException('Invalid target customer for this move.');
-                    }
-
-                    $alreadyOrdered = Order::where('customer_id', $targetCustomer->id)
-                        ->where('catalogue_id', $order->catalogue_id)
-                        ->exists();
-                    if ($alreadyOrdered) {
-                        throw new \RuntimeException("{$targetCustomer->name} already has an order on this catalogue.");
-                    }
-
-                    $targetOrder = Order::create([
-                        'catalogue_id'        => $order->catalogue_id,
-                        'customer_id'         => $targetCustomer->id,
-                        'status'              => 'received',
-                        'total_amount'        => 0,
-                        'total_paid'          => 0,
-                        'outstanding_balance' => 0,
-                        'submitted_name'      => $targetCustomer->name,
-                        'submitted_city'      => $targetCustomer->city,
-                        'submitted_email'     => $targetCustomer->email,
-                        'submitted_at'        => now(),
-                        'notes'               => 'Created from Move Pieces.',
-                    ]);
-                    $targetOrder->setRelation('items', collect());
+                if (! $targetOrder
+                    || $targetOrder->id === $order->id
+                    || $targetOrder->catalogue_id !== $order->catalogue_id
+                    || $targetOrder->status === 'cancelled'
+                ) {
+                    throw new \RuntimeException('Invalid target order for this move.');
                 }
+
+                $targetOrder->load(['items.design', 'customer']);
+                $targetCustomer = $targetOrder->customer;
 
                 $customer = $order->customer;
 
@@ -181,9 +150,7 @@ class OrderPieceMoveController extends Controller
                     $sourceItem->save(); // OrderItem::booted() recomputes total_qty/total_amount
                 }
 
-                $targetLabel = $targetType === 'existing_order'
-                    ? "Order #{$targetOrder->order_number} ({$targetCustomer->name})"
-                    : "new Order #{$targetOrder->order_number} ({$targetCustomer->name})";
+                $targetLabel = "Order #{$targetOrder->order_number} ({$targetCustomer->name})";
 
                 // Group moved rows by design (one bullet line per design, sizes
                 // comma-joined within it) — the header line is the only thing not
@@ -296,58 +263,71 @@ class OrderPieceMoveController extends Controller
                     }
                 }
 
-                // --- Target increment / create ---
+                // --- Target increment ---
+                //
+                // Moved pieces inherit the price the target customer is already
+                // paying for that design — their existing tier, set when they
+                // ordered. Never re-priced against the benchmark: a below-benchmark
+                // customer stays on selling_price even if the move pushes them over
+                // it, and their existing pieces keep their existing price.
 
-                $requestedByDesign = collect($nonZeroItems)->groupBy('design_id');
+                $requestedByDesign   = collect($nonZeroItems)->groupBy('design_id');
                 $targetItemsByDesign = $targetOrder->items->keyBy('design_id');
-                $benchmark   = $order->catalogue->quantity_benchmark;
-                $totalAdded  = 0;
+                $totalAdded      = 0;
                 $targetDesignIds = [];
+
+                // Fallback tier, only used if the target has no line for a moved
+                // design (shouldn't happen — every order covers every design):
+                // discounted if any existing line is priced at its design's
+                // discount_price.
+                $targetIsDiscounted = $targetOrder->items->contains(fn($i) =>
+                    $i->design
+                    && $i->design->discount_price !== null
+                    && (float) $i->design->discount_price !== (float) $i->design->selling_price
+                    && (float) $i->unit_price === (float) $i->design->discount_price
+                );
 
                 foreach ($requestedByDesign as $designId => $rows) {
                     $targetDesignIds[] = $designId;
                     $design = $sourceItemsByDesign->get($designId)->design;
 
                     $item = $targetItemsByDesign->get($designId);
-                    $oldAmount = 0;
 
-                    if (! $item) {
+                    if ($item) {
+                        $unitPrice = (float) $item->unit_price;
+                    } else {
+                        $unitPrice = ($targetIsDiscounted && $design->discount_price !== null)
+                            ? (float) $design->discount_price
+                            : (float) $design->selling_price;
+
                         $item = new OrderItem([
                             'order_id'   => $targetOrder->id,
                             'design_id'  => $designId,
                             'qty_xs'     => 0, 'qty_s' => 0, 'qty_m' => 0, 'qty_l' => 0, 'qty_xl' => 0,
-                            'unit_price' => 0,
+                            'unit_price' => (int) round($unitPrice),
                         ]);
-                    } else {
-                        $oldAmount = (float) $item->total_amount;
                     }
 
+                    $addedQty = 0;
                     foreach ($rows as $row) {
                         $col = 'qty_' . $row['size'];
                         $item->{$col} = (int) $item->{$col} + (int) $row['qty'];
+                        $addedQty += (int) $row['qty'];
                     }
-
-                    $newDesignTotalQty = $item->qty_xs + $item->qty_s + $item->qty_m + $item->qty_l + $item->qty_xl;
-                    $useDiscount = $benchmark !== null && $newDesignTotalQty > $benchmark;
-                    $item->unit_price = (int) round(
-                        ($useDiscount && $design->discount_price !== null)
-                            ? (float) $design->discount_price
-                            : (float) ($design->selling_price ?? $item->unit_price)
-                    );
 
                     $item->save(); // booted() recomputes total_qty/total_amount
 
-                    $totalAdded += (float) $item->total_amount - $oldAmount;
+                    $totalAdded += (float) $item->unit_price * $addedQty;
                 }
 
-                if ($targetType === 'existing_order') {
-                    $targetOrder->increment('total_amount', $totalAdded);
-                    $targetOrder->increment('outstanding_balance', $totalAdded);
-                } else {
-                    $targetOrder->update([
-                        'total_amount'        => $totalAdded,
-                        'outstanding_balance' => $totalAdded,
-                    ]);
+                $targetOrder->increment('total_amount', $totalAdded);
+                $targetOrder->increment('outstanding_balance', $totalAdded);
+
+                // A dispatched target now has undispatched pieces again — reopen it
+                // so staff can record a dispatch batch for them. Deliberately no
+                // customer push for this (it's a step backwards, like other reverts).
+                if ($targetOrder->status === 'dispatched') {
+                    $targetOrder->update(['status' => 'partially_dispatched']);
                 }
 
                 $sourceLabel = "Order #{$order->order_number} ({$customer->name})";
@@ -363,11 +343,6 @@ class OrderPieceMoveController extends Controller
                     $targetCustomer,
                     $targetDesc
                 );
-
-                $autoAppliedPayment = null;
-                if ($targetType === 'new_customer') {
-                    $autoAppliedPayment = app(AdvanceCreditAutoApplyService::class)->apply($targetOrder, $targetCustomer);
-                }
 
                 // --- Alerts + activity log ---
 
@@ -403,22 +378,6 @@ class OrderPieceMoveController extends Controller
                         'new_total'     => 'PKR ' . number_format((float) $targetOrder->total_amount, 0),
                     ])
                     ->log("Order #{$targetOrder->order_number} received pieces moved from {$sourceLabel} by {$byName}");
-
-                if ($autoAppliedPayment) {
-                    activity()
-                        ->performedOn($targetOrder)
-                        ->causedBy(Auth::user())
-                        ->event('detail')
-                        ->withProperties([
-                            'order'          => 'Order #' . $targetOrder->order_number,
-                            'customer'       => $targetCustomer->name,
-                            'amount'         => 'PKR ' . number_format((float) $autoAppliedPayment->amount, 0),
-                            'auto_confirmed' => $targetOrder->status === 'confirmed' ? 'Yes' : 'No',
-                        ])
-                        ->log('Payment #' . $targetOrder->order_number . 'p' . $autoAppliedPayment->sequence_number
-                            . ' of PKR ' . number_format((float) $autoAppliedPayment->amount, 0)
-                            . ' auto-applied from advance credit on Order #' . $targetOrder->order_number);
-                }
             });
         } catch (\RuntimeException $e) {
             return back()->withErrors(['items' => $e->getMessage()])->withInput();

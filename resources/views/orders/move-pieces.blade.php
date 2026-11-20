@@ -31,13 +31,6 @@
                 . ' (' . ucfirst(str_replace('_', ' ', $t->status)) . ')',
         ]);
     }
-    foreach ($newCustomerTargets as $c) {
-        $targetsJs->push([
-            'type'  => 'new_customer',
-            'id'    => $c->id,
-            'label' => ($c->name ?? '—') . ' — New Order',
-        ]);
-    }
 @endphp
 
 <div class="flex items-center gap-3 mb-7">
@@ -232,11 +225,11 @@
             </div>
         </div>
 
-        {{-- Target picker — existing order on this catalogue, or a new customer --}}
+        {{-- Target picker — existing non-cancelled order on this catalogue (dispatched included) --}}
         <div class="card p-6 mb-5">
             <h2 class="text-[#1D1D1F] text-sm font-semibold mb-1">Move To</h2>
             <p class="text-[#6E6E73] text-xs mb-3">
-                An existing order on this catalogue, or a customer who hasn't ordered on it yet (a brand-new order is created for them).
+                A customer who already has an order on this catalogue. Cancelled orders are not listed. If the order is already dispatched, it reopens as Partially Dispatched so the new pieces can be dispatched.
             </p>
             <div class="relative" @click.outside="open = false">
                 <input type="text"
@@ -284,7 +277,7 @@
                 <span class="font-semibold text-[#FF9500]" x-text="formatPkr(surplus)"></span>
             </div>
             <p class="text-xs text-[#86868B] pt-2">
-                The target order's price and total will be computed on save, using current design pricing.
+                Moved pieces are charged at the price the target customer is already paying for each design (discount or normal, based on their original order).
             </p>
         </div>
 
