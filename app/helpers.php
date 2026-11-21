@@ -73,3 +73,45 @@ if (!function_exists('lacs_format')) {
         return ($negative ? '-' : '') . $formatted;
     }
 }
+
+if (!function_exists('s3_content_disposition')) {
+    /**
+     * Build a Content-Disposition value that is safe to pass to S3 as
+     * ResponseContentDisposition on a presigned URL.
+     *
+     * S3 rejects any header value that can't be represented in ISO-8859-1, so a
+     * raw filename containing emojis, "…" or Urdu text makes the presigned URL
+     * fail with InvalidArgument. This returns an RFC 6266 value with a plain
+     * ASCII `filename` fallback plus a percent-encoded UTF-8 `filename*`, so the
+     * whole value is ASCII and browsers still show the original name.
+     *
+     * @param string      $type     'inline' or 'attachment'
+     * @param string|null $filename Original uploaded filename (stored untouched in the DB)
+     * @param string      $default  ASCII name used when the fallback ends up empty
+     */
+    function s3_content_disposition(string $type, ?string $filename, string $default): string
+    {
+        $filename = trim((string) $filename);
+        if ($filename === '') {
+            $filename = $default;
+        }
+
+        // makeDisposition() rejects path separators in the filename itself.
+        $filename = str_replace(['/', '\\'], '-', $filename);
+
+        // ASCII fallback: transliterate, drop non-printable/non-ASCII bytes and
+        // the characters makeDisposition() refuses in a fallback (%, ").
+        $fallback = \Illuminate\Support\Str::ascii($filename);
+        $fallback = preg_replace('/[^\x20-\x7E]/', '', $fallback);
+        $fallback = str_replace(['%', '"'], '', $fallback);
+        $fallback = trim(preg_replace('/\s+/', ' ', $fallback));
+
+        // If nothing meaningful survived (e.g. an all-Urdu name leaves just ".pdf"),
+        // use the default instead of a nameless file.
+        if (!preg_match('/[A-Za-z0-9]/', pathinfo($fallback, PATHINFO_FILENAME))) {
+            $fallback = $default;
+        }
+
+        return \Symfony\Component\HttpFoundation\HeaderUtils::makeDisposition($type, $filename, $fallback);
+    }
+}

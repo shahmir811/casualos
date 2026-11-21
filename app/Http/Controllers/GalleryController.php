@@ -31,12 +31,14 @@ class GalleryController extends Controller
         $catalogue = Catalogue::where('hd_gallery_token', $token)->firstOrFail();
         abort_unless($hdImage->catalogue_id === $catalogue->id, 404);
 
-        $filename = str_replace('"', '', $hdImage->original_filename);
-
         $url = Storage::disk('s3')->temporaryUrl(
             $hdImage->s3_path,
             now()->addMinutes(5),
-            ['ResponseContentDisposition' => 'attachment; filename="'.$filename.'"']
+            ['ResponseContentDisposition' => s3_content_disposition(
+                'attachment',
+                $hdImage->original_filename,
+                'hd-image.'.(pathinfo($hdImage->s3_path, PATHINFO_EXTENSION) ?: 'jpg')
+            )]
         );
 
         return redirect()->away($url);
