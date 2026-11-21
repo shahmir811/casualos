@@ -110,12 +110,10 @@ class CatalogueController extends Controller
     {
         abort_unless($catalogue->catalogue_book_path, 404);
 
-        $filename = str_replace('"', '', $catalogue->catalogue_book_original_filename ?? 'catalogue-book.pdf');
-
         $url = Storage::disk('s3')->temporaryUrl(
             $catalogue->catalogue_book_path,
             now()->addMinutes(10),
-            ['ResponseContentDisposition' => 'inline; filename="'.$filename.'"']
+            ['ResponseContentDisposition' => s3_content_disposition('inline', $catalogue->catalogue_book_original_filename, 'catalogue-book.pdf')]
         );
 
         return response()->json(['url' => $url]);
